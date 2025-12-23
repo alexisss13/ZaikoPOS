@@ -6,7 +6,8 @@ export interface UIProduct {
   stock: number;
   code: string | null;
   minStock: number;
-  category?: string;
+  category?: string; // Ahora sí viene de la relación
+  active: boolean;   // Nuevo campo
 }
 
 export interface ProductApiResponse {

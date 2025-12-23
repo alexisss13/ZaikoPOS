@@ -27,6 +27,7 @@ export async function GET(req: Request) {
         // Opcional: Ocultar productos sin stock en la búsqueda si lo deseas
         // { stock: { some: { branchId, quantity: { gt: 0 } } } } 
       ],
+      active: true,
     };
 
     // Consulta transaccional (Total + Data)
@@ -34,17 +35,14 @@ export async function GET(req: Request) {
       prisma.product.count({ where: whereClause }),
       prisma.product.findMany({
         where: whereClause,
-        take: limit,
-        skip: (page - 1) * limit,
+        // ... pagination ...
         include: {
-          stock: {
-            where: { branchId },
-            select: { quantity: true },
-          },
+          stock: { where: { branchId }, select: { quantity: true } },
+          category: { select: { name: true } } // <-- INCLUIR CATEGORÍA
         },
         orderBy: { name: 'asc' },
       }),
-    ]);
+  ]);
 
     // Transformación Decimal -> Number (DTO)
     const formattedProducts: UIProduct[] = products.map((p) => ({
@@ -54,7 +52,9 @@ export async function GET(req: Request) {
       code: p.code,
       minStock: p.minStock,
       stock: p.stock[0]?.quantity || 0,
-    }));
+      active: p.active,
+      category: p.category?.name || 'General' // Mapear nombre
+  }));
 
     return NextResponse.json({
       data: formattedProducts,

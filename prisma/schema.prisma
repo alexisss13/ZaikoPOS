@@ -1,5 +1,3 @@
-// zaiko/prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,13 +7,12 @@ datasource db {
 }
 
 // ==========================================
-// ENUMS (Enumeradores fijos)
+// ENUMS
 // ==========================================
-
 enum Role {
-  SUPER_ADMIN // Dueño del SaaS
-  OWNER       // Dueño del negocio (Cliente)
-  CASHIER     // Vendedor
+  SUPER_ADMIN
+  OWNER
+  CASHIER
 }
 
 enum PaymentMethod {
@@ -29,260 +26,23 @@ enum PaymentMethod {
 enum InvoiceType {
   BOLETA
   FACTURA
-  NOTA_VENTA // Para ventas internas/offline sin valor fiscal inmediato
+  NOTA_VENTA
 }
 
 enum InvoiceStatus {
-  PENDING   // Creado pero no enviado a SUNAT (Estado por defecto MVP)
-  SENT      // Enviado a SUNAT
-  ACCEPTED  // Aceptado (CDR ok)
-  REJECTED  // Rechazado
-  VOIDED    // Anulado
+  PENDING
+  SENT
+  ACCEPTED
+  REJECTED
+  VOIDED
 }
 
 enum NotificationType {
   CASH_OPENED
   CASH_CLOSED
   DAILY_SUMMARY
-  ALERT     // Stock bajo, etc.
+  ALERT
 }
-
-// ==========================================
-// MODELOS: GESTIÓN DE NEGOCIO (TENANT)
-// ==========================================
-
-model Business {
-  id          String   @id @default(uuid())
-  name        String
-  ruc         String   @unique // Identificador fiscal
-  address     String?
-  logoUrl     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relaciones
-  branches    Branch[]
-  users       User[]
-  products    Product[]
-  customers   Customer[]
-  sunatConfig SunatConfig? // Configuración futura SUNAT
-  auditLogs   AuditLog[]
-}
-
-model Branch {
-  id          String   @id @default(uuid())
-  businessId  String
-  name        String   // Ej: "Tienda Centro", "Sucursal 2"
-  address     String?
-  phone       String?
-  
-  // Relaciones
-  business    Business @relation(fields: [businessId], references: [id])
-  stock       Stock[]
-  cashSessions CashSession[]
-  sales       Sale[]
-}
-
-// ==========================================
-// MODELOS: USUARIOS Y AUTENTICACIÓN
-// ==========================================
-
-model User {
-  id          String   @id @default(uuid())
-  businessId  String?  // Null si es SUPER_ADMIN
-  name        String
-  email       String   @unique
-  password    String   // Hash
-  role        Role     @default(CASHIER)
-  pin         String?  // PIN rápido para cajeros (opcional)
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-
-  // Relaciones
-  business    Business? @relation(fields: [businessId], references: [id])
-  sessions    CashSession[] // Cajas que abrió este usuario
-  sales       Sale[]        // Ventas realizadas
-  auditLogs   AuditLog[]
-}
-
-// ==========================================
-// MODELOS: INVENTARIO Y PRODUCTOS
-// ==========================================
-
-model Product {
-  id          String   @id @default(uuid())
-  businessId  String
-  name        String
-  code        String?  // Código de barras / SKU local
-  description String?
-  price       Decimal  @db.Decimal(10, 2) // Precio base
-  cost        Decimal? @db.Decimal(10, 2) // Costo para reportes de ganancia
-  imageUrl    String?
-  minStock    Int      @default(5) // Alerta de stock bajo
-  
-  // Relaciones
-  business    Business @relation(fields: [businessId], references: [id])
-  stock       Stock[]
-  saleItems   SaleItem[]
-
-  @@unique([businessId, code]) // No repetir códigos en el mismo negocio
-}
-
-model Stock {
-  id          String   @id @default(uuid())
-  branchId    String
-  productId   String
-  quantity    Int      @default(0)
-
-  // Relaciones
-  branch      Branch   @relation(fields: [branchId], references: [id])
-  product     Product  @relation(fields: [productId], references: [id])
-
-  @@unique([branchId, productId]) // Un registro de stock por producto por sucursal
-}
-
-// ==========================================
-// MODELOS: CAJA Y FLUJO DE DINERO
-// ==========================================
-
-model CashSession {
-  id            String   @id @default(uuid())
-  branchId      String
-  userId        String   // Quién abrió la caja
-  openedAt      DateTime @default(now())
-  closedAt      DateTime?
-  
-  initialCash   Decimal  @db.Decimal(10, 2)
-  finalCash     Decimal? @db.Decimal(10, 2) // Lo que cuenta el cajero al cerrar
-  income        Decimal  @default(0) @db.Decimal(10, 2) // Total ventas efectivo sistema
-  expense       Decimal  @default(0) @db.Decimal(10, 2) // Salidas/Gastos
-  
-  difference    Decimal? @db.Decimal(10, 2) // Diferencia (Sobra/Falta)
-  status        String   @default("OPEN") // OPEN, CLOSED
-
-  // Relaciones
-  branch        Branch   @relation(fields: [branchId], references: [id])
-  user          User     @relation(fields: [userId], references: [id])
-  sales         Sale[]
-}
-
-// ==========================================
-// MODELOS: VENTAS (CORE)
-// ==========================================
-
-model Customer {
-  id          String   @id @default(uuid())
-  businessId  String
-  name        String
-  docType     String?  // DNI, RUC
-  docNumber   String?
-  email       String?
-  phone       String?
-  
-  business    Business @relation(fields: [businessId], references: [id])
-  sales       Sale[]
-
-  @@unique([businessId, docNumber])
-}
-
-model Sale {
-  id            String   @id @default(uuid())
-  code          String   @default(cuid()) // Identificador corto interno
-  externalId    String?  @unique // Clave de idempotencia (UUID local)
-  businessId    String?  // Redundancia útil para reportes globales
-  branchId      String
-  cashSessionId String?  // Opcional solo si es venta web, en POS es obligatorio
-  userId        String   // Vendedor
-  customerId    String?
-  
-  subtotal      Decimal  @db.Decimal(10, 2)
-  discount      Decimal  @default(0) @db.Decimal(10, 2)
-  total         Decimal  @db.Decimal(10, 2)
-  
-  status        String   @default("COMPLETED") // COMPLETED, CANCELED
-  createdAt     DateTime @default(now())
-
-  // Relaciones
-  branch        Branch      @relation(fields: [branchId], references: [id])
-  user          User        @relation(fields: [userId], references: [id])
-  customer      Customer?   @relation(fields: [customerId], references: [id])
-  cashSession   CashSession? @relation(fields: [cashSessionId], references: [id])
-  
-  items         SaleItem[]
-  payments      SalePayment[] // Soporte para pagos mixtos
-  invoice       Invoice?      // Anclaje para SUNAT futuro
-}
-
-model SaleItem {
-  id          String   @id @default(uuid())
-  saleId      String
-  productId   String
-  quantity    Int
-  price       Decimal  @db.Decimal(10, 2) // Precio al momento de la venta
-  subtotal    Decimal  @db.Decimal(10, 2)
-
-  sale        Sale     @relation(fields: [saleId], references: [id])
-  product     Product  @relation(fields: [productId], references: [id])
-}
-
-model SalePayment {
-  id          String        @id @default(uuid())
-  saleId      String
-  method      PaymentMethod
-  amount      Decimal       @db.Decimal(10, 2)
-  reference   String?       // Nro operación Yape/Plin/Tarjeta
-
-  sale        Sale          @relation(fields: [saleId], references: [id])
-}
-
-// ==========================================
-// MODELOS: FACTURACIÓN SUNAT (FUTURO - NO TOCAR LOGICA AUN)
-// ==========================================
-
-model Invoice {
-  id            String        @id @default(uuid())
-  saleId        String        @unique
-  invoiceType   InvoiceType   // BOLETA, FACTURA
-  serie         String        // B001, F001
-  number        Int           // Correlativo
-  status        InvoiceStatus @default(PENDING)
-  
-  pdfUrl        String?
-  xmlUrl        String?
-  cdrUrl        String?       // Constancia de recepción SUNAT
-  
-  issuedAt      DateTime      @default(now())
-
-  sale          Sale          @relation(fields: [saleId], references: [id])
-}
-
-model SunatConfig {
-  id            String   @id @default(uuid())
-  businessId    String   @unique
-  solUser       String?
-  solPassword   String?  // Encriptado
-  certPassword  String?  // Clave del certificado digital
-  active        Boolean  @default(false) // MVP: Siempre false
-
-  business      Business @relation(fields: [businessId], references: [id])
-}
-
-// ==========================================
-// MODELOS: NOTIFICACIONES
-// ==========================================
-
-model Notification {
-  id          String           @id @default(uuid())
-  userId      String?          // Si es null, es para todos los admins del negocio
-  title       String
-  message     String
-  type        NotificationType
-  read        Boolean          @default(false)
-  createdAt   DateTime         @default(now())
-}
-
-
 
 enum AuditAction {
   LOGIN
@@ -296,16 +56,274 @@ enum AuditAction {
   SYSTEM_ERROR
 }
 
+// ==========================================
+// NEGOCIOS
+// ==========================================
+model Business {
+  id          String     @id @default(uuid())
+  name        String
+  ruc         String     @unique
+  address     String?
+  logoUrl     String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relaciones
+  branches    Branch[]
+  users       User[]
+  products    Product[]
+  categories  Category[]
+  customers   Customer[]
+  sales       Sale[]     // 👈 Esto requiere la relación inversa en Sale
+  sunatConfig SunatConfig?
+  auditLogs   AuditLog[]
+}
+
+// ==========================================
+// SUCURSALES
+// ==========================================
+model Branch {
+  id          String      @id @default(uuid())
+  businessId  String
+  name        String
+  address     String?
+  phone       String?
+
+  business    Business    @relation(fields: [businessId], references: [id])
+  stock       Stock[]
+  users       User[]
+  cashSessions CashSession[]
+  sales       Sale[]
+
+  @@index([businessId])
+}
+
+// ==========================================
+// USUARIOS
+// ==========================================
+model User {
+  id          String    @id @default(uuid())
+  businessId  String?
+  branchId    String?
+  name        String
+  email       String    @unique
+  password    String
+  role        Role      @default(CASHIER)
+  pin         String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  business    Business? @relation(fields: [businessId], references: [id])
+  branch      Branch?   @relation(fields: [branchId], references: [id])
+  sessions    CashSession[]
+  sales       Sale[]
+  auditLogs   AuditLog[]
+
+  @@index([businessId])
+  @@index([branchId])
+}
+
+// ==========================================
+// CATEGORIAS Y PRODUCTOS
+// ==========================================
+model Category {
+  id          String    @id @default(uuid())
+  businessId  String
+  name        String
+  business    Business  @relation(fields: [businessId], references: [id])
+  products    Product[]
+
+  @@index([businessId])
+}
+
+model Product {
+  id          String     @id @default(uuid())
+  businessId  String
+  categoryId  String?
+  name        String
+  code        String?    // Barcode o SKU
+  description String?
+  price       Decimal    @db.Decimal(12,2)
+  cost        Decimal?   @db.Decimal(12,2)
+  imageUrl    String?
+  minStock    Int        @default(5)
+  active      Boolean    @default(true)
+
+  business    Business   @relation(fields: [businessId], references: [id])
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  stock       Stock[]
+  saleItems   SaleItem[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+}
+
+// ==========================================
+// INVENTARIO
+// ==========================================
+model Stock {
+  id          String    @id @default(uuid())
+  branchId    String
+  productId   String
+  quantity    Int       @default(0)
+  updatedAt   DateTime  @updatedAt
+
+  branch      Branch    @relation(fields: [branchId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+
+  @@unique([branchId, productId])
+  @@index([branchId])
+}
+
+// ==========================================
+// CAJA Y FLUJO DE DINERO
+// ==========================================
+model CashSession {
+  id          String    @id @default(uuid())
+  branchId    String
+  userId      String
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+  initialCash Decimal    @db.Decimal(12,2)
+  finalCash   Decimal?   @db.Decimal(12,2)
+  income      Decimal    @default(0) @db.Decimal(12,2)
+  expense     Decimal    @default(0) @db.Decimal(12,2)
+  difference  Decimal?   @db.Decimal(12,2)
+  status      String     @default("OPEN")
+
+  branch      Branch    @relation(fields: [branchId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  sales       Sale[]
+}
+
+// ==========================================
+// CLIENTES
+// ==========================================
+model Customer {
+  id          String    @id @default(uuid())
+  businessId  String
+  name        String
+  docType     String?
+  docNumber   String?
+  email       String?
+  phone       String?
+
+  business    Business  @relation(fields: [businessId], references: [id])
+  sales       Sale[]
+
+  @@unique([businessId, docNumber])
+}
+
+// ==========================================
+// VENTAS
+// ==========================================
+model Sale {
+  id            String        @id @default(uuid())
+  code          String        @default(cuid())
+  externalId    String?       @unique
+  businessId    String?
+  branchId      String
+  cashSessionId String?
+  userId        String
+  customerId    String?
+
+  subtotal      Decimal       @db.Decimal(12,2)
+  discount      Decimal       @default(0) @db.Decimal(12,2)
+  total         Decimal       @db.Decimal(12,2)
+  status        String        @default("COMPLETED")
+  createdAt     DateTime      @default(now())
+
+  // RELACIONES
+  // 👇 AQUÍ ESTABA EL ERROR: Faltaba la relación con Business
+  business      Business?     @relation(fields: [businessId], references: [id]) 
+  
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  cashSession   CashSession?  @relation(fields: [cashSessionId], references: [id])
+  items         SaleItem[]
+  payments      SalePayment[]
+  invoice       Invoice?
+}
+
+model SaleItem {
+  id          String    @id @default(uuid())
+  saleId      String
+  productId   String
+  quantity    Int
+  price       Decimal   @db.Decimal(12,2)
+  subtotal    Decimal   @db.Decimal(12,2)
+
+  sale        Sale      @relation(fields: [saleId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+}
+
+model SalePayment {
+  id          String        @id @default(uuid())
+  saleId      String
+  method      PaymentMethod
+  amount      Decimal       @db.Decimal(12,2)
+  reference   String?
+
+  sale        Sale          @relation(fields: [saleId], references: [id])
+}
+
+// ==========================================
+// FACTURACIÓN SUNAT
+// ==========================================
+model Invoice {
+  id          String        @id @default(uuid())
+  saleId      String        @unique
+  invoiceType InvoiceType
+  serie       String
+  number      Int
+  status      InvoiceStatus @default(PENDING)
+  pdfUrl      String?
+  xmlUrl      String?
+  cdrUrl      String?
+  issuedAt    DateTime      @default(now())
+
+  sale        Sale          @relation(fields: [saleId], references: [id])
+}
+
+model SunatConfig {
+  id            String   @id @default(uuid())
+  businessId    String   @unique
+  solUser       String?
+  solPassword   String?
+  certPassword  String?
+  active        Boolean  @default(false)
+
+  business      Business @relation(fields: [businessId], references: [id])
+}
+
+// ==========================================
+// NOTIFICACIONES
+// ==========================================
+model Notification {
+  id          String          @id @default(uuid())
+  userId      String?
+  title       String
+  message     String
+  type        NotificationType
+  read        Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+}
+
+// ==========================================
+// AUDITORÍA
+// ==========================================
 model AuditLog {
   id          String      @id @default(uuid())
   businessId  String
-  userId      String?     // Puede ser null si es un error de sistema sin sesión
+  userId      String?
   action      AuditAction
-  details     String?     // JSON string o texto simple
+  details     String?
   ipAddress   String?
   createdAt   DateTime    @default(now())
 
-  // Relaciones
   business    Business    @relation(fields: [businessId], references: [id])
   user        User?       @relation(fields: [userId], references: [id])
 }
