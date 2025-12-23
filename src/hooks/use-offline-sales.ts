@@ -2,32 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { offlineDB, OfflineSalePayload, OfflineSale } from '@/lib/offline/db';
 import { useNetwork } from './use-network';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 export function useOfflineSales() {
   const isOnline = useNetwork();
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 1. Cargar conteo inicial
+  // Helper para actualizar conteo
   const refreshCount = useCallback(async () => {
-    const count = await offlineDB.getCount();
-    setPendingCount(count);
+    try {
+      const count = await offlineDB.getCount();
+      setPendingCount(count);
+    } catch (e) {
+      console.error("Error leyendo IndexedDB:", e);
+    }
   }, []);
 
-  // FIX: Definimos una función interna async para ejecutar la promesa
+  // CORRECCIÓN 1: Envolver la llamada inicial en una función async interna
   useEffect(() => {
+    let isMounted = true;
+    
     const init = async () => {
-      await refreshCount();
+      if (isMounted) await refreshCount();
     };
+    
     init();
+
+    return () => { isMounted = false; };
   }, [refreshCount]);
 
-  // 2. Función para guardar venta offline
-  const saveOfflineSale = async (
-    payload: OfflineSalePayload, 
-    userId: string, 
-    branchId: string
-  ) => {
+  const saveOfflineSale = async (payload: OfflineSalePayload, userId: string, branchId: string) => {
     const localId = uuidv4();
     const sale: OfflineSale = {
       localId,
@@ -36,32 +41,25 @@ export function useOfflineSales() {
       createdAtLocal: Date.now(),
       retryCount: 0,
     };
-
     await offlineDB.addSale(sale);
     await refreshCount();
-    console.log(`[Offline] Venta guardada localmente: ${localId}`);
     return localId;
   };
 
-  // 3. Lógica de Sincronización (FIFO)
   const syncSales = useCallback(async () => {
+    // Verificaciones iniciales para evitar ejecuciones innecesarias
     if (!isOnline || isSyncing) return;
-
+    
     const sales = await offlineDB.getAllSales();
     if (sales.length === 0) return;
 
     setIsSyncing(true);
-    console.log(`[Sync] Iniciando sincronización de ${sales.length} ventas...`);
+    let successCount = 0;
 
     for (const sale of sales) {
       try {
-        console.log(`[Sync] Procesando venta: ${sale.localId}`);
-
-        const body = {
-          ...sale.payload,
-          externalId: sale.localId 
-        };
-
+        const body = { ...sale.payload, externalId: sale.localId };
+        
         const res = await fetch('/api/sales', {
           method: 'POST',
           headers: {
@@ -74,48 +72,45 @@ export function useOfflineSales() {
 
         if (res.ok) {
           await offlineDB.removeSale(sale.localId);
-          console.log(`[Sync] Venta sincronizada y eliminada: ${sale.localId}`);
+          successCount++;
         } else {
-          const errorData = await res.json();
+          const status = res.status;
           
-          if (res.status === 400) {
-            console.error(`[Sync] Error fatal (400) en venta ${sale.localId}:`, errorData);
-            break; 
-          } else if (res.status === 409) {
-            console.error(`[Sync] Conflicto (409) en venta ${sale.localId}:`, errorData);
-            break; 
+          if (status >= 400 && status < 500) {
+            console.error(`[Sync] Venta rechazada ${sale.localId} (Status ${status})`);
+            await offlineDB.removeSale(sale.localId); 
+            toast.error(`Venta offline rechazada por el servidor.`);
           } else {
-            console.warn(`[Sync] Error transitorio (${res.status}) en venta ${sale.localId}`);
-            break; 
+            console.warn(`[Sync] Error servidor ${sale.localId}, se reintentará.`);
+            break; // Parar loop en errores de servidor
           }
         }
-
-      } catch (networkError) {
-        console.error('[Sync] Error de red durante sync, pausando...', networkError);
+      } catch (error) {
+        console.error('[Sync] Fallo de red crítico');
         break; 
       }
     }
 
+    if (successCount > 0) toast.success(`${successCount} ventas sincronizadas.`);
     await refreshCount();
     setIsSyncing(false);
   }, [isOnline, isSyncing, refreshCount]);
 
-  // 4. Trigger automático: Cuando vuelve internet
-  // FIX: Usamos el mismo patrón de función interna async
+  // CORRECCIÓN 2: Envolver el auto-sync para evitar setState síncrono implícito
   useEffect(() => {
-    if (isOnline && pendingCount > 0) {
-      const runSync = async () => {
-        await syncSales();
-      };
-      runSync();
-    }
-  }, [isOnline, pendingCount, syncSales]);
+    let isMounted = true;
 
-  return {
-    isOnline,
-    pendingCount,
-    isSyncing,
-    saveOfflineSale,
-    triggerSync: syncSales,
-  };
+    const runAutoSync = async () => {
+      // Validamos aquí adentro también para asegurar consistencia
+      if (isOnline && pendingCount > 0 && !isSyncing) {
+         if (isMounted) await syncSales();
+      }
+    };
+
+    runAutoSync();
+
+    return () => { isMounted = false; };
+  }, [isOnline, pendingCount, isSyncing, syncSales]);
+
+  return { isOnline, pendingCount, isSyncing, saveOfflineSale, triggerSync: syncSales };
 }

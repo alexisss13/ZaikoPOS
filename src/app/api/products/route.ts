@@ -1,42 +1,72 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { UIProduct } from '@/types/product';
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = req.headers.get('x-branch-id') || searchParams.get('branchId');
+    const branchId = searchParams.get('branchId');
+    const search = searchParams.get('q') || '';
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = 50; // Cargar de 50 en 50 para rendimiento
 
     if (!branchId) {
       return NextResponse.json({ error: 'Branch ID requerido' }, { status: 400 });
     }
 
-    // Obtenemos productos que tengan registro de stock en esta sucursal
-    // Opcional: Podrías traer todos los del business, pero filtrar por stock es más seguro
-    const products = await prisma.product.findMany({
-      where: {
-        stock: {
-          some: { branchId: branchId }
-        }
-      },
-      include: {
-        stock: {
-          where: { branchId: branchId },
-          select: { quantity: true }
-        }
-      }
-    });
+    // Filtros dinámicos
+    const whereClause = {
+      stock: { some: { branchId } }, // Solo productos asociados a esta sucursal
+      AND: [
+        {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { code: { contains: search, mode: 'insensitive' as const } },
+          ],
+        },
+        // Opcional: Ocultar productos sin stock en la búsqueda si lo deseas
+        // { stock: { some: { branchId, quantity: { gt: 0 } } } } 
+      ],
+    };
 
-    // Aplanamos la respuesta para el frontend
-    const formattedProducts = products.map(p => ({
-      ...p,
-      price: Number(p.price), // Decimal a Number
-      stock: p.stock[0]?.quantity || 0
+    // Consulta transaccional (Total + Data)
+    const [total, products] = await prisma.$transaction([
+      prisma.product.count({ where: whereClause }),
+      prisma.product.findMany({
+        where: whereClause,
+        take: limit,
+        skip: (page - 1) * limit,
+        include: {
+          stock: {
+            where: { branchId },
+            select: { quantity: true },
+          },
+        },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    // Transformación Decimal -> Number (DTO)
+    const formattedProducts: UIProduct[] = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      code: p.code,
+      minStock: p.minStock,
+      stock: p.stock[0]?.quantity || 0,
     }));
 
-    return NextResponse.json(formattedProducts);
+    return NextResponse.json({
+      data: formattedProducts,
+      metadata: {
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

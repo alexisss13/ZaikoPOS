@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useOfflineSales } from '@/hooks/use-offline-sales';
 import { OfflineIndicator } from '@/components/pos/OfflineIndicator';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { PaymentMethod } from '@prisma/client';
 import { toast } from 'sonner';
 import { usePosStore } from '@/store/pos-store';
-import { Trash2, ShoppingCart, Search } from 'lucide-react';
-import { ProductCard, UIProduct } from '@/components/pos/ProductCard';
+import { Trash2, ShoppingCart, Search, Loader2, WifiOff, RefreshCw } from 'lucide-react';
+import { ProductCard } from '@/components/pos/ProductCard';
+import { useCatalog } from '@/hooks/use-catalog';
+import { useAuth } from '@/context/auth-context';
 
-// Definimos el tipo para evitar el 'any' en los pagos
 interface PosPayment {
   method: PaymentMethod;
   amount: number;
@@ -19,86 +20,55 @@ interface PosPayment {
 }
 
 export default function PosPage() {
-  const { 
-    isOnline, 
-    pendingCount, 
-    isSyncing, 
-    saveOfflineSale, 
-    triggerSync 
-  } = useOfflineSales();
-
-  // Conexión con el Store Global
+  // --- 1. HOOKS DE ARQUITECTURA ---
+  const { branchId, userId, role } = useAuth();
+  const { isOnline, pendingCount, isSyncing, saveOfflineSale, triggerSync } = useOfflineSales();
   const { items, total, addItem, clearCart, removeItem } = usePosStore();
+  
+  // --- 2. GESTIÓN DE CATÁLOGO (SWR + Cache) ---
+  const { 
+    products: allProducts, // SWR nos da todo el array, filtramos aquí
+    loading: isLoadingCatalog, 
+    isValidating,
+    isOfflineMode 
+  } = useCatalog(branchId);
 
+  // --- 3. ESTADO LOCAL ---
+  const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  // Usamos la interfaz correcta que exporta el ProductCard
-  const [products, setProducts] = useState<UIProduct[]>([]);
-  const [search, setSearch] = useState('');
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
-  // 1. CARGAR PRODUCTOS
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // NOTA: Recuerda reemplazar este ID con el que te dio el seed en la consola
-        // Si no tienes el ID a mano, el array estará vacío pero no dará error.
-        const res = await fetch('/api/products?branchId=9bac85a7-19d8-4089-bcf1-401d45a2cff9');
-        if (res.ok) {
-          const data = await res.json();
-          setProducts(data);
-        }
-      } catch (error) {
-        console.error("Error cargando productos", error);
-        toast.error("Error al cargar el catálogo");
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
-    fetchProducts();
-  }, []);
-
-  // 2. FILTRADO RÁPIDO (Memoizado)
+  // Filtrado Client-Side (Extremadamente rápido para < 2000 productos)
   const filteredProducts = useMemo(() => {
-    if (!search) return products;
-    const lower = search.toLowerCase();
-    return products.filter(p => 
+    if (!searchTerm) return allProducts;
+    const lower = searchTerm.toLowerCase();
+    return allProducts.filter(p => 
       p.name.toLowerCase().includes(lower) || 
-      (p.code && p.code.toLowerCase().includes(lower))
+      p.code?.toLowerCase().includes(lower)
     );
-  }, [search, products]);
+  }, [searchTerm, allProducts]);
 
-  // 3. PROCESAR VENTA
+  // --- 4. LÓGICA DE VENTA ---
   const handleProcessSale = async (payments: PosPayment[]) => { 
-    if (items.length === 0) {
-      toast.error("El carrito está vacío");
-      return;
-    }
-
+    if (items.length === 0) { toast.error("Carrito vacío"); return; }
+    
+    // Validar montos...
     const totalPayments = payments.reduce((acc, p) => acc + p.amount, 0);
-    // Permitimos margen de 0.01 por redondeo flotante
     if (Math.abs(totalPayments - total) > 0.01) {
-      toast.error("El pago no cubre el total de la venta");
-      return;
+        toast.error("Pago incompleto"); return;
     }
 
     setIsProcessing(true);
     
-    // Construir Payload
     const payload = {
-      items: items.map(i => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        price: i.price
-      })),
-      payments: payments, 
+      items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
+      payments, 
       customerId: undefined
     };
 
-    const userId = 'user-uuid-mock'; 
-    const branchId = 'branch-uuid-mock';
-
     try {
-      if (isOnline) {
+      // Intentamos venta ONLINE solo si SWR dice que no estamos en modo offline estricto
+      // y el navegador dice que hay línea.
+      if (isOnline && !isOfflineMode) {
         const res = await fetch('/api/sales', {
           method: 'POST',
           headers: {
@@ -110,34 +80,30 @@ export default function PosPage() {
         });
 
         if (!res.ok) {
-          const errorData = await res.json();
-          if (res.status === 400 || res.status === 409) {
-            toast.error("Error de venta", { description: errorData.error });
-            setIsProcessing(false);
-            return; 
-          }
-          throw new Error('Error de servidor');
+           // Si falla por 500 o timeout, lanzamos error para caer en el catch y guardar offline
+           if (res.status >= 500) throw new Error('Fallo servidor, guardando offline');
+           
+           // Si es 400 (stock), mostramos el error real y NO guardamos offline
+           const err = await res.json();
+           toast.error(err.error || "Error al procesar venta");
+           setIsProcessing(false);
+           return;
         }
 
-        toast.success("Venta registrada correctamente");
-        clearCart(); 
+        toast.success("Venta Exitosa");
+        clearCart();
       } else {
-        throw new Error('Sin conexión');
+        throw new Error('Modo Offline detectado');
       }
 
     } catch (error) {
-      console.log('Activando modo offline por:', error);
-      try {
-        await saveOfflineSale(payload, userId, branchId);
-        toast.warning("Modo Sin Conexión", {
-          description: "Venta guardada localmente.",
-          duration: 5000,
-        });
-        clearCart(); 
-      } catch (saveError) {
-        console.error("Fallo crítico:", saveError);
-        toast.error("Error Crítico", { description: "No se pudo guardar." });
-      }
+      // FALLBACK OFFLINE
+      console.log('Guardando localmente...', error);
+      await saveOfflineSale(payload, userId, branchId);
+      toast.warning("Venta guardada offline", {
+        description: "Se sincronizará cuando vuelva la conexión."
+      });
+      clearCart();
     } finally {
       setIsProcessing(false);
     }
@@ -146,122 +112,121 @@ export default function PosPage() {
   return (
     <div className="h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden">
       
-      {/* SECCIÓN IZQUIERDA: CATÁLOGO */}
-      <div className="flex-1 flex flex-col h-full p-4 gap-4 overflow-hidden border-r">
+      {/* --- COLUMNA IZQUIERDA: CATÁLOGO --- */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden border-r bg-slate-50/50">
         
-        {/* BUSCADOR */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input 
-            placeholder="Buscar por nombre o código..." 
-            className="pl-9 bg-white shadow-sm h-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-          />
-        </div>
-
-        {/* GRID DE PRODUCTOS */}
-        <div className="flex-1 overflow-y-auto pr-2 pb-20">
-          {isLoadingProducts ? (
-            <div className="flex flex-col items-center justify-center h-40 gap-2 text-muted-foreground">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p>Cargando catálogo...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-60 text-muted-foreground">
-              <Search className="w-12 h-12 mb-2 opacity-20" />
-              <p>No se encontraron productos</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {filteredProducts.map(p => (
-                <ProductCard 
-                  key={p.id} 
-                  product={p} 
-                  // YA NO NECESITAS 'as any', TypeScript ahora entiende que son compatibles
-                  onAdd={(prod) => addItem(prod)} 
+        {/* HEADER CATÁLOGO */}
+        <div className="p-4 flex gap-3 items-center bg-white border-b">
+             <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input 
+                  placeholder="Buscar productos..." 
+                  className={`pl-9 ${isOfflineMode ? 'border-amber-300 focus-visible:ring-amber-300' : ''}`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
                 />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-
-      {/* SECCIÓN DERECHA: CARRITO (LADO FIJO) */}
-      <div className="w-full md:w-100px bg-white shadow-xl flex flex-col h-full z-20">
-        
-        {/* HEADER CARRITO */}
-        <div className="p-4 border-b bg-white flex justify-between items-center">
-            <h1 className="font-bold flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5" /> Carrito
-            </h1>
-            <OfflineIndicator 
-                isOnline={isOnline}
-                isSyncing={isSyncing}
-                pendingCount={pendingCount}
-                onSync={triggerSync}
-            />
+             </div>
+             {/* Indicador de estado de Red/Datos */}
+             {isOfflineMode ? (
+                 <div className="flex items-center gap-1 text-amber-600 text-xs font-medium px-3 py-2 bg-amber-50 rounded-full border border-amber-200">
+                    <WifiOff className="w-3 h-3" />
+                    <span>Offline</span>
+                 </div>
+             ) : isValidating ? (
+                 <div className="flex items-center gap-1 text-blue-600 text-xs font-medium px-3 py-2 bg-blue-50 rounded-full">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Actualizando...</span>
+                 </div>
+             ) : null}
         </div>
 
-        {/* LISTA CARRITO (SCROLLABLE) */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
-            {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
-                    <ShoppingCart className="w-16 h-16 mb-4 stroke-1" />
-                    <p className="font-medium">Tu carrito está vacío</p>
-                    <p className="text-xs">Escanea o selecciona productos</p>
+        {/* GRID */}
+        <div className="flex-1 overflow-y-auto p-4">
+            {isLoadingCatalog ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                    <p>Cargando catálogo...</p>
+                </div>
+            ) : filteredProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-60 text-muted-foreground opacity-60">
+                    <Search className="w-12 h-12 mb-2" />
+                    <p>No se encontraron productos</p>
                 </div>
             ) : (
-                items.map((item) => (
-                    <div key={item.productId} className="flex justify-between items-center bg-white p-3 rounded-lg border shadow-sm group hover:border-primary/50 transition-colors">
-                        <div>
-                           <p className="font-medium text-sm line-clamp-1">{item.name}</p>
-                           <p className="text-xs text-muted-foreground mt-1">
-                             <span className="font-semibold text-foreground">{item.quantity}</span> x S/ {item.price.toFixed(2)}
-                           </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                           <span className="font-bold text-sm">S/ {item.subtotal.toFixed(2)}</span>
-                           <Button 
-                             variant="ghost" 
-                             size="icon" 
-                             className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50"
-                             onClick={() => removeItem(item.productId)}
-                           >
-                             <Trash2 className="w-4 h-4" />
-                           </Button>
-                        </div>
-                      </div>
-                ))
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20">
+                    {filteredProducts.map(p => (
+                        <ProductCard 
+                            key={p.id} 
+                            product={p} 
+                            onAdd={(prod) => {
+                                if (prod.stock <= 0) return toast.error("Sin stock");
+                                addItem(prod);
+                            }} 
+                        />
+                    ))}
+                </div>
             )}
         </div>
-
-        {/* FOOTER TOTALES */}
-        <div className="p-4 border-t bg-white space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-             <div className="flex justify-between items-end">
-                <span className="text-muted-foreground font-medium">Total a Pagar</span>
-                <span className="text-3xl font-bold text-primary">S/ {total.toFixed(2)}</span>
-             </div>
-             
-             <Button 
-                size="lg" 
-                className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
-                disabled={isProcessing || items.length === 0}
-                onClick={() => handleProcessSale([{ method: PaymentMethod.CASH, amount: total }])}
-             >
-                {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Procesando...
-                    </div>
-                ) : 'COBRAR (Espacio)'}
-             </Button>
-        </div>
-
       </div>
 
+      {/* --- COLUMNA DERECHA: CARRITO --- */}
+      <div className="w-full md:w-[400px] bg-white shadow-xl flex flex-col h-full z-20 border-l">
+          <div className="p-4 border-b flex justify-between items-center bg-white">
+              <h1 className="font-bold flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  <span className="hidden sm:inline">Carrito</span>
+              </h1>
+              <OfflineIndicator 
+                  isOnline={isOnline} 
+                  pendingCount={pendingCount} 
+                  isSyncing={isSyncing} 
+                  onSync={triggerSync}
+              />
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {items.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-40">
+                      <ShoppingCart className="w-12 h-12 mb-2" />
+                      <p>Carrito vacío</p>
+                  </div>
+              ) : (
+                  items.map(item => (
+                      <div key={item.productId} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border">
+                          <div>
+                              <p className="font-medium text-sm line-clamp-1">{item.name}</p>
+                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                  <span className="bg-white px-2 py-0.5 rounded border">{item.quantity}</span>
+                                  <span>x S/ {item.price.toFixed(2)}</span>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                              <span className="font-bold">S/ {item.subtotal.toFixed(2)}</span>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => removeItem(item.productId)}>
+                                  <Trash2 className="w-4 h-4" />
+                              </Button>
+                          </div>
+                      </div>
+                  ))
+              )}
+          </div>
+
+          <div className="p-4 border-t bg-slate-50 space-y-3">
+              <div className="flex justify-between items-end">
+                  <span className="text-muted-foreground font-medium">Total</span>
+                  <span className="text-3xl font-bold text-primary">S/ {total.toFixed(2)}</span>
+              </div>
+              <Button 
+                size="lg" 
+                className="w-full h-12 text-lg font-bold shadow-md" 
+                disabled={items.length === 0 || isProcessing}
+                onClick={() => handleProcessSale([{ method: PaymentMethod.CASH, amount: total }])}
+              >
+                {isProcessing ? <Loader2 className="animate-spin" /> : `COBRAR S/ ${total.toFixed(2)}`}
+              </Button>
+          </div>
+      </div>
     </div>
   );
 }
