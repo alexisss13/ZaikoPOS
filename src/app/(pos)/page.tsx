@@ -42,7 +42,7 @@ export default function PosPage() {
       try {
         // NOTA: Recuerda reemplazar este ID con el que te dio el seed en la consola
         // Si no tienes el ID a mano, el array estará vacío pero no dará error.
-        const res = await fetch('/api/products?branchId=branch-uuid-mock'); 
+        const res = await fetch('/api/products?branchId=9bac85a7-19d8-4089-bcf1-401d45a2cff9');
         if (res.ok) {
           const data = await res.json();
           setProducts(data);

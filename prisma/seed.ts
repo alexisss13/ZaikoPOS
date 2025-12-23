@@ -1,38 +1,22 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Role } from '@prisma/client';
 import { hashPassword } from '../src/lib/security';
+// No olvides dotenv para que el script lea el .env al ejecutarse directo
+import 'dotenv/config'; 
 
-// 1. CARGA MANUAL DE .ENV
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
-  const envConfig = fs.readFileSync(envPath, 'utf-8');
-  envConfig.split('\n').forEach((line) => {
-    if (!line || line.startsWith('#')) return;
-    const [key, ...valueParts] = line.split('=');
-    if (key && valueParts.length > 0) {
-      const value = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
-      process.env[key.trim()] = value;
-    }
-  });
-}
+// 1. Configurar la conexión usando el Driver Adapter (La forma Prisma 7)
+const connectionString = `${process.env.DATABASE_URL}`;
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error('❌ ERROR: DATABASE_URL no cargada.');
-  process.exit(1);
-}
-
-// 2. INSTANCIA MANUAL
-// Al no tener URL en el schema, Prisma 7 permite/exige esto:
-const prisma = new PrismaClient();
-
+// Usamos pg.Pool como indica el estándar para adaptadores
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🌱 Iniciando seed...');
-  console.log('🔌 Conectando...');
+  console.log('🌱 Iniciando seed (Modo Adapter)...');
 
-  // Limpieza
+  // Limpieza de datos
   try {
       await prisma.salePayment.deleteMany();
       await prisma.saleItem.deleteMany();
@@ -44,18 +28,23 @@ async function main() {
       await prisma.branch.deleteMany();
       await prisma.business.deleteMany();
       console.log('🗑️  BD Limpiada');
-  } catch (e) { console.log('⚠️  Limpieza omitida'); }
+  } catch (e) {
+      console.log('⚠️  Limpieza omitida.');
+  }
 
-  // Datos
+  // Crear Negocio
   const business = await prisma.business.create({
     data: { name: 'Bodega "El Primo"', ruc: '20123456789', address: 'Av. Siempre Viva 123' }
   });
 
+  // Crear Sucursal
   const branch = await prisma.branch.create({
     data: { businessId: business.id, name: 'Sucursal Principal' }
   });
 
+  // Crear Usuario
   const passwordHash = await hashPassword('123456'); 
+  
   await prisma.user.create({
     data: {
       businessId: business.id,
@@ -66,7 +55,7 @@ async function main() {
     }
   });
 
-  // Productos
+  // Crear Productos
   const productsData = [
     { name: 'Coca Cola 600ml', price: 3.50, code: '77501' },
     { name: 'Inca Kola 600ml', price: 3.50, code: '77502' },
@@ -74,24 +63,24 @@ async function main() {
     { name: 'Arroz Costeño 1kg', price: 4.20, code: 'PROD04' },
     { name: 'Aceite Primor', price: 12.50, code: 'PROD05' },
     { name: 'Atún Florida', price: 5.50, code: 'PROD06' },
-    { name: 'Detergente Bolivar', price: 8.00, code: 'PROD07' },
-    { name: 'Leche Gloria Azul', price: 4.00, code: 'PROD08' },
-    { name: 'Yogurt Gloria 1L', price: 6.50, code: 'PROD09' },
-    { name: 'Cerveza Pilsen', price: 7.00, code: 'PROD10' },
   ];
 
   console.log('📦 Creando productos...');
+
   for (const p of productsData) {
     const product = await prisma.product.create({
       data: { businessId: business.id, name: p.name, price: p.price, code: p.code }
     });
+
     await prisma.stock.create({
       data: { branchId: branch.id, productId: product.id, quantity: 100 }
     });
   }
 
+  console.log('------------------------------------------------');
   console.log('✅ SEED EXITOSO');
   console.log(`🏪 BRANCH ID: ${branch.id}`); 
+  console.log('------------------------------------------------');
 }
 
 main()
