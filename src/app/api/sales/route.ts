@@ -1,73 +1,113 @@
 import { NextResponse } from 'next/server';
-import { saleService } from '@/services/sale.service';
+import prisma from '@/lib/prisma';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { PaymentMethod } from '@prisma/client';
+
+// 1. Esquema estricto para los pagos (Adiós z.any)
+const paymentSchema = z.object({
+  method: z.nativeEnum(PaymentMethod), // Valida contra el Enum de Prisma
+  amount: z.number().positive(),
+  reference: z.string().optional().nullable(),
+});
 
 const saleSchema = z.object({
-  externalId: z.string().uuid().optional(), // <--- NUEVO
   items: z.array(z.object({
-    productId: z.string().uuid(),
-    quantity: z.number().int().positive(),
-    price: z.number().nonnegative(),
-  })).min(1, 'La venta debe tener al menos un producto'),
-  payments: z.array(z.object({
-    method: z.enum(['CASH', 'YAPE', 'PLIN', 'CARD', 'TRANSFER']),
-    amount: z.number().positive(),
-    reference: z.string().optional(),
-  })).min(1, 'Debe haber al menos un método de pago'),
-  customerId: z.string().uuid().optional(),
+    productId: z.string(),
+    quantity: z.number().positive(),
+    price: z.number(),
+  })),
+  payments: z.array(paymentSchema),
+  externalId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
   try {
     const userId = req.headers.get('x-user-id');
     const branchId = req.headers.get('x-branch-id');
-
+    
     if (!userId || !branchId) {
-      return NextResponse.json({ error: 'Credenciales faltantes' }, { status: 401 });
+      return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 });
     }
 
     const body = await req.json();
-    const validatedData = saleSchema.parse(body);
-
-    // Pasamos externalId al servicio (asegúrate de actualizar la interfaz en sale.service.ts también, 
-    // pero por ahora Prisma lo aceptará si lo pasamos directo en el create data si actualizamos el tipo)
-    // NOTA: Para no romper el servicio ahora, pasamos externalId como parte de la data
-    // Si tu servicio es estricto con tipos, añade externalId?: string a CreateSaleParams
     
-    const sale = await saleService.createSale({
-      userId,
-      branchId,
-      ...validatedData,
-      externalId: validatedData.externalId 
+    // Validación Zod segura
+    const { items, payments, externalId } = saleSchema.parse(body);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // A. Idempotencia (Evitar duplicados offline)
+      if (externalId) {
+        const existing = await tx.sale.findUnique({ where: { externalId } });
+        if (existing) return existing;
+      }
+
+      // B. Verificación y Descuento de Stock
+      for (const item of items) {
+        // Buscamos el stock específico en la sucursal
+        const stockEntry = await tx.stock.findUnique({
+            where: { branchId_productId: { branchId, productId: item.productId } }
+        });
+
+        if (!stockEntry || stockEntry.quantity < item.quantity) {
+          throw new Error(`STOCK_CONFLICT:${item.productId}`);
+        }
+
+        await tx.stock.update({
+          where: { id: stockEntry.id },
+          data: { quantity: { decrement: item.quantity } }
+        });
+      }
+
+      // C. Crear Venta
+      const totalAmount = items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+
+      const sale = await tx.sale.create({
+        data: {
+          externalId,
+          branchId,
+          userId,
+          subtotal: totalAmount,
+          total: totalAmount,
+          status: 'COMPLETED',
+          items: {
+            create: items.map(i => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              price: i.price,
+              subtotal: i.price * i.quantity
+            }))
+          },
+          payments: {
+            create: payments.map(p => ({
+              method: p.method,
+              amount: p.amount,
+              reference: p.reference || null
+            }))
+          }
+        }
+      });
+
+      return sale;
     });
 
-    return NextResponse.json(sale, { status: 201 });
+    return NextResponse.json(result);
 
   } catch (error: unknown) {
-    let status = 500;
-    let message = 'Error al procesar la venta';
+    // Manejo tipado de errores
+    if (error instanceof Error && error.message?.startsWith('STOCK_CONFLICT')) {
+      const productId = error.message.split(':')[1];
+      return NextResponse.json(
+        { error: 'Stock insuficiente', code: 'CONFLICT', productId }, 
+        { status: 409 }
+      );
+    }
 
-    // Manejo de errores Zod
     if (error instanceof z.ZodError) {
-      status = 400;
-      message = error.issues[0]?.message || 'Datos inválidos';
-    } 
-    // Manejo de errores Prisma (Idempotencia)
-    else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2002: Unique constraint failed
-      if (error.code === 'P2002' && (error.meta?.target as string[])?.includes('externalId')) {
-        // IDEMPOTENCIA: Si ya existe el externalId, devolvemos 200 OK fingiendo éxito
-        return NextResponse.json({ message: 'Venta ya procesada previamente' }, { status: 200 });
-      }
-    }
-    else if (error instanceof Error) {
-      message = error.message;
-      if (message.includes('Caja') || message.includes('Stock') || message.includes('coincide')) {
-        status = 409;
-      }
+       // CORRECCIÓN: Usamos .issues en lugar de .errors para satisfacer al tipado estricto
+       return NextResponse.json({ error: 'Datos inválidos', details: error.issues }, { status: 400 });
     }
 
-    return NextResponse.json({ error: message }, { status });
+    console.error('Error procesando venta:', error);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

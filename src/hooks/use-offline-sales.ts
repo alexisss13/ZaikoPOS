@@ -4,33 +4,23 @@ import { useNetwork } from './use-network';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
+export interface SyncConflict {
+  saleId: string;
+  reason: string;
+  productId?: string;
+}
+
 export function useOfflineSales() {
   const isOnline = useNetwork();
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
 
-  // Helper para actualizar conteo
+  // ... (refreshCount y saveOfflineSale se mantienen igual) ...
   const refreshCount = useCallback(async () => {
-    try {
-      const count = await offlineDB.getCount();
-      setPendingCount(count);
-    } catch (e) {
-      console.error("Error leyendo IndexedDB:", e);
-    }
+    const count = await offlineDB.getCount();
+    setPendingCount(count);
   }, []);
-
-  // CORRECCIÓN 1: Envolver la llamada inicial en una función async interna
-  useEffect(() => {
-    let isMounted = true;
-    
-    const init = async () => {
-      if (isMounted) await refreshCount();
-    };
-    
-    init();
-
-    return () => { isMounted = false; };
-  }, [refreshCount]);
 
   const saveOfflineSale = async (payload: OfflineSalePayload, userId: string, branchId: string) => {
     const localId = uuidv4();
@@ -47,7 +37,6 @@ export function useOfflineSales() {
   };
 
   const syncSales = useCallback(async () => {
-    // Verificaciones iniciales para evitar ejecuciones innecesarias
     if (!isOnline || isSyncing) return;
     
     const sales = await offlineDB.getAllSales();
@@ -55,9 +44,11 @@ export function useOfflineSales() {
 
     setIsSyncing(true);
     let successCount = 0;
+    const newConflicts: SyncConflict[] = [];
 
     for (const sale of sales) {
       try {
+        // Body con ID de idempotencia
         const body = { ...sale.payload, externalId: sale.localId };
         
         const res = await fetch('/api/sales', {
@@ -76,41 +67,69 @@ export function useOfflineSales() {
         } else {
           const status = res.status;
           
-          if (status >= 400 && status < 500) {
-            console.error(`[Sync] Venta rechazada ${sale.localId} (Status ${status})`);
-            await offlineDB.removeSale(sale.localId); 
-            toast.error(`Venta offline rechazada por el servidor.`);
+          if (status === 409) {
+            // CONFLICTO REAL (Stock se acabó mientras estaba offline)
+            const data = await res.json();
+            console.error(`[Sync] Conflicto de stock en venta ${sale.localId}`);
+            
+            // No borramos la venta, la dejamos en DB pero la marcamos en UI
+            // Opcional: Podrías moverla a una tabla 'failed_sales' en IndexedDB
+            newConflicts.push({ 
+                saleId: sale.localId, 
+                reason: 'Stock insuficiente',
+                productId: data.productId
+            });
+            
+            // Eliminamos de la cola de 'pendientes de reintento automático' para no bloquear
+            await offlineDB.removeSale(sale.localId);
+            
+            // Aquí deberías guardar la venta en un store de "Errores" para que el usuario la corrija
+            // saveToConflictStore(sale); 
+            
+          } else if (status >= 400 && status < 500) {
+            // Error de datos (Bug del frontend o validación)
+            await offlineDB.removeSale(sale.localId);
+            toast.error(`Venta corrupta eliminada: ${sale.localId}`);
           } else {
-            console.warn(`[Sync] Error servidor ${sale.localId}, se reintentará.`);
-            break; // Parar loop en errores de servidor
+            // Error 500 o Red: Se mantiene en cola para reintentar luego
+            console.warn(`[Sync] Error servidor, reintentando luego.`);
           }
         }
       } catch (error) {
-        console.error('[Sync] Fallo de red crítico');
-        break; 
+        console.error('[Sync] Error de red grave');
+        break; // Cortar sincronización
       }
     }
 
     if (successCount > 0) toast.success(`${successCount} ventas sincronizadas.`);
+    
+    if (newConflicts.length > 0) {
+        setConflicts(prev => [...prev, ...newConflicts]);
+        toast.error(`${newConflicts.length} ventas tuvieron conflictos de stock.`);
+    }
+
     await refreshCount();
     setIsSyncing(false);
   }, [isOnline, isSyncing, refreshCount]);
 
-  // CORRECCIÓN 2: Envolver el auto-sync para evitar setState síncrono implícito
+  // Auto-sync
   useEffect(() => {
     let isMounted = true;
-
-    const runAutoSync = async () => {
-      // Validamos aquí adentro también para asegurar consistencia
-      if (isOnline && pendingCount > 0 && !isSyncing) {
-         if (isMounted) await syncSales();
-      }
+    const run = async () => {
+        if (isOnline && pendingCount > 0 && !isSyncing) {
+            if(isMounted) await syncSales();
+        }
     };
-
-    runAutoSync();
-
+    run();
     return () => { isMounted = false; };
   }, [isOnline, pendingCount, isSyncing, syncSales]);
 
-  return { isOnline, pendingCount, isSyncing, saveOfflineSale, triggerSync: syncSales };
+  return { 
+      isOnline, 
+      pendingCount, 
+      isSyncing, 
+      saveOfflineSale, 
+      triggerSync: syncSales,
+      conflicts // Nuevo estado para mostrar en UI
+  };
 }

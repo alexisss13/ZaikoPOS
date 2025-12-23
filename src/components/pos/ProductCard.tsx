@@ -4,26 +4,18 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-
-// DEFINICIÓN FLEXIBLE: Lo que el componente realmente necesita para pintar
-export interface UIProduct {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  code: string | null;
-  minStock?: number; // Opcional
-}
+// 👇 IMPORTAR LA INTERFAZ GLOBAL (Borra la interfaz local si la tienes abajo)
+import { UIProduct } from '@/types/product';
 
 interface ProductCardProps {
   product: UIProduct;
-  onAdd: (product: UIProduct) => void; // Adiós 'any'
+  onAdd: (product: UIProduct) => void;
 }
 
 export function ProductCard({ product, onAdd }: ProductCardProps) {
+  // Aseguramos que minStock tenga valor por si la API falla en enviarlo
+  const minStock = product.minStock ?? 0;
   const hasStock = product.stock > 0;
-  // Corrección: min-h-10 es la clase correcta de Tailwind 4/Standard
-  const minStock = product.minStock || 5; 
 
   return (
     <Card 
@@ -35,6 +27,7 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
            <Badge variant="outline" className="text-xs font-normal">
              {product.code || 'S/C'}
            </Badge>
+           {/* Usamos la variable local segura */}
            {product.stock <= minStock && hasStock && (
              <Badge variant="destructive" className="text-[10px] h-4 px-1">
                Bajo: {product.stock}
