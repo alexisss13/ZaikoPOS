@@ -6,7 +6,7 @@ import { Prisma, PaymentMethod } from '@prisma/client';
 interface SaleItemInput {
   productId: string;
   quantity: number;
-  price: number; // Precio unitario al momento de la venta
+  price: number; 
 }
 
 interface SalePaymentInput {
@@ -18,6 +18,7 @@ interface SalePaymentInput {
 interface CreateSaleParams {
   userId: string;
   branchId: string;
+  externalId?: string; // <--- NUEVO: Opcional para idempotencia
   items: SaleItemInput[];
   payments: SalePaymentInput[];
   customerId?: string;
@@ -25,10 +26,9 @@ interface CreateSaleParams {
 
 export const saleService = {
   createSale: async (params: CreateSaleParams) => {
-    const { userId, branchId, items, payments, customerId } = params;
+    const { userId, branchId, externalId, items, payments, customerId } = params; // <--- Destructurar externalId
 
     // 1. VALIDACIÓN: Caja Abierta
-    // Buscamos la sesión del usuario en esa sucursal
     const cashSession = await prisma.cashSession.findFirst({
       where: {
         userId,
@@ -41,19 +41,17 @@ export const saleService = {
       throw new Error('No puedes realizar una venta sin una caja abierta.');
     }
 
-    // 2. CÁLCULOS Y VALIDACIONES FINANCIERAS
+    // 2. CÁLCULOS
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const total = subtotal; // Por ahora sin descuentos globales complejos
+    const total = subtotal; 
     
     const totalPaid = payments.reduce((acc, pay) => acc + pay.amount, 0);
 
-    // Permitimos un margen de error ínfimo por redondeo flotante (0.01)
     if (Math.abs(total - totalPaid) > 0.01) {
       throw new Error(`El pago total (S/ ${totalPaid}) no coincide con el monto de la venta (S/ ${total}).`);
     }
 
-    // 3. TRANSACCIÓN ATÓMICA (Prisma $transaction)
-    // Todo lo que ocurra aquí dentro tiene éxito junto o falla junto.
+    // 3. TRANSACCIÓN ATÓMICA
     return await prisma.$transaction(async (tx) => {
       
       // A. Verificar y Descontar Stock
@@ -80,6 +78,7 @@ export const saleService = {
       // B. Crear la Venta Cabecera
       const sale = await tx.sale.create({
         data: {
+          externalId, // <--- NUEVO: Pasamos el ID de idempotencia
           branchId,
           userId,
           cashSessionId: cashSession.id,
@@ -91,7 +90,7 @@ export const saleService = {
         }
       });
 
-      // C. Crear Items de Venta
+      // C. Crear Items
       await tx.saleItem.createMany({
         data: items.map(item => ({
           saleId: sale.id,
@@ -112,8 +111,7 @@ export const saleService = {
         }))
       });
 
-      // E. Actualizar Caja (Solo si hay efectivo)
-      // Filtramos pagos que sean CASH
+      // E. Actualizar Caja (Solo Cash)
       const cashIncome = payments
         .filter(p => p.method === 'CASH')
         .reduce((acc, p) => acc + p.amount, 0);

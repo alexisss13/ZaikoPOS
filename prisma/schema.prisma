@@ -187,6 +187,7 @@ model Customer {
 model Sale {
   id            String   @id @default(uuid())
   code          String   @default(cuid()) // Identificador corto interno
+  externalId    String?  @unique // Clave de idempotencia (UUID local)
   businessId    String?  // Redundancia útil para reportes globales
   branchId      String
   cashSessionId String?  // Opcional solo si es venta web, en POS es obligatorio
