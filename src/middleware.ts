@@ -77,11 +77,11 @@ export const config = {
   matcher: [
     /*
      * Coincidir con todas las rutas excepto:
-     * - api/auth (login/logout son públicas, otras api protegidas por middleware)
      * - _next/static (archivos estáticos)
      * - _next/image (imágenes optimizadas)
      * - favicon.ico (icono)
+     * - public (archivos públicos)
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 };
