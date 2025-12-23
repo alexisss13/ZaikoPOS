@@ -1,9 +1,21 @@
-import { PrismaClient, Role } from '@prisma/client';
+// 1. Cargar variables de entorno ANTES de cualquier otra importación
+import "dotenv/config";
+import { Role } from '@prisma/client';
 import { hash } from 'bcryptjs';
-
-const prisma = new PrismaClient();
+// 2. Importar la instancia configurada de prisma
+import { prisma } from '../src/lib/prisma';
 
 async function main() {
+  console.log('🌱 Iniciando seed...');
+
+  // Limpieza inicial para evitar duplicados
+  await prisma.stock.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.branch.deleteMany();
+  await prisma.business.deleteMany();
+
   // 1. Crear Negocio
   const business = await prisma.business.create({
     data: {
@@ -72,13 +84,13 @@ async function main() {
     });
   }
 
-  console.log('Seed completado! 🚀');
+  console.log('✅ Seed completado exitosamente! 🚀');
   console.log({ businessId: business.id, branchId: branch.id, ownerId: owner.id });
 }
 
 main()
   .catch(e => {
-    console.error(e);
+    console.error('❌ Error en el seed:', e);
     process.exit(1);
   })
   .finally(async () => {

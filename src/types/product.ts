@@ -1,13 +1,13 @@
-// src/types/product.ts
 export interface UIProduct {
   id: string;
   name: string;
-  price: number;     // Ya transformado de Decimal
+  price: number;
   stock: number;
   code: string | null;
   minStock: number;
-  category?: string; // Ahora sí viene de la relación
-  active: boolean;   // Nuevo campo
+  category?: string;   // Nombre de la categoría (para mostrar)
+  categoryId?: string; // ID de la relación (para lógica)
+  active: boolean;     // Estado del producto
 }
 
 export interface ProductApiResponse {

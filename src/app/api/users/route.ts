@@ -9,11 +9,11 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   role: z.nativeEnum(Role),
+  branchId: z.string().optional(), // 👈 Opcional: Vincular a una sucursal
 });
 
 export async function POST(req: Request) {
   try {
-    // Validar permisos (Solo OWNER o SUPER_ADMIN)
     const requesterRole = req.headers.get('x-user-role');
     const businessId = req.headers.get('x-business-id');
 
@@ -28,7 +28,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createUserSchema.parse(body);
 
-    // Hash password
     const hashedPassword = await hashPassword(data.password);
 
     const user = await prisma.user.create({
@@ -37,16 +36,17 @@ export async function POST(req: Request) {
         email: data.email,
         password: hashedPassword,
         role: data.role,
-        businessId: businessId,
+        businessId: businessId, // 👈 Vinculación obligatoria al Negocio
+        branchId: data.branchId, // 👈 Vinculación opcional a Sucursal
       },
-      select: { id: true, name: true, email: true, role: true } // No devolver password
+      select: { id: true, name: true, email: true, role: true }
     });
 
     return NextResponse.json(user);
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-        return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+        return NextResponse.json({ error: 'Datos inválidos', details: error.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Error al crear usuario' }, { status: 500 });
   }

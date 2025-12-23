@@ -9,7 +9,8 @@ import {
   ShoppingBag, 
   LogOut, 
   Store, 
-  ShieldCheck // <--- Importamos el ícono para Auditoría
+  ShieldCheck,
+  Tags // <--- Importamos el ícono para Auditoría
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/users', label: 'Usuarios', icon: Users },
     { href: '/dashboard/products', label: 'Inventario', icon: Package }, // Futuro (CRUD Productos)
+    { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
     { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck }, // <--- NUEVA RUTA
     { href: '/pos', label: 'Ir al POS', icon: ShoppingBag }, 
   ];
