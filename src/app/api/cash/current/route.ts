@@ -1,20 +1,27 @@
 import { NextResponse } from 'next/server';
-import { cashService } from '@/services/cash.service';
+import prisma from '@/lib/prisma';
 
 export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const queryBranchId = searchParams.get('branchId');
+  const userId = req.headers.get('x-user-id');
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!queryBranchId) {
-      return NextResponse.json({ error: 'Branch ID requerido' }, { status: 400 });
-    }
+  // Buscar última sesión del usuario que NO tenga fecha de cierre
+  const session = await prisma.cashSession.findFirst({
+    where: { 
+        userId,
+        closedAt: null // Importante: Solo abiertas
+    },
+    orderBy: { openedAt: 'desc' }
+  });
 
-    const session = await cashService.getCurrentSession(queryBranchId);
-    return NextResponse.json({ session });
-  } catch (error: unknown) {
-    // Manejo tipado seguro
-    const message = error instanceof Error ? error.message : 'Error interno desconocido';
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  if (!session) return NextResponse.json({ session: null });
+
+  return NextResponse.json({ 
+      session: {
+          id: session.id,
+          status: 'OPEN',
+          initialCash: Number(session.initialCash),
+          openedAt: session.openedAt
+      } 
+  });
 }
