@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 import { PaymentMethod } from '@prisma/client';
+import { logAudit } from '@/lib/audit';
 
 // 1. Esquema estricto para los pagos (Adiós z.any)
 const paymentSchema = z.object({
@@ -40,7 +41,19 @@ export async function POST(req: Request) {
         const existing = await tx.sale.findUnique({ where: { externalId } });
         if (existing) return existing;
       }
-
+    if (result) {
+    // Buscamos el businessId del usuario si no lo tenemos a mano
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { businessId: true } });
+    
+    if (user?.businessId) {
+        await logAudit({
+            action: 'CREATE_SALE',
+            businessId: user.businessId,
+            userId: userId,
+            details: `Venta ${result.code} por S/ ${result.total}`,
+        });
+    }
+}
       // B. Verificación y Descuento de Stock
       for (const item of items) {
         // Buscamos el stock específico en la sucursal

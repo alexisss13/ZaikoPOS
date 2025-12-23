@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter } from "next/font/google"; // O la fuente que uses
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner"; // <--- IMPORTAR AQUÍ
+import { Toaster } from "@/components/ui/sonner";
+// 👇 1. IMPORTAR EL PROVIDER
+import { AuthProvider } from "@/context/auth-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Zaiko POS",
-  description: "Sistema de Punto de Venta",
+  description: "Sistema de Punto de Venta SaaS",
 };
 
 export default function RootLayout({
@@ -18,8 +20,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        {children}
-        <Toaster /> {/* <--- AGREGAR AQUÍ (Puede ir antes de cerrar body) */}
+        {/* 👇 2. ENVOLVER TODO EN AUTHPROVIDER */}
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

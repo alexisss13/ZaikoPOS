@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
+import { logAudit } from '@/lib/audit'; // 👈 FIX 1: Importar logAudit
 
 const closeSchema = z.object({
   finalCash: z.number().min(0),
@@ -13,18 +14,17 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { finalCash } = closeSchema.parse(body);
+    // 👈 FIX 2: Extraer 'comments' del parseo
+    const { finalCash, comments } = closeSchema.parse(body);
 
     // 1. Obtener sesión abierta
     const session = await prisma.cashSession.findFirst({
         where: { userId, closedAt: null },
-        include: { sales: true } // Ojo: en un sistema grande, sumar con aggregate
     });
 
     if (!session) return NextResponse.json({ error: 'No hay caja abierta' }, { status: 404 });
 
     // 2. Calcular Totales del Sistema
-    // Sumamos ventas hechas por este usuario desde que abrió la caja
     const salesAgg = await prisma.sale.aggregate({
         where: {
             userId: userId,
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     
     // El sistema espera tener: Inicial + Ventas
     const expectedCash = initial + systemIncome;
-    const difference = finalCash - expectedCash; // Positivo = Sobra, Negativo = Falta
+    const difference = finalCash - expectedCash; 
 
     // 3. Cerrar Sesión
     const closedSession = await prisma.cashSession.update({
@@ -52,6 +52,27 @@ export async function POST(req: Request) {
             status: 'CLOSED'
         }
     });
+
+    // 👈 FIX 3: Lógica de Auditoría Corregida
+    // No buscamos closedSession.businessId porque no existe.
+    // Buscamos el usuario para saber a qué negocio pertenece.
+    const user = await prisma.user.findUnique({ 
+        where: { id: userId }, 
+        select: { businessId: true } 
+    });
+    
+    if (user?.businessId) {
+        await logAudit({
+            action: 'CLOSE_CASH',
+            businessId: user.businessId,
+            userId: userId,
+            details: JSON.stringify({
+                finalCash,
+                difference: closedSession.difference,
+                comments: comments || 'Sin comentarios'
+            })
+        });
+    }
 
     return NextResponse.json(closedSession);
 

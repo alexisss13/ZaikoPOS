@@ -1,7 +1,7 @@
+// src/app/page.tsx
 import { redirect } from 'next/navigation';
 
-export default function Home() {
-  // Por ahora, redirigimos siempre al login.
-  // En el futuro, el middleware decidirá si vas a /pos o /login
+export default function RootPage() {
+  // Redirigir al login por defecto
   redirect('/login');
 }

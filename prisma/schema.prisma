@@ -66,6 +66,7 @@ model Business {
   products    Product[]
   customers   Customer[]
   sunatConfig SunatConfig? // Configuración futura SUNAT
+  auditLogs   AuditLog[]
 }
 
 model Branch {
@@ -102,6 +103,7 @@ model User {
   business    Business? @relation(fields: [businessId], references: [id])
   sessions    CashSession[] // Cajas que abrió este usuario
   sales       Sale[]        // Ventas realizadas
+  auditLogs   AuditLog[]
 }
 
 // ==========================================
@@ -280,3 +282,30 @@ model Notification {
   createdAt   DateTime         @default(now())
 }
 
+
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  CREATE_SALE
+  OPEN_CASH
+  CLOSE_CASH
+  UPDATE_STOCK
+  CREATE_USER
+  DELETE_USER
+  SYSTEM_ERROR
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  businessId  String
+  userId      String?     // Puede ser null si es un error de sistema sin sesión
+  action      AuditAction
+  details     String?     // JSON string o texto simple
+  ipAddress   String?
+  createdAt   DateTime    @default(now())
+
+  // Relaciones
+  business    Business    @relation(fields: [businessId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id])
+}

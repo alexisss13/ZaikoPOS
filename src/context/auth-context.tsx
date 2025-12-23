@@ -1,20 +1,27 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from 'react';
 
-interface UserSession {
+// Tipos
+export interface UserSession {
   userId: string;
   branchId: string;
   role: string;
   name: string;
 }
 
-const AuthContext = createContext<UserSession | null>(null);
+// Lo que el contexto va a exponer realmente
+interface AuthContextType extends UserSession {
+  isAuthenticated: boolean;
+  setSession: Dispatch<SetStateAction<UserSession | null>>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // CORRECCIÓN: Leemos localStorage DURANTE la inicialización del estado, no después.
+  // Inicialización perezosa (Lazy) segura
   const [session, setSession] = useState<UserSession | null>(() => {
-    // Esto solo corre en el cliente
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('zaiko_session');
       if (stored) {
@@ -26,12 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    // Fallback para desarrollo (Seed ID)
-    // Solo si estamos en dev y no hay nada guardado
+    // MOCK PARA DESARROLLO (Si no hay sesión real)
     if (process.env.NODE_ENV === 'development') {
       return {
-        userId: 'user-id-del-seed', // El ID no importa tanto en dev si no validas FKs estrictas aun
-        branchId: '9bac85a7-19d8-4089-bcf1-401d45a2cff9', // TU BRANCH ID DEL SEED
+        userId: 'user-id-del-seed',
+        branchId: '9bac85a7-19d8-4089-bcf1-401d45a2cff9', // Ojo: Usa tu ID real del seed si lo tienes
         role: 'OWNER',
         name: 'Primo Admin'
       };
@@ -40,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   });
 
-  // Efecto opcional para guardar sesión si cambia (login)
   useEffect(() => {
     if (session) {
       localStorage.setItem('zaiko_session', JSON.stringify(session));
@@ -49,20 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  // Si no hay sesión (y no estamos cargando), podrías redirigir o mostrar login
-  // Por ahora retornamos null o un loader simple si quisieras bloquear
-  if (!session && typeof window !== 'undefined') {
-     // Aquí podrías forzar redirect al login si es una ruta protegida
-  }
+  const logout = () => {
+    setSession(null);
+    localStorage.removeItem('zaiko_session');
+    // Aquí podrías forzar redirect con window.location.href = '/login'
+  };
 
-  return <AuthContext.Provider value={session}>{children}</AuthContext.Provider>;
+  // Valores derivados seguros
+  // Si no hay sesión, devolvemos strings vacíos para evitar crashes al destructurar
+  const contextValue: AuthContextType = {
+    userId: session?.userId || '',
+    branchId: session?.branchId || '',
+    role: session?.role || '',
+    name: session?.name || '',
+    isAuthenticated: !!session,
+    setSession, // <--- Ahora sí exponemos la función
+    logout
+  };
+
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    // Para evitar errores en Next.js SSR cuando el contexto aún no está listo
-    // Retornamos un mock seguro o lanzamos error controlado
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
