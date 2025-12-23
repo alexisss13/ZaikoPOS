@@ -3,49 +3,36 @@ import path from 'node:path';
 import { PrismaClient, Role } from '@prisma/client';
 import { hashPassword } from '../src/lib/security';
 
-// ==========================================
-// 1. CARGA MANUAL DE VARIABLES DE ENTORNO
-// ==========================================
-// Esto evita depender de 'dotenv' o configuraciones de CLI que están fallando
+// 1. CARGA MANUAL DE .ENV
 const envPath = path.resolve(__dirname, '../.env');
-
 if (fs.existsSync(envPath)) {
-  console.log('📂 Leyendo archivo .env manualmente...');
   const envConfig = fs.readFileSync(envPath, 'utf-8');
-  
   envConfig.split('\n').forEach((line) => {
-    // Ignoramos comentarios y líneas vacías
     if (!line || line.startsWith('#')) return;
-    
-    // Separamos clave y valor
     const [key, ...valueParts] = line.split('=');
     if (key && valueParts.length > 0) {
-      const value = valueParts.join('=').trim().replace(/^["']|["']$/g, ''); // Quitamos comillas
+      const value = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
       process.env[key.trim()] = value;
     }
   });
-} else {
-  console.warn('⚠️ No se encontró el archivo .env en la raíz');
 }
 
-// Verificación de seguridad
-if (!process.env.DATABASE_URL) {
-  console.error('❌ ERROR: DATABASE_URL no se cargó. Verifica tu archivo .env');
+const url = process.env.DATABASE_URL;
+if (!url) {
+  console.error('❌ ERROR: DATABASE_URL no cargada.');
   process.exit(1);
 }
 
-// ==========================================
-// 2. INICIO DEL SEED
-// ==========================================
-
-// Instanciamos Prisma (ahora sí encontrará la variable en process.env)
+// 2. INSTANCIA MANUAL
+// Al no tener URL en el schema, Prisma 7 permite/exige esto:
 const prisma = new PrismaClient();
+
 
 async function main() {
   console.log('🌱 Iniciando seed...');
-  console.log('🔌 Conectando a la base de datos...');
+  console.log('🔌 Conectando...');
 
-  // 1. Limpiar BD
+  // Limpieza
   try {
       await prisma.salePayment.deleteMany();
       await prisma.saleItem.deleteMany();
@@ -56,33 +43,20 @@ async function main() {
       await prisma.user.deleteMany();
       await prisma.branch.deleteMany();
       await prisma.business.deleteMany();
-      console.log('🗑️  Base de datos limpiada');
-  } catch (e) {
-      console.log('⚠️  Limpieza omitida (BD vacía o error menor).');
-  }
+      console.log('🗑️  BD Limpiada');
+  } catch (e) { console.log('⚠️  Limpieza omitida'); }
 
-  // 2. Crear Negocio
+  // Datos
   const business = await prisma.business.create({
-    data: {
-      name: 'Bodega "El Primo"',
-      ruc: '20123456789',
-      address: 'Av. Siempre Viva 123',
-    }
+    data: { name: 'Bodega "El Primo"', ruc: '20123456789', address: 'Av. Siempre Viva 123' }
   });
 
-  // 3. Crear Sucursal
   const branch = await prisma.branch.create({
-    data: {
-      businessId: business.id,
-      name: 'Sucursal Principal',
-      address: 'Av. Siempre Viva 123',
-    }
+    data: { businessId: business.id, name: 'Sucursal Principal' }
   });
 
-  // 4. Crear Usuario
   const passwordHash = await hashPassword('123456'); 
-  
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
       businessId: business.id,
       name: 'Primo Admin',
@@ -92,7 +66,7 @@ async function main() {
     }
   });
 
-  // 5. Crear Productos
+  // Productos
   const productsData = [
     { name: 'Coca Cola 600ml', price: 3.50, code: '77501' },
     { name: 'Inca Kola 600ml', price: 3.50, code: '77502' },
@@ -107,35 +81,22 @@ async function main() {
   ];
 
   console.log('📦 Creando productos...');
-
   for (const p of productsData) {
     const product = await prisma.product.create({
-      data: {
-        businessId: business.id,
-        name: p.name,
-        price: p.price,
-        code: p.code,
-      }
+      data: { businessId: business.id, name: p.name, price: p.price, code: p.code }
     });
-
     await prisma.stock.create({
-      data: {
-        branchId: branch.id,
-        productId: product.id,
-        quantity: 100,
-      }
+      data: { branchId: branch.id, productId: product.id, quantity: 100 }
     });
   }
 
-  console.log('------------------------------------------------');
   console.log('✅ SEED EXITOSO');
   console.log(`🏪 BRANCH ID: ${branch.id}`); 
-  console.log('------------------------------------------------');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
