@@ -13,12 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/context/auth-context';
 
 // Esquema de validación
 const formSchema = z.object({
   email: z.string().email('Ingresa un correo válido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
 });
+
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -39,6 +41,8 @@ export default function LoginPage() {
     },
   });
 
+  const { setSession } = useAuth();
+
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     setError(null);
@@ -55,6 +59,13 @@ export default function LoginPage() {
       if (!res.ok) {
         throw new Error(result.error || 'Error al iniciar sesión');
       }
+
+      setSession({
+        userId: result.user.id,
+        branchId: result.user.branchId || '',
+        role: result.user.role,
+        name: result.user.name
+    });
 
       toast.success(`Bienvenido, ${result.user.name}`);
 
@@ -151,7 +162,7 @@ export default function LoginPage() {
         </CardContent>
         
         <CardFooter className="flex flex-col gap-2 text-center text-sm text-muted-foreground">
-          <p>Credenciales demo: admin@zaiko.com / 123456</p>
+          <p>Credenciales demo: admin@zaiko.com / admin123</p>
         </CardFooter>
       </Card>
     </div>

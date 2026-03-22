@@ -1,78 +1,68 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { Role } from '@prisma/client';
 
-// Tipos
 export interface UserSession {
   userId: string;
   branchId: string;
-  role: string;
+  role: Role;
   name: string;
 }
 
-// Lo que el contexto va a exponer realmente
 interface AuthContextType extends UserSession {
   isAuthenticated: boolean;
-  setSession: Dispatch<SetStateAction<UserSession | null>>;
+  setSession: (session: UserSession | null) => void;
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Inicialización perezosa (Lazy) segura
-  const [session, setSession] = useState<UserSession | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('zaiko_session');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch (e) {
-          console.error("Error parseando sesión", e);
-        }
-      }
-    }
-    
-    // MOCK PARA DESARROLLO (Si no hay sesión real)
-    if (process.env.NODE_ENV === 'development') {
-      return {
-        userId: 'user-id-del-seed',
-        branchId: '9bac85a7-19d8-4089-bcf1-401d45a2cff9', // Ojo: Usa tu ID real del seed si lo tienes
-        role: 'OWNER',
-        name: 'Primo Admin'
-      };
-    }
-    
-    return null;
-  });
+export function AuthProvider({ children }: { children: ReactNode }) {
+  // 1. Iniciamos siempre en null. Sin mocks. La verdad viene del localStorage o del Login.
+  const [session, setSessionState] = useState<UserSession | null>(null);
 
   useEffect(() => {
-    if (session) {
-      localStorage.setItem('zaiko_session', JSON.stringify(session));
+    const saved = localStorage.getItem('zaiko_session');
+    if (saved) {
+      // ✅ queueMicrotask evita el error de "cascading renders" 
+      // al mover el setState fuera del proceso de commit síncrono.
+      queueMicrotask(() => {
+        try {
+          setSessionState(JSON.parse(saved));
+        } catch (error) {
+          localStorage.removeItem('zaiko_session');
+        }
+      });
+    }
+  }, []);
+
+  const setSession = (newSession: UserSession | null) => {
+    setSessionState(newSession);
+    if (newSession) {
+      localStorage.setItem('zaiko_session', JSON.stringify(newSession));
     } else {
       localStorage.removeItem('zaiko_session');
     }
-  }, [session]);
+  };
 
   const logout = () => {
     setSession(null);
-    localStorage.removeItem('zaiko_session');
-    // Aquí podrías forzar redirect con window.location.href = '/login'
   };
 
-  // Valores derivados seguros
-  // Si no hay sesión, devolvemos strings vacíos para evitar crashes al destructurar
-  const contextValue: AuthContextType = {
-    userId: session?.userId || '',
-    branchId: session?.branchId || '',
-    role: session?.role || '',
-    name: session?.name || '',
-    isAuthenticated: !!session,
-    setSession, // <--- Ahora sí exponemos la función
-    logout
-  };
-
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      userId: session?.userId || '',
+      branchId: session?.branchId || '',
+      role: session?.role || Role.USER, 
+      name: session?.name || 'Invitado',
+      isAuthenticated: !!session,
+      setSession,
+      logout,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {

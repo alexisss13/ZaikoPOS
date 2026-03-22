@@ -1,4 +1,4 @@
-import { Product } from '@prisma/client';
+import { PaymentMethod } from '@prisma/client';
 
 export interface CartItem {
   productId: string;
@@ -18,16 +18,34 @@ export interface PosInputProduct {
   code?: string | null;
 }
 
+// NUEVO: Interfaz para los pagos mixtos
+export interface PosPayment {
+  method: PaymentMethod;
+  amount: number;
+  reference?: string | null;
+}
+
 export interface PosState {
   items: CartItem[];
   subtotal: number;
   discount: number;
   total: number;
   
-  // Acciones
+  // NUEVO: Estados Financieros
+  payments: PosPayment[];
+  tenderedAmount: number;
+  changeAmount: number;
+  
+  // Acciones de Carrito
   addItem: (product: PosInputProduct) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   setDiscount: (amount: number) => void;
   clearCart: () => void;
+
+  // NUEVO: Acciones de Pago
+  addPayment: (payment: PosPayment) => void;
+  removePayment: (method: PaymentMethod) => void;
+  setTenderedAmount: (amount: number) => void;
+  clearPayments: () => void;
 }

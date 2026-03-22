@@ -7,12 +7,23 @@ datasource db {
 }
 
 // ==========================================
-// ENUMS
+// 🌍 ENUMS (COMBINADOS)
 // ==========================================
+enum Division {
+  JUGUETERIA
+  FIESTAS
+}
+
 enum Role {
-  SUPER_ADMIN
-  OWNER
-  CASHIER
+  // Roles E-commerce
+  ADMIN
+  SELLER
+  USER
+  // Roles POS
+  SUPER_ADMIN 
+  OWNER       
+  MANAGER     
+  CASHIER     
 }
 
 enum PaymentMethod {
@@ -42,12 +53,14 @@ enum NotificationType {
   CASH_CLOSED
   DAILY_SUMMARY
   ALERT
+  VOID_REQUEST
 }
 
 enum AuditAction {
   LOGIN
   LOGOUT
   CREATE_SALE
+  VOID_SALE
   OPEN_CASH
   CLOSE_CASH
   UPDATE_STOCK
@@ -57,150 +70,220 @@ enum AuditAction {
 }
 
 // ==========================================
-// NEGOCIOS
-// ==========================================
-model Business {
-  id          String     @id @default(uuid())
-  name        String
-  ruc         String     @unique
-  address     String?
-  logoUrl     String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relaciones
-  branches    Branch[]
-  users       User[]
-  products    Product[]
-  categories  Category[]
-  customers   Customer[]
-  sales       Sale[]     // 👈 Esto requiere la relación inversa en Sale
-  sunatConfig SunatConfig?
-  auditLogs   AuditLog[]
-}
-
-// ==========================================
-// SUCURSALES
-// ==========================================
-model Branch {
-  id          String      @id @default(uuid())
-  businessId  String
-  name        String
-  address     String?
-  phone       String?
-
-  business    Business    @relation(fields: [businessId], references: [id])
-  stock       Stock[]
-  users       User[]
-  cashSessions CashSession[]
-  sales       Sale[]
-
-  @@index([businessId])
-}
-
-// ==========================================
-// USUARIOS
+// 👤 USUARIOS (HÍBRIDO: NEXTAUTH + POS)
 // ==========================================
 model User {
-  id          String    @id @default(uuid())
-  businessId  String?
-  branchId    String?
-  name        String
-  email       String    @unique
-  password    String
-  role        Role      @default(CASHIER)
-  pin         String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? 
+  image         String?   
+  password      String?   
+  role          Role      @default(USER)
+  
+  // Relaciones E-commerce / NextAuth
+  accounts      Account[] 
+  sessions      Session[] // Sesiones web
+  orders        Order[]     
+  addresses     Address[]   
+  favorites     Favorite[]  
+  
+  // 👇 NUEVOS CAMPOS POS (Opcionales para no romper E-commerce)
+  businessId    String?
+  branchId      String?
+  pin           String?
+  permissions   Json?    
+  isActive      Boolean   @default(true)
 
-  business    Business? @relation(fields: [businessId], references: [id])
-  branch      Branch?   @relation(fields: [branchId], references: [id])
-  sessions    CashSession[]
-  sales       Sale[]
-  auditLogs   AuditLog[]
+  business      Business? @relation(fields: [businessId], references: [id])
+  branch        Branch?   @relation(fields: [branchId], references: [id])
+  cashSessions  CashSession[] // Renombrado para evitar colisión con Session de NextAuth
+  sales         Sale[]
+  auditLogs     AuditLog[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([businessId])
   @@index([branchId])
 }
 
 // ==========================================
-// CATEGORIAS Y PRODUCTOS
+// 🔐 TABLAS DE NEXTAUTH (INTACTAS)
+// ==========================================
+model Account {
+  id                 String  @id @default(uuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}    
+
+// ==========================================
+// 📦 PRODUCTOS Y CATEGORÍAS (HÍBRIDOS)
 // ==========================================
 model Category {
-  id          String    @id @default(uuid())
-  businessId  String
+  id          String   @id @default(uuid())
   name        String
-  business    Business  @relation(fields: [businessId], references: [id])
+  slug        String   @unique
+  division    Division @default(JUGUETERIA)
+  image       String?  
+
+  // 👇 NUEVOS CAMPOS POS
+  businessId  String?
+  business    Business? @relation(fields: [businessId], references: [id])
+
   products    Product[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([businessId])
 }
 
 model Product {
-  id          String     @id @default(uuid())
-  businessId  String
-  categoryId  String?
-  name        String
-  code        String?    // Barcode o SKU
-  description String?
-  price       Decimal    @db.Decimal(12,2)
-  cost        Decimal?   @db.Decimal(12,2)
-  imageUrl    String?
-  minStock    Int        @default(5)
-  active      Boolean    @default(true)
+  id                 String   @id @default(uuid())
+  title              String
+  description        String
+  slug               String   @unique
+  price              Decimal  @default(0) @db.Decimal(10, 2)
+  stock              Int      @default(0) // Stock global e-commerce
+  images             String[]
+  isAvailable        Boolean  @default(true)
+  wholesalePrice     Decimal? @db.Decimal(10, 2) 
+  wholesaleMinCount  Int?      
+  discountPercentage Int      @default(0) 
+  tags               String[] 
+  color              String?
+  groupTag           String?
+  division           Division @default(JUGUETERIA)
+  barcode            String?  @unique 
 
-  business    Business   @relation(fields: [businessId], references: [id])
-  category    Category?  @relation(fields: [categoryId], references: [id])
-  stock       Stock[]
-  saleItems   SaleItem[]
+  categoryId         String
+  category           Category @relation(fields: [categoryId], references: [id])
+  orderItems         OrderItem[]
+  favorites          Favorite[] 
+
+  // 👇 NUEVOS CAMPOS POS
+  businessId         String?
+  code               String?   // Alternativa/Complemento a barcode
+  cost               Decimal?  @db.Decimal(12,2)
+  minStock           Int       @default(5)
+  active             Boolean   @default(true)
+
+  business           Business? @relation(fields: [businessId], references: [id])
+  branchStock        Stock[]   // Renombrado para no colisionar con 'stock' Int
+  saleItems          SaleItem[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@unique([businessId, code])
   @@index([businessId])
 }
 
 // ==========================================
-// INVENTARIO
+// 🏢 TABLAS EXCLUSIVAS DEL POS (NUEVAS)
 // ==========================================
+model Business {
+  id              String     @id @default(uuid())
+  name            String
+  ruc             String     @unique
+  address         String?
+  logoUrl         String?
+  brandColors     Json?    
+  isActive        Boolean    @default(true) 
+  maxBranches     Int        @default(1)
+  maxManagers     Int        @default(1)
+  maxEmployees    Int        @default(3)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  branches        Branch[]
+  users           User[]
+  products        Product[]
+  categories      Category[]
+  customers       Customer[]
+  sales           Sale[]     
+  sunatConfig     SunatConfig?
+  auditLogs       AuditLog[]
+}
+
+model Branch {
+  id            String      @id @default(uuid())
+  businessId    String
+  name          String
+  address       String?
+  phone         String?
+
+  business      Business    @relation(fields: [businessId], references: [id])
+  stock         Stock[]
+  users         User[]
+  cashSessions  CashSession[]
+  sales         Sale[]
+
+  @@index([businessId])
+}
+
 model Stock {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   branchId    String
   productId   String
-  quantity    Int       @default(0)
-  updatedAt   DateTime  @updatedAt
+  quantity    Int      @default(0)
+  updatedAt   DateTime @updatedAt
 
-  branch      Branch    @relation(fields: [branchId], references: [id])
-  product     Product   @relation(fields: [productId], references: [id])
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
 
   @@unique([branchId, productId])
   @@index([branchId])
 }
 
-// ==========================================
-// CAJA Y FLUJO DE DINERO
-// ==========================================
 model CashSession {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   branchId    String
   userId      String
-  openedAt    DateTime  @default(now())
+  openedAt    DateTime @default(now())
   closedAt    DateTime?
-  initialCash Decimal    @db.Decimal(12,2)
-  finalCash   Decimal?   @db.Decimal(12,2)
-  income      Decimal    @default(0) @db.Decimal(12,2)
-  expense     Decimal    @default(0) @db.Decimal(12,2)
-  difference  Decimal?   @db.Decimal(12,2)
-  status      String     @default("OPEN")
+  initialCash Decimal  @db.Decimal(12,2)
+  finalCash   Decimal? @db.Decimal(12,2)
+  income      Decimal  @default(0) @db.Decimal(12,2)
+  expense     Decimal  @default(0) @db.Decimal(12,2)
+  difference  Decimal? @db.Decimal(12,2)
+  status      String   @default("OPEN")
 
-  branch      Branch    @relation(fields: [branchId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
   sales       Sale[]
 }
 
-// ==========================================
-// CLIENTES
-// ==========================================
 model Customer {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   businessId  String
   name        String
   docType     String?
@@ -208,71 +291,64 @@ model Customer {
   email       String?
   phone       String?
 
-  business    Business  @relation(fields: [businessId], references: [id])
+  business    Business @relation(fields: [businessId], references: [id])
   sales       Sale[]
 
   @@unique([businessId, docNumber])
 }
 
-// ==========================================
-// VENTAS
-// ==========================================
 model Sale {
-  id            String        @id @default(uuid())
-  code          String        @default(cuid())
-  externalId    String?       @unique
-  businessId    String?
-  branchId      String
-  cashSessionId String?
-  userId        String
-  customerId    String?
+  id             String        @id @default(uuid())
+  code           String        @default(cuid())
+  externalId     String?       @unique
+  businessId     String?
+  branchId       String
+  cashSessionId  String?
+  userId         String
+  customerId     String?
 
-  subtotal      Decimal       @db.Decimal(12,2)
-  discount      Decimal       @default(0) @db.Decimal(12,2)
-  total         Decimal       @db.Decimal(12,2)
-  status        String        @default("COMPLETED")
-  createdAt     DateTime      @default(now())
+  subtotal       Decimal       @db.Decimal(12,2)
+  discount       Decimal       @default(0) @db.Decimal(12,2)
+  total          Decimal       @db.Decimal(12,2)
+  tenderedAmount Decimal       @db.Decimal(12,2) 
+  changeAmount   Decimal       @default(0) @db.Decimal(12,2) 
+  status         String        @default("COMPLETED") 
+  createdAt      DateTime      @default(now())
 
-  // RELACIONES
-  // 👇 AQUÍ ESTABA EL ERROR: Faltaba la relación con Business
-  business      Business?     @relation(fields: [businessId], references: [id]) 
-  
-  branch        Branch        @relation(fields: [branchId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
-  customer      Customer?     @relation(fields: [customerId], references: [id])
-  cashSession   CashSession?  @relation(fields: [cashSessionId], references: [id])
-  items         SaleItem[]
-  payments      SalePayment[]
-  invoice       Invoice?
+  business       Business?     @relation(fields: [businessId], references: [id]) 
+  branch         Branch        @relation(fields: [branchId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  cashSession    CashSession?  @relation(fields: [cashSessionId], references: [id])
+  items          SaleItem[]
+  payments       SalePayment[]
+  invoice        Invoice?
 }
 
 model SaleItem {
-  id          String    @id @default(uuid())
-  saleId      String
-  productId   String
-  quantity    Int
-  price       Decimal   @db.Decimal(12,2)
-  subtotal    Decimal   @db.Decimal(12,2)
+  id        String   @id @default(uuid())
+  saleId    String
+  productId String
+  quantity  Int
+  price     Decimal  @db.Decimal(12,2)
+  subtotal  Decimal  @db.Decimal(12,2)
 
-  sale        Sale      @relation(fields: [saleId], references: [id])
-  product     Product   @relation(fields: [productId], references: [id])
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 
   @@index([saleId])
 }
 
 model SalePayment {
-  id          String        @id @default(uuid())
-  saleId      String
-  method      PaymentMethod
-  amount      Decimal       @db.Decimal(12,2)
-  reference   String?
+  id        String        @id @default(uuid())
+  saleId    String
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(12,2)
+  reference String?
 
-  sale        Sale          @relation(fields: [saleId], references: [id])
+  sale      Sale          @relation(fields: [saleId], references: [id])
 }
 
-// ==========================================
-// FACTURACIÓN SUNAT
-// ==========================================
 model Invoice {
   id          String        @id @default(uuid())
   saleId      String        @unique
@@ -299,22 +375,16 @@ model SunatConfig {
   business      Business @relation(fields: [businessId], references: [id])
 }
 
-// ==========================================
-// NOTIFICACIONES
-// ==========================================
 model Notification {
-  id          String          @id @default(uuid())
-  userId      String?
-  title       String
-  message     String
-  type        NotificationType
-  read        Boolean         @default(false)
-  createdAt   DateTime        @default(now())
+  id        String           @id @default(uuid())
+  userId    String?
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
 }
 
-// ==========================================
-// AUDITORÍA
-// ==========================================
 model AuditLog {
   id          String      @id @default(uuid())
   businessId  String
@@ -326,4 +396,153 @@ model AuditLog {
 
   business    Business    @relation(fields: [businessId], references: [id])
   user        User?       @relation(fields: [userId], references: [id])
+}
+
+// ==========================================
+// 🛒 TABLAS EXCLUSIVAS E-COMMERCE (INTACTAS)
+// ==========================================
+model Address {
+  id        String   @id @default(uuid())
+  dni       String?  
+  firstName String
+  lastName  String
+  phone     String
+  address   String   
+  address2  String?  
+  city      String   
+  province  String?
+  country   String   @default("Perú") 
+  
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, productId])
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  receiptNumber  String?     @unique
+  totalAmount    Decimal     @db.Decimal(10, 2)
+  totalItems     Int
+  status         OrderStatus @default(PENDING)
+  isPaid         Boolean     @default(false)
+  mercadoPagoId  String?     @unique 
+  clientName     String
+  clientPhone    String
+  deliveryMethod String      @default("PICKUP") 
+  shippingAddress String?
+  shippingCost   Decimal     @default(0) @db.Decimal(10, 2)
+  notes          String?
+  
+  user           User?       @relation(fields: [userId], references: [id])
+  userId         String?
+  orderItems     OrderItem[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  DELIVERED
+  CANCELLED
+}
+
+model StoreConfig {
+  id               String   @id @default(uuid())
+  whatsappPhone    String   @default("51999999999")
+  welcomeMessage   String   @default("Hola Festamas, quiero confirmar mi pedido...")
+  localDeliveryPrice Decimal @default(10.00) @db.Decimal(10, 2)
+  heroImage        String?
+  heroTitle        String   @default("Juguetes y Alegría")
+  heroSubtitle     String   @default("Encuentra el regalo perfecto en Festamas")
+  heroButtonText   String   @default("Ver Juguetes")
+  heroButtonLink   String   @default("#catalogo")
+  heroBtnColor     String   @default("#fb3099")
+  updatedAt        DateTime @updatedAt
+}
+
+model Coupon {
+  id             String     @id @default(uuid())
+  code           String     @unique
+  discount       Decimal    @db.Decimal(10, 2)
+  type           CouponType @default(FIXED)
+  isActive       Boolean    @default(true)
+  expirationDate DateTime?  
+  maxUses        Int?       
+  currentUses    Int        @default(0) 
+  division       Division   @default(JUGUETERIA) 
+  createdAt      DateTime   @default(now())
+}
+
+enum CouponType {
+  FIXED
+  PERCENTAGE
+}
+
+enum BannerPosition {
+  MAIN_HERO
+  MIDDLE_SECTION
+}
+
+model Banner {
+  id        String         @id @default(uuid())
+  title     String   
+  subtitle  String?
+  imageUrl  String   
+  mobileUrl String?  
+  link      String?  
+  position  BannerPosition
+  division  Division 
+  active    Boolean        @default(true)
+  order     Int            @default(0) 
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model HomeSection {
+  id        String   @id @default(uuid())
+  title     String   
+  subtitle  String?  
+  tag       String   
+  division  Division @default(JUGUETERIA)
+  icon      String   @default("star")
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Catalog {
+  id         String   @id @default(uuid())
+  title      String   
+  coverImage String   
+  iframeUrl  String   
+  division   Division @default(JUGUETERIA) 
+  isActive   Boolean  @default(true) 
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

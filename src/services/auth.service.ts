@@ -1,7 +1,6 @@
 import prisma from '@/lib/prisma';
 import { verifyPassword } from '@/lib/security';
 import { createSession, SessionPayload } from '@/lib/auth';
-import { Role } from '@prisma/client';
 
 interface LoginParams {
   email: string;
@@ -10,13 +9,14 @@ interface LoginParams {
 
 export const authService = {
   login: async ({ email, password }: LoginParams) => {
-    // 1. Buscar usuario
+    // 1. Buscar usuario e incluir la relación
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { business: true } // Opcional, si necesitamos datos del negocio
+      include: { business: true } 
     });
 
-    if (!user) {
+    // Validar si existe y si tiene contraseña (evita crash si se registró con Google)
+    if (!user || !user.password) {
       throw new Error('Credenciales inválidas');
     }
 
@@ -33,13 +33,14 @@ export const authService = {
     // 3. Preparar Payload (Aislamiento Multi-tenant)
     const payload: SessionPayload = {
       userId: user.id,
-      email: user.email,
+      email: user.email!,
       role: user.role,
-      businessId: user.businessId,
-      name: user.name,
+      businessId: user.businessId || '',
+      branchId: user.branchId || '', // <--- CRÍTICO
+      name: user.name || 'Usuario',
     };
 
-    // 4. Crear Sesión (Cookie)
+    // 4. Crear Sesión (Cookie JWT)
     await createSession(payload);
 
     return { 
@@ -48,13 +49,14 @@ export const authService = {
         id: user.id,
         name: user.name,
         role: user.role,
-        businessId: user.businessId
+        businessId: user.businessId,
+        branchId: user.branchId
       }
     };
   },
 
   logout: async () => {
-    // Lógica adicional de auditoría podría ir aquí
+    // La eliminación de la cookie se maneja en el route handler o server action
     return true;
   }
 };

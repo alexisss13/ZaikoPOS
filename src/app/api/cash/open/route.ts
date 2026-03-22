@@ -7,6 +7,10 @@ const openSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  console.log("Headers recibidos en API:", {
+    userId: req.headers.get('x-user-id'),
+    branchId: req.headers.get('x-branch-id')
+  });
   try {
     const userId = req.headers.get('x-user-id');
     const branchId = req.headers.get('x-branch-id');

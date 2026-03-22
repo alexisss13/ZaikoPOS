@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function DashboardPage() {
-  const { data, isLoading } = useSWR('/api/reports/stats', fetcher);
+  const { data, isLoading, error } = useSWR('/api/reports/stats', fetcher);
 
   if (isLoading) {
     return (
@@ -18,14 +18,21 @@ export default function DashboardPage() {
     );
   }
 
-  // Datos seguros
-  const stats = data || { today: { amount: 0, count: 0 }, lowStock: 0, chart: [] };
+  // 1. EXTRAER DATOS DE FORMA EXTREMADAMENTE SEGURA
+  // Si algo viene undefined o falla la API, cae en el fallback (0 o [])
+  const amount = data?.today?.amount ?? 0;
+  const count = data?.today?.count ?? 0;
+  const lowStock = data?.lowStock ?? 0;
+  const chartData = Array.isArray(data?.chart) ? data.chart : [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h2>
         <p className="text-muted-foreground">Resumen de operaciones de tu negocio.</p>
+        
+        {/* Opcional: Mostrar si la API falló para que sepas por qué está todo en cero */}
+        {error && <p className="text-red-500 text-sm mt-2">Error cargando datos. Mostrando valores por defecto.</p>}
       </div>
 
       {/* CARDS KPI */}
@@ -37,7 +44,7 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">S/ {stats.today.amount.toFixed(2)}</div>
+            <div className="text-2xl font-bold">S/ {amount.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               +10% vs ayer (Mock)
             </p>
@@ -50,7 +57,7 @@ export default function DashboardPage() {
             <ShoppingCart className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.today.count}</div>
+            <div className="text-2xl font-bold">{count}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Tickets emitidos hoy
             </p>
@@ -63,7 +70,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.lowStock}</div>
+            <div className="text-2xl font-bold text-red-600">{lowStock}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Productos con stock &lt; 5
             </p>
@@ -77,7 +84,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-                S/ {stats.today.count > 0 ? (stats.today.amount / stats.today.count).toFixed(2) : '0.00'}
+                S/ {count > 0 ? (amount / count).toFixed(2) : '0.00'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Promedio por venta
@@ -94,7 +101,7 @@ export default function DashboardPage() {
         <CardContent className="pl-2">
             <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.chart}>
+                    <BarChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis 
                             dataKey="name" 

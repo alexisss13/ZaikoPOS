@@ -5,7 +5,6 @@ import { jwtVerify } from 'jose';
 const SECRET_KEY = process.env.JWT_SECRET || 'secret-fallback-dev-only';
 const key = new TextEncoder().encode(SECRET_KEY);
 
-// Rutas que no requieren autenticación
 const publicRoutes = ['/login', '/register', '/api/auth/login'];
 
 export async function middleware(req: NextRequest) {
@@ -16,7 +15,7 @@ export async function middleware(req: NextRequest) {
     publicRoutes.includes(path) || 
     path.startsWith('/_next') || 
     path.startsWith('/static') ||
-    path.includes('.') // Archivos (favicon, etc)
+    path.includes('.') 
   ) {
     return NextResponse.next();
   }
@@ -34,14 +33,10 @@ export async function middleware(req: NextRequest) {
     const role = payload.role as string;
 
     // 3. Control de Acceso por Rol (RBAC)
-    
-    // CASHIER: Solo acceso a POS y perfil, prohibido Dashboard
     if (role === 'CASHIER' && path.startsWith('/dashboard')) {
       return NextResponse.redirect(new URL('/pos', req.nextUrl));
     }
 
-    // OWNER: Acceso a Dashboard, prohibido (o advertencia) en POS si se requiere
-    // Por ahora permitimos al OWNER entrar al POS, pero el flujo principal es Dashboard
     if (role === 'OWNER' && path === '/') {
        return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
     }
@@ -52,10 +47,11 @@ export async function middleware(req: NextRequest) {
       if (role === 'OWNER' || role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
     }
 
-    // Inyectar headers con información del usuario para el backend (opcional pero útil)
+    // 4. Inyectar headers para el Backend
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-user-id', payload.userId as string);
-    requestHeaders.set('x-business-id', payload.businessId as string || '');
+    requestHeaders.set('x-business-id', (payload.businessId as string) || '');
+    requestHeaders.set('x-branch-id', (payload.branchId as string) || '');
     requestHeaders.set('x-user-role', role);
 
     return NextResponse.next({
@@ -72,16 +68,8 @@ export async function middleware(req: NextRequest) {
   }
 }
 
-// Configurar en qué rutas se ejecuta
 export const config = {
   matcher: [
-    /*
-     * Coincidir con todas las rutas excepto:
-     * - _next/static (archivos estáticos)
-     * - _next/image (imágenes optimizadas)
-     * - favicon.ico (icono)
-     * - public (archivos públicos)
-     */
     '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 };

@@ -9,10 +9,11 @@ import { toast } from 'sonner';
 import { usePosStore } from '@/store/pos-store';
 import { Trash2, ShoppingCart, Loader2 } from 'lucide-react';
 import { ProductCard } from '@/components/pos/ProductCard';
-import { PosHeader } from '@/components/pos/PosHeader'; // <--- NUEVO HEADER
+import { PosHeader } from '@/components/pos/PosHeader';
 import { useCatalog } from '@/hooks/use-catalog';
 import { useAuth } from '@/context/auth-context';
 import { UIProduct } from '@/types/product';
+import { PaymentModal } from '@/components/pos/PaymentModal';
 
 interface PosPayment {
   method: PaymentMethod;
@@ -28,6 +29,7 @@ export default function PosPage() {
   const { products, loading: isLoadingCatalog, isOfflineMode, isValidating, mutate } = useCatalog(branchId);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredProducts = useMemo(() => {
@@ -39,13 +41,15 @@ export default function PosPage() {
     );
   }, [searchTerm, products]);
 
-  const handleProcessSale = async (payments: PosPayment[]) => { 
+  const handleProcessSale = async (payments: PosPayment[], tenderedAmount: number) => { 
     if (items.length === 0) { toast.error("Carrito vacío"); return; }
     setIsProcessing(true);
+    setIsPaymentOpen(false); // Cerramos el modal al iniciar el proceso
     
     const payload = {
       items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
       payments, 
+      tenderedAmount
     };
 
     try {
@@ -175,12 +179,21 @@ export default function PosPage() {
               <Button 
                 size="lg" className="w-full h-14 text-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
                 disabled={items.length === 0 || isProcessing}
-                onClick={() => handleProcessSale([{ method: PaymentMethod.CASH, amount: total }])}
+                onClick={() => setIsPaymentOpen(true)} // <-- AHORA ABRE EL MODAL
               >
                 {isProcessing ? <div className="flex items-center gap-2"><Loader2 className="animate-spin" /> PROCESANDO</div> : 'COBRAR (ESPACIO)'}
               </Button>
           </div>
       </div>
+
+      {/* RENDERIZADO DEL MODAL */}
+      <PaymentModal 
+        isOpen={isPaymentOpen}
+        onClose={() => setIsPaymentOpen(false)}
+        total={total}
+        onConfirm={handleProcessSale}
+      />
+      
     </div>
   );
 }
