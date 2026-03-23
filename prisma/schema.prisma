@@ -241,6 +241,11 @@ model Branch {
   address       String?
   phone         String?
 
+  // 👇 NUEVOS CAMPOS: Sobrescritura Fiscal (Opcionales)
+  customRuc       String?     // Si es null, usa el ruc del Business
+  customLegalName String?     // Si es null, usa el name del Business
+  customAddress   String?     // Para imprimir en el ticket de esta tienda específica
+
   business      Business    @relation(fields: [businessId], references: [id])
   stock         Stock[]
   users         User[]
