@@ -84,6 +84,16 @@ export async function POST(req: Request) {
       include: { business: { select: { name: true } } }
     });
 
+    if (newUser.businessId) {
+      await prisma.auditLog.create({
+        data: {
+          action: 'CREATE_USER',
+          details: `Se registró un nuevo miembro del equipo: ${newUser.name} (${newUser.email}) asignado como ${newUser.role}.`,
+          businessId: newUser.businessId
+        }
+      });
+    }
+
     return NextResponse.json(newUser);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Error interno';

@@ -69,6 +69,16 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     }
 
     await prisma.user.delete({ where: { id } });
+    // 🚀 AQUÍ OCURRE LA MAGIA: Avisamos al Log de Auditoría
+    if (userToDelete.businessId) {
+      await prisma.auditLog.create({
+        data: {
+          action: 'DELETE_USER',
+          details: `Se eliminó definitivamente al usuario: ${userToDelete.name || 'Sin Nombre'} (${userToDelete.email}) con rol de ${userToDelete.role}.`,
+          businessId: userToDelete.businessId
+        }
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

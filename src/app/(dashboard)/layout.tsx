@@ -35,7 +35,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/branches', label: 'Red de Sucursales', icon: Store },
     { href: '/dashboard/users', label: 'Usuarios Sistema', icon: Users },
     { href: '/dashboard/audit', label: 'Logs del Sistema', icon: ShieldCheck },
-    { href: '/dashboard/health', label: 'Estado Servidores', icon: HardDrive },
   ];
 
   // 2. Menú para Dueños/Managers (Visión Operativa de Tienda)

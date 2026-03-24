@@ -241,10 +241,16 @@ model Branch {
   address       String?
   phone         String?
 
+  // 👇 NUEVOS CAMPOS: Branding Independiente
+  logoUrl         String?
+  brandColors     Json?       // Ej: { "primary": "#...", "secondary": "#...", "optional": "#..." }
+
   // 👇 NUEVOS CAMPOS: Sobrescritura Fiscal (Opcionales)
   customRuc       String?     // Si es null, usa el ruc del Business
   customLegalName String?     // Si es null, usa el name del Business
   customAddress   String?     // Para imprimir en el ticket de esta tienda específica
+
+  ecommerceCode   String?     // Ej: "JUGUETERIA" o "FIESTAS"
 
   business      Business    @relation(fields: [businessId], references: [id])
   stock         Stock[]
