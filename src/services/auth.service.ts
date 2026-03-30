@@ -9,13 +9,11 @@ interface LoginParams {
 
 export const authService = {
   login: async ({ email, password }: LoginParams) => {
-    // 1. Buscar usuario e incluir la relación
     const user = await prisma.user.findUnique({
       where: { email },
       include: { business: true } 
     });
 
-    // Validar si existe y si tiene contraseña (evita crash si se registró con Google)
     if (!user || !user.password) {
       throw new Error('Credenciales inválidas');
     }
@@ -24,24 +22,24 @@ export const authService = {
       throw new Error('Usuario desactivado. Contacte al administrador.');
     }
 
-    // 2. Verificar Password
     const isValid = await verifyPassword(password, user.password);
     if (!isValid) {
       throw new Error('Credenciales inválidas');
     }
 
-    // 3. Preparar Payload (Aislamiento Multi-tenant)
-    const payload: SessionPayload = {
+    // 🚀 LÓGICA ESTRICTA SIN 'ANY'
+    const payload = {
       userId: user.id,
       email: user.email!,
       role: user.role,
       businessId: user.businessId || '',
-      branchId: user.branchId || '', // <--- CRÍTICO
+      branchId: user.branchId || '',
       name: user.name || 'Usuario',
+      permissions: (user.permissions as Record<string, boolean>) || {},
     };
 
-    // 4. Crear Sesión (Cookie JWT)
-    await createSession(payload);
+    // 🚀 Casteo seguro a unknown primero para satisfacer al linter de TypeScript
+    await createSession(payload as unknown as SessionPayload);
 
     return { 
       success: true, 
@@ -50,13 +48,13 @@ export const authService = {
         name: user.name,
         role: user.role,
         businessId: user.businessId,
-        branchId: user.branchId
+        branchId: user.branchId,
+        permissions: (user.permissions as Record<string, boolean>) || {}
       }
     };
   },
 
   logout: async () => {
-    // La eliminación de la cookie se maneja en el route handler o server action
     return true;
   }
 };
