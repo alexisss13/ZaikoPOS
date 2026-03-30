@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Division } from '@prisma/client';
 
-// GET se mantiene igual...
 export async function GET(req: Request) {
   const businessId = req.headers.get('x-business-id');
   const branchId = req.headers.get('x-branch-id');
@@ -45,7 +44,26 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const businessId = req.headers.get('x-business-id');
+  const role = req.headers.get('x-user-role');
+  const userId = req.headers.get('x-user-id');
+  const userBranchId = req.headers.get('x-branch-id');
+
   if (!businessId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+
+  // 🚀 1. VERIFICACIÓN DE PERMISOS EN BACKEND
+  let permissions: Record<string, boolean> = {};
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user?.permissions) permissions = user.permissions as Record<string, boolean>;
+  }
+
+  const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
+  const canCreate = isSuperOrOwner || permissions.canCreateProducts;
+  const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
+
+  if (!canCreate) {
+    return NextResponse.json({ error: 'Operación denegada. No tienes permiso para crear productos.' }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
@@ -61,13 +79,14 @@ export async function POST(req: Request) {
     const category = await prisma.category.findUnique({ where: { id: body.categoryId } });
     const productDivision = category?.division || 'OTROS';
 
-    // 🚀 1. Preparamos el array de sucursales
-    const branchStockData = Object.entries(body.branchStocks || {}).map(([bId, qty]) => ({
-      branchId: bId,
-      quantity: parseInt(qty as string) || 0
-    }));
+    // 🚀 2. FILTRAR SUCURSALES (Ignora hackeos si intenta enviar stock a otra sucursal sin permiso)
+    const branchStockData = Object.entries(body.branchStocks || {})
+      .filter(([bId, _]) => canManageGlobal || bId === userBranchId)
+      .map(([bId, qty]) => ({
+        branchId: bId,
+        quantity: parseInt(qty as string) || 0
+      }));
 
-    // 🚀 2. MAGIA: Sumamos automáticamente todo el stock físico para el E-commerce
     const calculatedWebStock = branchStockData.reduce((acc, curr) => acc + curr.quantity, 0);
 
     const newProduct = await prisma.product.create({
@@ -84,10 +103,8 @@ export async function POST(req: Request) {
         wholesalePrice: body.wholesalePrice ? parseFloat(body.wholesalePrice) : null,
         wholesaleMinCount: body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null,
         discountPercentage: body.discountPercentage ? parseInt(body.discountPercentage) : 0,
-        
-        stock: calculatedWebStock, // 👈 Se guarda la suma exacta
+        stock: calculatedWebStock, 
         minStock: body.minStock ? parseInt(body.minStock) : 5,
-        
         barcode: body.barcode || null,
         code: body.code || null,
         color: body.color || null,

@@ -106,7 +106,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
 
   const totalCalculatedStock = Object.values(branchStocks).reduce((acc, curr) => acc + (parseInt(curr) || 0), 0);
   
-  // 🚀 Filtramos las tiendas que SÍ puede ver este usuario (pero el backend recibirá TODAS en el save)
+  // 🚀 Filtramos las tiendas que SÍ puede ver este usuario en el Modal
   const visibleBranches = branches?.filter(b => canViewOtherBranches || b.id === user?.branchId) || [];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -152,7 +152,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
       const payload = { 
         ...formData, 
         barcode: finalBarcode, 
-        branchStocks // Envía el objeto completo (los inputs que no vio no se sobrescriben)
+        branchStocks // 🚀 El backend ignorará los IDs que no pueda editar
       };
 
       const url = productToEdit?.id ? `/api/products/${productToEdit.id}` : '/api/products';
@@ -164,8 +164,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
       toast.success(productToEdit?.id ? 'Producto actualizado' : 'Producto creado');
       onSuccess(); onClose();
     } catch (error: unknown) { 
-      const err = error instanceof Error ? error.message : 'Error inesperado';
-      toast.error(err); 
+      toast.error('Error inesperado'); 
     } 
     finally { setIsLoading(false); }
   };
