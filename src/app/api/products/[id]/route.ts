@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-// 🚀 FIX: Eliminamos la importación de 'Division' que no se usaba
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const businessId = req.headers.get('x-business-id');
@@ -8,7 +7,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const userId = req.headers.get('x-user-id');
   const userBranchId = req.headers.get('x-branch-id');
 
-  // 🚀 1. VERIFICAR PERMISOS
   let permissions: Record<string, boolean> = {};
   if (userId) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -26,9 +24,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const body = await req.json();
 
-    const product = await prisma.product.findUnique({ where: { id } });
+    const product = await prisma.product.findUnique({ where: { id }, include: { category: true } });
     if (!product || (product.businessId !== businessId && product.businessId !== null)) {
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    }
+
+    if (!isSuperOrOwner && !canManageGlobal) {
+      const myBranch = userBranchId ? await prisma.branch.findUnique({ where: { id: userBranchId } }) : null;
+      const isGlobalProduct = !product.category?.ecommerceCode;
+      const isMyCatalogProduct = product.category?.ecommerceCode === myBranch?.ecommerceCode;
+
+      if (isGlobalProduct || !isMyCatalogProduct) {
+        return NextResponse.json({ error: 'No tienes permiso de Catálogo Global para editar este producto de otra marca.' }, { status: 403 });
+      }
     }
 
     let finalSlug = product.slug;
@@ -38,14 +46,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       finalSlug = existing ? `${formattedSlug}-${Math.random().toString(36).substring(2, 6)}` : formattedSlug;
     }
 
-    const category = body.categoryId ? await prisma.category.findUnique({ where: { id: body.categoryId } }) : null;
-    const productDivision = category ? category.division : product.division;
-    const finalImages = body.image ? [body.image] : product.images;
-
-    // 🚀 3. ACTUALIZAR STOCK SEGURO
     if (body.branchStocks) {
       for (const [bId, qty] of Object.entries(body.branchStocks)) {
-        // Si no es admin global, ignoramos cualquier ID que no sea su sucursal
         if (!canManageGlobal && bId !== userBranchId) continue;
         
         const parsedQty = parseInt(qty as string) || 0;
@@ -57,7 +59,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
-    // 🚀 4. RECALCULAR STOCK WEB TOTAL (Sumando de la BD real para no perder data oculta)
     const allStocks = await prisma.stock.findMany({ where: { productId: id } });
     const calculatedWebStock = allStocks.reduce((acc, curr) => acc + curr.quantity, 0);
 
@@ -68,14 +69,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         description: body.description ?? product.description,
         slug: finalSlug,
         categoryId: body.categoryId || product.categoryId,
-        division: productDivision, // 🚀 FIX: Ya no necesita "as Division"
-        images: finalImages,
+        images: body.image ? [body.image] : product.images,
         price: body.price !== undefined ? parseFloat(body.price) : product.price,
         
-        // 🚀 FIX: Protegemos el costo directamente aquí (Inline) para que TypeScript y Prisma no peleen por el tipo Decimal
+        // 🚀 FIX ELEGANTE: Todo se reduce a number | null. Cero errores de TypeScript.
         cost: canViewCosts && body.cost !== undefined 
           ? (body.cost ? parseFloat(body.cost) : null) 
-          : product.cost,
+          : (product.cost ? Number(product.cost) : null),
 
         wholesalePrice: body.wholesalePrice !== undefined ? (body.wholesalePrice ? parseFloat(body.wholesalePrice) : null) : product.wholesalePrice,
         wholesaleMinCount: body.wholesaleMinCount !== undefined ? (body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null) : product.wholesaleMinCount,
@@ -106,7 +106,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const role = req.headers.get('x-user-role');
   const userId = req.headers.get('x-user-id');
 
-  // 🚀 VERIFICACIÓN PARA DAR DE BAJA
   let permissions: Record<string, boolean> = {};
   if (userId) {
     const user = await prisma.user.findUnique({ where: { id: userId } });

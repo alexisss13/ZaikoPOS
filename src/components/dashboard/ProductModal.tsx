@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Loader2, Package, Image as ImageIcon, DollarSign, Barcode, Tags, Store, Globe, PowerOff, ScanBarcode } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth } from '@/context/auth-context'; // 🚀 IMPORTAMOS CONTEXTO
+import { useAuth } from '@/context/auth-context'; 
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -47,13 +47,14 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: ProductModalProps) {
-  // 🚀 OBTENEMOS AL USUARIO Y SUS PERMISOS
   const { user, role } = useAuth();
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   const permissions = user?.permissions || {};
   
   const canViewCosts = isSuperOrOwner || permissions.canViewCosts;
-  const canViewOtherBranches = isSuperOrOwner || permissions.canViewOtherBranches;
+  const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
+  // 🚀 FIX: Aplicamos la misma lógica del page.tsx para el modal
+  const canViewOtherBranches = isSuperOrOwner || permissions.canViewOtherBranches || canManageGlobal;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -106,7 +107,6 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
 
   const totalCalculatedStock = Object.values(branchStocks).reduce((acc, curr) => acc + (parseInt(curr) || 0), 0);
   
-  // 🚀 Filtramos las tiendas que SÍ puede ver este usuario en el Modal
   const visibleBranches = branches?.filter(b => canViewOtherBranches || b.id === user?.branchId) || [];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -152,7 +152,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
       const payload = { 
         ...formData, 
         barcode: finalBarcode, 
-        branchStocks // 🚀 El backend ignorará los IDs que no pueda editar
+        branchStocks 
       };
 
       const url = productToEdit?.id ? `/api/products/${productToEdit.id}` : '/api/products';
@@ -227,12 +227,10 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
               </div>
             </div>
 
-            {/* 🚀 PRIVACIDAD DE COSTOS: El grid se adapta si se oculta el campo costo */}
             <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-emerald-500" /> Precios y Costos</h3>
               <div className={`grid grid-cols-1 ${canViewCosts ? 'md:grid-cols-2' : ''} gap-4`}>
                 <div className="space-y-2"><Label>Precio Venta (S/) *</Label><Input type="number" min="0" step="0.01" name="price" value={formData.price} onChange={handleChange} required /></div>
-                
                 {canViewCosts && (
                   <div className="space-y-2"><Label>Costo Compra (S/)</Label><Input type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} placeholder="Opcional" /></div>
                 )}
@@ -256,7 +254,6 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                 <div className="space-y-2"><Label>Código Interno (SKU)</Label><Input name="code" value={formData.code} onChange={handleChange} /></div>
               </div>
 
-              {/* 🚀 PROTECCIÓN: Solo muestra la sucursal a la que tiene permiso de ver */}
               <div className="pt-4 border-t">
                 <Label className="text-slate-600 flex items-center gap-2 mb-3"><Store className="w-4 h-4" /> Stock Físico por Tienda</Label>
                 {visibleBranches.length > 0 ? (

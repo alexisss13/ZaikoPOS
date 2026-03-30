@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProductModal, ProductData } from '@/components/dashboard/ProductModal';
 import Barcode from 'react-barcode';
-import { useAuth } from '@/context/auth-context'; // 🚀 IMPORTAMOS CONTEXTO DE AUTENTICACIÓN
+import { useAuth } from '@/context/auth-context';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -31,20 +31,25 @@ interface Category { id: string; name: string; }
 const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
-  // 🚀 OBTENEMOS AL USUARIO Y SUS PERMISOS
   const { user, role } = useAuth();
   const permissions = user?.permissions || {};
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   
   const canCreate = isSuperOrOwner || permissions.canCreateProducts;
   const canEdit = isSuperOrOwner || permissions.canEditProducts;
-  const canViewOthers = isSuperOrOwner || permissions.canViewOtherBranches;
+  const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
+  // 🚀 FIX: Si puede manejar globales, POR LÓGICA debe poder ver y asignar a otras tiendas
+  const canViewOthers = isSuperOrOwner || permissions.canViewOtherBranches || canManageGlobal;
 
   const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher);
   const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher);
   
+  const myBranch = branches?.find(b => b.id === user?.branchId);
+  const myCode = myBranch?.ecommerceCode; 
+
   const uniqueCodes = Array.from(new Set(branches?.map((b) => b.ecommerceCode).filter(Boolean))) as string[];
+  const visibleCodes = canViewOthers ? uniqueCodes : uniqueCodes.filter(c => c === myCode);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [codeFilter, setCodeFilter] = useState('ALL');
@@ -61,6 +66,10 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     return products.filter(p => {
+      if (!canViewOthers && p.category?.ecommerceCode && p.category.ecommerceCode !== myCode) {
+        return false;
+      }
+
       const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             (p.barcode && p.barcode.includes(searchTerm)) || 
                             (p.code && p.code.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -86,7 +95,7 @@ export default function ProductsPage() {
 
       return matchesSearch && matchesCode && matchesCategory && matchesStock;
     });
-  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter]);
+  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter, canViewOthers, myCode]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -104,7 +113,7 @@ export default function ProductsPage() {
   const downloadBarcodePNG = async () => {
     if (!barcodeProduct || !ticketRef.current) return;
     try {
-      toast.loading('Generando etiqueta en alta calidad...', { id: 'barcode-toast' });
+      toast.loading('Generando etiqueta...', { id: 'barcode-toast' });
       const htmlToImage = await import('html-to-image');
       const dataUrl = await htmlToImage.toPng(ticketRef.current, { 
         pixelRatio: 5, backgroundColor: '#ffffff', style: { margin: '0', border: 'none', borderRadius: '0' }, skipFonts: true, 
@@ -122,13 +131,12 @@ export default function ProductsPage() {
   const inactiveTabClass = "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full">
+    <div className="space-y-6 max-w-7xl mx-auto w-full pb-20">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Package className="w-6 h-6 text-primary" /> Inventario</h1>
           <p className="text-slate-500 text-sm mt-1">Gestiona el stock de tus sucursales y tienda web.</p>
         </div>
-        {/* 🚀 PROTECCIÓN: Botón Nuevo Producto */}
         {canCreate && (
           <Button onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }} className="gap-2 shadow-md w-full sm:w-auto">
             <Plus className="w-4 h-4" /> Nuevo Producto
@@ -170,7 +178,9 @@ export default function ProductsPage() {
           <div className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-lg border border-slate-200/60 w-max">
             <button onClick={() => {setCodeFilter('ALL'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}>Todos</button>
             <button onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'GENERAL' ? activeTabClass : inactiveTabClass}`}><LinkIcon className="w-3.5 h-3.5" /> Compartidos</button>
-            {uniqueCodes.map(code => (<button key={code} onClick={() => {setCodeFilter(code); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === code ? activeTabClass : inactiveTabClass}`}>{code}</button>))}
+            
+            {visibleCodes.map(code => (<button key={code} onClick={() => {setCodeFilter(code); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === code ? activeTabClass : inactiveTabClass}`}>{code}</button>))}
+            
             <div className="w-px h-5 bg-slate-300 mx-1" />
             <button onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'INACTIVE' ? 'bg-red-50 text-red-600 shadow-sm ring-1 ring-red-200/50' : 'text-slate-500 hover:text-red-600 hover:bg-red-50/50'}`}><PowerOff className="w-3.5 h-3.5" /> Ocultos</button>
           </div>
@@ -189,10 +199,25 @@ export default function ProductsPage() {
               ) : (
                 paginatedProducts.map((product: Product) => {
                   
-                  // 🚀 PROTECCIÓN: Sumar solo stock visible
                   const visibleStockList = product.branchStock?.filter(bs => canViewOthers || bs.branchId === user?.branchId) || [];
                   const totalPhysicalStock = visibleStockList.reduce((acc, curr) => acc + curr.quantity, 0);
                   const hasWholesale = Number(product.wholesalePrice) > 0;
+
+                  const isGlobalProduct = !product.category?.ecommerceCode;
+                  const isMyCatalogProduct = product.category?.ecommerceCode === myCode;
+                  
+                  let canEditThisSpecificProduct = false;
+                  if (isSuperOrOwner) {
+                    canEditThisSpecificProduct = true;
+                  } else if (canEdit) {
+                    if (isGlobalProduct) {
+                      canEditThisSpecificProduct = !!canManageGlobal;
+                    } else if (isMyCatalogProduct) {
+                      canEditThisSpecificProduct = true;
+                    } else {
+                      canEditThisSpecificProduct = !!canManageGlobal;
+                    }
+                  }
 
                   return (
                     <tr key={product.id} className={`hover:bg-slate-50 transition-colors group ${!product.active ? 'opacity-75 bg-slate-50' : ''}`}>
@@ -239,11 +264,12 @@ export default function ProductsPage() {
                           {(product.barcode || product.code) && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 hover:bg-slate-200" onClick={() => setBarcodeProduct(product)}><BarcodeIcon className="w-4 h-4" /></Button>
                           )}
-                          {/* 🚀 PROTECCIÓN: Oculta botón editar si no tiene permiso */}
-                          {canEdit && (
+                          
+                          {canEditThisSpecificProduct && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100" onClick={() => { setSelectedProduct(product); setIsModalOpen(true); }}><Edit className="w-4 h-4" /></Button>
                           )}
-                          {canEdit && product.active && (
+                          
+                          {canEditThisSpecificProduct && product.active && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-100" onClick={() => handleDelete(product.id as string)}><Trash2 className="w-4 h-4" /></Button>
                           )}
                         </div>
