@@ -3,9 +3,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  Plus, MoreVertical, 
-  Search, ChevronLeft, ChevronRight, 
-  UserCog, PowerOff, Trash2, Building, Filter
+  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Filter, LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +26,7 @@ interface SystemUser {
   business?: { name: string } | null;
 }
 
-const ITEMS_PER_PAGE = 2;
+const ITEMS_PER_PAGE = 8; // 🚀 Lo subí a 8 para que se vea mejor la paginación
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Ingeniero TI',
@@ -113,125 +111,173 @@ export default function UsersPage() {
     finally { setOpenDropdownId(null); }
   };
 
+  // 🚀 ESTILOS PARA LOS TABS MODERNOS
+  const baseTabClass = "px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-2 cursor-pointer";
+  const activeTabClass = "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50";
+  const inactiveTabClass = "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
+
   if (isLoading) return <div className="p-8 text-center text-slate-500">Cargando directorio de personal...</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto w-full">
       
       {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Personal del Sistema</h1>
-          <p className="text-slate-500 text-sm">Gestiona los accesos y roles de tu equipo de trabajo.</p>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><UserCog className="w-6 h-6 text-primary" /> Personal del Sistema</h1>
+          <p className="text-slate-500 text-sm mt-1">Gestiona los accesos y roles de tu equipo de trabajo.</p>
         </div>
         <Button onClick={handleOpenNew} className="gap-2 shadow-md w-full sm:w-auto shrink-0">
           <Plus className="w-4 h-4" /> Registrar Usuario
         </Button>
       </div>
 
-      {/* BARRA DE BÚSQUEDA Y FILTROS */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
+      {/* 🚀 PANEL DE BÚSQUEDA Y FILTROS PREMIUM */}
+      <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        
+        {/* Fila 1: Buscador y Filtro de Estado */}
+        <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
               placeholder="Buscar por nombre o correo..." 
-              className="pl-9 bg-slate-50 border-slate-200"
+              className="pl-9 bg-slate-50/50 h-10 border-slate-200 focus-visible:bg-white transition-colors"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] shrink-0 bg-slate-50">
+            <SelectTrigger className="w-full md:w-[180px] shrink-0 bg-slate-50/50 h-10">
               <Filter className="w-4 h-4 mr-2 text-slate-400" />
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Todos</SelectItem>
-              <SelectItem value="ACTIVE">Activos</SelectItem>
-              <SelectItem value="INACTIVE">Suspendidos</SelectItem>
+              <SelectItem value="ALL" className="font-bold">Todos</SelectItem>
+              <SelectItem value="ACTIVE" className="text-emerald-600 font-bold">Activos</SelectItem>
+              <SelectItem value="INACTIVE" className="text-red-600 font-bold">Suspendidos</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 shrink-0">Filtro Rápido:</span>
-          <Button variant={roleFilter === 'ALL' ? 'default' : 'outline'} size="sm" className="rounded-full h-8 shrink-0 text-xs transition-colors" onClick={() => setRoleFilter('ALL')}>Todos</Button>
-          {currentUserRole === 'SUPER_ADMIN' && (
-            <Button variant={roleFilter === 'SUPER_ADMIN' ? 'default' : 'outline'} size="sm" className="rounded-full h-8 shrink-0 text-xs transition-colors" onClick={() => setRoleFilter('SUPER_ADMIN')}>Ingenieros TI</Button>
-          )}
-          <Button variant={roleFilter === 'OWNER' ? 'default' : 'outline'} size="sm" className="rounded-full h-8 shrink-0 text-xs transition-colors" onClick={() => setRoleFilter('OWNER')}>Dueños</Button>
-          <Button variant={roleFilter === 'MANAGER' ? 'default' : 'outline'} size="sm" className="rounded-full h-8 shrink-0 text-xs transition-colors" onClick={() => setRoleFilter('MANAGER')}>Jefes Tienda</Button>
-          <Button variant={roleFilter === 'CASHIER' ? 'default' : 'outline'} size="sm" className="rounded-full h-8 shrink-0 text-xs transition-colors" onClick={() => setRoleFilter('CASHIER')}>Cajeros</Button>
+        {/* Fila 2: Vistas Segmentadas por Rol */}
+        <div className="flex items-center overflow-x-auto hide-scrollbar pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-lg border border-slate-200/60 w-max">
+            
+            <button 
+              onClick={() => setRoleFilter('ALL')} 
+              className={`${baseTabClass} ${roleFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}
+            >
+              Todos los Roles
+            </button>
+
+            {currentUserRole === 'SUPER_ADMIN' && (
+              <button 
+                onClick={() => setRoleFilter('SUPER_ADMIN')} 
+                className={`${baseTabClass} ${roleFilter === 'SUPER_ADMIN' ? activeTabClass : inactiveTabClass}`}
+              >
+                Ingenieros TI
+              </button>
+            )}
+
+            <button 
+              onClick={() => setRoleFilter('OWNER')} 
+              className={`${baseTabClass} ${roleFilter === 'OWNER' ? activeTabClass : inactiveTabClass}`}
+            >
+              Dueños
+            </button>
+            
+            <button 
+              onClick={() => setRoleFilter('MANAGER')} 
+              className={`${baseTabClass} ${roleFilter === 'MANAGER' ? activeTabClass : inactiveTabClass}`}
+            >
+              Jefes Tienda
+            </button>
+            
+            <button 
+              onClick={() => setRoleFilter('CASHIER')} 
+              className={`${baseTabClass} ${roleFilter === 'CASHIER' ? activeTabClass : inactiveTabClass}`}
+            >
+              Cajeros
+            </button>
+
+          </div>
         </div>
       </div>
 
-      {/* LISTA DE USUARIOS */}
-      <div className="grid grid-cols-1 gap-3">
+      {/* GRID DE USUARIOS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         {paginatedUsers.length === 0 ? (
-          <div className="text-center py-12 bg-white border border-dashed rounded-xl">
-            <UserCog className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No se encontraron usuarios</p>
+          <div className="col-span-full text-center py-16 bg-white border border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center">
+            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+              <UserCog className="w-8 h-8 text-slate-300" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">No se encontraron usuarios</h3>
+            <p className="text-sm text-slate-500 mb-4">Intenta cambiando los filtros de búsqueda.</p>
+            <Button variant="link" onClick={() => { setSearchTerm(''); setRoleFilter('ALL'); setStatusFilter('ALL'); }} className="text-primary">
+              Limpiar filtros
+            </Button>
           </div>
         ) : (
           paginatedUsers.map((user: SystemUser) => {
             const isDropdownOpen = openDropdownId === user.id;
 
             return (
-              <Card key={user.id} className={`transition-all relative ${!user.isActive ? 'opacity-70 bg-slate-50' : 'hover:shadow-sm'} ${isDropdownOpen ? 'z-50' : 'z-10'}`}>
-                <CardContent className="p-3 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
+              <Card key={user.id} className={`transition-all relative border-slate-200 ${!user.isActive ? 'opacity-70 bg-slate-50' : 'hover:shadow-md'} ${isDropdownOpen ? 'z-50' : 'z-10'}`}>
+                <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   
                   {/* Avatar y Datos Base */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
-                    <div className="relative">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-lg text-white shadow-sm shrink-0 ${user.isActive ? 'bg-primary' : 'bg-slate-400'}`}>
+                  <div className="flex items-center gap-4 flex-1 min-w-0 w-full">
+                    <div className="relative shrink-0">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg text-white shadow-inner ${user.isActive ? 'bg-primary' : 'bg-slate-400'}`}>
                         {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       {!user.isActive && (
-                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full"></span>
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full shadow-sm"></span>
                       )}
                     </div>
                     
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-slate-900 truncate text-sm sm:text-base leading-tight">
-                        {user.name}
-                      </p>
-                      <p className="text-xs sm:text-sm text-slate-500 truncate leading-snug">{user.email}</p>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-bold text-slate-900 truncate text-base leading-tight">
+                          {user.name}
+                        </p>
+                        {!user.isActive && <Badge variant="destructive" className="text-[9px] py-0 h-4">SUSPENDIDO</Badge>}
+                      </div>
+                      <p className="text-xs text-slate-500 truncate leading-snug">{user.email}</p>
                     </div>
                   </div>
 
                   {/* Etiquetas (Rol y Negocio) + Botones */}
-                  <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto mt-1 md:mt-0 pl-13 md:pl-0 border-t md:border-t-0 pt-3 md:pt-0">
+                  <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto mt-2 md:mt-0 pl-16 md:pl-0 border-t border-slate-100 md:border-t-0 pt-3 md:pt-0">
                     
                     <div className="flex items-center gap-2 overflow-hidden">
-                      {/* Ocultamos el negocio en celulares (solo se ve en sm o superior) */}
                       {currentUserRole === 'SUPER_ADMIN' && user.business && (
-                        <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 px-2 py-1 rounded border max-w-[120px]">
+                        <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-[120px]">
                           <Building className="w-3 h-3 text-slate-400 shrink-0" /> 
-                          <span className="truncate">{user.business.name}</span>
+                          <span className="truncate font-medium">{user.business.name}</span>
                         </div>
                       )}
                       
-                      <Badge variant="outline" className={`${ROLE_COLORS[user.role] || ROLE_COLORS.CASHIER} shrink-0 text-[10px] sm:text-xs px-2 py-0.5`}>
+                      <Badge variant="outline" className={`${ROLE_COLORS[user.role] || ROLE_COLORS.CASHIER} shrink-0 text-[10px] sm:text-xs px-2.5 py-0.5 uppercase font-bold`}>
                         {ROLE_LABELS[user.role] || user.role}
                       </Badge>
                     </div>
 
-                    <div className="flex items-center ml-auto shrink-0 border-l border-slate-200 pl-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" onClick={() => handleOpenEdit(user)}>
+                    <div className="flex items-center ml-auto shrink-0 border-l border-slate-200 pl-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors" onClick={() => handleOpenEdit(user)}>
                         <UserCog className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" onClick={() => setOpenDropdownId(isDropdownOpen ? null : user.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors" onClick={() => setOpenDropdownId(isDropdownOpen ? null : user.id)}>
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                       
                       {isDropdownOpen && (
-                        <div className="absolute right-4 top-full mt-1 w-44 bg-white border rounded-lg shadow-xl z-50 py-1 overflow-hidden">
-                          <button onClick={() => handleToggleStatus(user)} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 font-medium">
-                            <PowerOff className={`w-4 h-4 shrink-0 ${user.isActive ? 'text-orange-500' : 'text-emerald-500'}`} /> {user.isActive ? 'Bloquear' : 'Permitir'}
+                        <div className="absolute right-4 top-full mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+                          <button onClick={() => handleToggleStatus(user)} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 font-medium transition-colors">
+                            <PowerOff className={`w-4 h-4 shrink-0 ${user.isActive ? 'text-orange-500' : 'text-emerald-500'}`} /> {user.isActive ? 'Suspender Acceso' : 'Restaurar Acceso'}
                           </button>
-                          <button onClick={() => handleDelete(user.id)} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t font-medium">
-                            <Trash2 className="w-4 h-4 shrink-0" /> Eliminar
+                          <button onClick={() => handleDelete(user.id)} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 font-medium transition-colors">
+                            <Trash2 className="w-4 h-4 shrink-0" /> Eliminar Usuario
                           </button>
                         </div>
                       )}
@@ -245,12 +291,13 @@ export default function UsersPage() {
         )}
       </div>
 
+      {/* PAGINACIÓN */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border shadow-sm">
-          <p className="text-xs sm:text-sm text-slate-500">Pág. {currentPage} de {totalPages}</p>
+        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm mt-6">
+          <p className="text-sm text-slate-500">Pág. <span className="font-bold text-slate-900">{currentPage}</span> de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="hover:bg-slate-50"><ChevronLeft className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="hover:bg-slate-50"><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
       )}

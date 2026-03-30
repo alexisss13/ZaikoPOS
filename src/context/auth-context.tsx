@@ -5,12 +5,15 @@ import { Role } from '@/types/role';
 
 export interface UserSession {
   userId: string;
+  businessId?: string; // 🚀 Agregado
   branchId: string;
   role: Role;
   name: string;
+  permissions?: Record<string, boolean>; // 🚀 Agregado para el RBAC
 }
 
 interface AuthContextType extends UserSession {
+  user: UserSession | null; // 🚀 FIX: Exponemos el objeto usuario completo
   isAuthenticated: boolean;
   setSession: (session: UserSession | null) => void;
   logout: () => void;
@@ -52,10 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
+      user: session, // 🚀 AHORA SÍ EXISTE 'user' para usar user.permissions
       userId: session?.userId || '',
+      businessId: session?.businessId || '',
       branchId: session?.branchId || '',
       role: session?.role || Role.USER, 
       name: session?.name || 'Invitado',
+      permissions: session?.permissions || {}, // 🚀 Por si lo quieres sacar directo: const { permissions } = useAuth()
       isAuthenticated: !!session,
       setSession,
       logout,

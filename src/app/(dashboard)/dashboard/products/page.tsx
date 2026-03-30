@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProductModal, ProductData } from '@/components/dashboard/ProductModal';
 import Barcode from 'react-barcode';
+import { useAuth } from '@/context/auth-context'; // 🚀 IMPORTAMOS CONTEXTO DE AUTENTICACIÓN
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -30,6 +31,15 @@ interface Category { id: string; name: string; }
 const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
+  // 🚀 OBTENEMOS AL USUARIO Y SUS PERMISOS
+  const { user, role } = useAuth();
+  const permissions = user?.permissions || {};
+  const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
+  
+  const canCreate = isSuperOrOwner || permissions.canCreateProducts;
+  const canEdit = isSuperOrOwner || permissions.canEditProducts;
+  const canViewOthers = isSuperOrOwner || permissions.canViewOtherBranches;
+
   const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher);
   const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher);
@@ -124,31 +134,28 @@ export default function ProductsPage() {
     }
   };
 
-  // 🚀 ESTILOS PARA LOS TABS MODERNOS
   const baseTabClass = "px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-2 cursor-pointer";
   const activeTabClass = "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50";
   const inactiveTabClass = "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
 
   return (
-    <div className="space-y-6 pb-20 max-w-7xl mx-auto w-full">
+    <div className="space-y-6 max-w-7xl mx-auto w-full">
       
-      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Package className="w-6 h-6 text-primary" /> Inventario</h1>
           <p className="text-slate-500 text-sm mt-1">Gestiona el stock de tus sucursales y tienda web.</p>
         </div>
-        <Button onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }} className="gap-2 shadow-md w-full sm:w-auto">
-          <Plus className="w-4 h-4" /> Nuevo Producto
-        </Button>
+        {/* 🚀 PROTECCIÓN: Botón Nuevo Producto */}
+        {canCreate && (
+          <Button onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }} className="gap-2 shadow-md w-full sm:w-auto">
+            <Plus className="w-4 h-4" /> Nuevo Producto
+          </Button>
+        )}
       </div>
 
-      {/* 🚀 PANEL DE FILTROS REDISEÑADO */}
       <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        
-        {/* Fila 1: Buscador y Selectores (Se apilan en móvil, en fila en PC) */}
         <div className="flex flex-col lg:flex-row gap-3">
-          
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
@@ -179,7 +186,7 @@ export default function ProductsPage() {
                 <SelectValue placeholder="Filtro Stock" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL" className="font-bold">Cualquier Stock</SelectItem>
+                <SelectItem value="ALL" className="font-bold">Filtrar Stock</SelectItem>
                 <SelectItem value="LOW" className="text-amber-600 font-bold">Stock Bajo</SelectItem>
                 <SelectItem value="OUT" className="text-red-600 font-bold">Agotados</SelectItem>
               </SelectContent>
@@ -187,49 +194,21 @@ export default function ProductsPage() {
           </div>
         </div>
         
-        {/* Fila 2: Vistas Segmentadas (Estilo macOS/SaaS) */}
         <div className="flex items-center overflow-x-auto hide-scrollbar pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-lg border border-slate-200/60 w-max">
-            
-            <button 
-              onClick={() => {setCodeFilter('ALL'); setCurrentPage(1)}} 
-              className={`${baseTabClass} ${codeFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}
-            >
-              Todos
-            </button>
-            
-            <button 
-              onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1)}} 
-              className={`${baseTabClass} ${codeFilter === 'GENERAL' ? activeTabClass : inactiveTabClass}`}
-            >
-              <LinkIcon className="w-3.5 h-3.5" /> Compartidos
-            </button>
-
+            <button onClick={() => {setCodeFilter('ALL'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}>Todos</button>
+            <button onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'GENERAL' ? activeTabClass : inactiveTabClass}`}><LinkIcon className="w-3.5 h-3.5" /> Compartidos</button>
             {uniqueCodes.map(code => (
-              <button 
-                key={code} 
-                onClick={() => {setCodeFilter(code); setCurrentPage(1)}} 
-                className={`${baseTabClass} ${codeFilter === code ? activeTabClass : inactiveTabClass}`}
-              >
-                {code}
-              </button>
+              <button key={code} onClick={() => {setCodeFilter(code); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === code ? activeTabClass : inactiveTabClass}`}>{code}</button>
             ))}
-
-            {/* Separador sutil */}
             <div className="w-px h-5 bg-slate-300 mx-1" />
-
-            <button 
-              onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1)}} 
-              className={`${baseTabClass} ${codeFilter === 'INACTIVE' ? 'bg-red-50 text-red-600 shadow-sm ring-1 ring-red-200/50' : 'text-slate-500 hover:text-red-600 hover:bg-red-50/50'}`}
-            >
+            <button onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'INACTIVE' ? 'bg-red-50 text-red-600 shadow-sm ring-1 ring-red-200/50' : 'text-slate-500 hover:text-red-600 hover:bg-red-50/50'}`}>
               <PowerOff className="w-3.5 h-3.5" /> Ocultos
             </button>
-
           </div>
         </div>
       </div>
 
-      {/* TABLA DE RESULTADOS */}
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
@@ -255,15 +234,17 @@ export default function ProductsPage() {
                       <p className="font-medium text-slate-600">
                         {codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos con estos filtros.'}
                       </p>
-                      <Button variant="link" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>
-                        Limpiar filtros
-                      </Button>
+                      <Button variant="link" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button>
                     </div>
                   </td>
                 </tr>
               ) : (
                 paginatedProducts.map((product: Product) => {
-                  const totalPhysicalStock = product.branchStock?.reduce((acc, curr) => acc + curr.quantity, 0) || 0;
+                  
+                  // 🚀 PROTECCIÓN: Si no puede ver otras sucursales, filtramos el array de stock para sumar solo el suyo
+                  const visibleStockList = product.branchStock?.filter(bs => canViewOthers || bs.branchId === user?.branchId) || [];
+                  const totalPhysicalStock = visibleStockList.reduce((acc, curr) => acc + curr.quantity, 0);
+                  
                   const hasWholesale = Number(product.wholesalePrice) > 0;
 
                   return (
@@ -314,7 +295,8 @@ export default function ProductsPage() {
                             Web: {product.stock}
                           </Badge>
                           <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-200 bg-white">
-                            Físico: {totalPhysicalStock}
+                            {/* 🚀 Cambio dinámico del texto si no ve otras tiendas */}
+                            {!canViewOthers ? 'Tu Local:' : 'Físico:'} {totalPhysicalStock}
                           </Badge>
                         </div>
                       </td>
@@ -327,11 +309,15 @@ export default function ProductsPage() {
                             </Button>
                           )}
                           
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100" onClick={() => { setSelectedProduct(product); setIsModalOpen(true); }}><Edit className="w-4 h-4" /></Button>
+                          {/* 🚀 PROTECCIÓN: Botones de Edición */}
+                          {canEdit && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100" onClick={() => { setSelectedProduct(product); setIsModalOpen(true); }}><Edit className="w-4 h-4" /></Button>
+                          )}
                           
-                          {product.active && (
+                          {canEdit && product.active && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-100" onClick={() => handleDelete(product.id as string)} title="Dar de baja"><Trash2 className="w-4 h-4" /></Button>
                           )}
+
                         </div>
                       </td>
                     </tr>
@@ -353,48 +339,24 @@ export default function ProductsPage() {
         )}
       </div>
 
-      <ProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => mutate()} productToEdit={selectedProduct} />
+      {canCreate || canEdit ? (
+        <ProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => mutate()} productToEdit={selectedProduct} />
+      ) : null}
 
       <Dialog open={!!barcodeProduct} onOpenChange={() => setBarcodeProduct(null)}>
         <DialogContent className="sm:max-w-sm text-center border-none shadow-2xl p-6 bg-slate-100">
-          <DialogHeader className="mb-2">
-            <DialogTitle className="text-center text-slate-500 text-xs uppercase tracking-widest font-bold">Vista Previa Etiqueta</DialogTitle>
-          </DialogHeader>
-          
+          <DialogHeader className="mb-2"><DialogTitle className="text-center text-slate-500 text-xs uppercase tracking-widest font-bold">Vista Previa Etiqueta</DialogTitle></DialogHeader>
           <div className="flex flex-col items-center justify-center overflow-hidden">
-            <div 
-              ref={ticketRef}
-              id="barcode-ticket" 
-              className="bg-white px-6 py-5 flex flex-col items-center justify-center w-full max-w-[320px] text-black border border-slate-300"
-            >
-              <h3 className="font-black text-black text-center text-[16px] leading-tight uppercase w-full mb-4 px-2 line-clamp-3">
-                {barcodeProduct?.title}
-              </h3>
-
+            <div ref={ticketRef} id="barcode-ticket" className="bg-white px-6 py-5 flex flex-col items-center justify-center w-full max-w-[320px] text-black border border-slate-300">
+              <h3 className="font-black text-black text-center text-[16px] leading-tight uppercase w-full mb-4 px-2 line-clamp-3">{barcodeProduct?.title}</h3>
               <div className="w-full flex justify-center bg-white overflow-hidden">
-                {barcodeProduct && (
-                  <Barcode 
-                    value={barcodeProduct.barcode || barcodeProduct.code || '000000'} 
-                    width={2} 
-                    height={60} 
-                    fontSize={16} 
-                    textMargin={8} 
-                    margin={10} 
-                    format="CODE128" 
-                    background="#ffffff" 
-                    lineColor="#000000" 
-                    renderer="canvas" 
-                  />
-                )}
+                {barcodeProduct && <Barcode value={barcodeProduct.barcode || barcodeProduct.code || '000000'} width={2} height={60} fontSize={16} textMargin={8} margin={10} format="CODE128" background="#ffffff" lineColor="#000000" renderer="canvas" />}
               </div>
             </div>
           </div>
-          
           <div className="flex gap-3 w-full mt-6">
             <Button onClick={() => setBarcodeProduct(null)} className="flex-1" variant="outline">Cerrar</Button>
-            <Button onClick={downloadBarcodePNG} className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800 text-white">
-              <Download className="w-4 h-4"/> Descargar
-            </Button>
+            <Button onClick={downloadBarcodePNG} className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800 text-white"><Download className="w-4 h-4"/> Descargar</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Loader2, Package, Image as ImageIcon, DollarSign, Barcode, Tags, Store, Globe, PowerOff, ScanBarcode } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/auth-context'; // 🚀 IMPORTAMOS CONTEXTO
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -46,6 +47,14 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: ProductModalProps) {
+  // 🚀 OBTENEMOS AL USUARIO Y SUS PERMISOS
+  const { user, role } = useAuth();
+  const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
+  const permissions = user?.permissions || {};
+  
+  const canViewCosts = isSuperOrOwner || permissions.canViewCosts;
+  const canViewOtherBranches = isSuperOrOwner || permissions.canViewOtherBranches;
+
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   
@@ -96,18 +105,19 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
   }, [productToEdit, isOpen]);
 
   const totalCalculatedStock = Object.values(branchStocks).reduce((acc, curr) => acc + (parseInt(curr) || 0), 0);
+  
+  // 🚀 Filtramos las tiendas que SÍ puede ver este usuario (pero el backend recibirá TODAS en el save)
+  const visibleBranches = branches?.filter(b => canViewOtherBranches || b.id === user?.branchId) || [];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // 🚀 FIX: Evitar stocks negativos en las sucursales
   const handleBranchStockChange = (branchId: string, value: string) => {
-    if (value !== '' && parseInt(value) < 0) return; // Bloquea si es negativo
+    if (value !== '' && parseInt(value) < 0) return;
     setBranchStocks(prev => ({ ...prev, [branchId]: value }));
   };
 
-  // 🚀 NUEVO: Generador de Código de Barras (EAN-12 style)
   const generateRandomBarcode = () => {
     const code = Math.floor(100000000000 + Math.random() * 900000000000).toString();
     setFormData(prev => ({ ...prev, barcode: code }));
@@ -137,13 +147,12 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
     
     setIsLoading(true);
     try {
-      // 🚀 AUTOGENERAR si lo dejaron vacío al guardar
       const finalBarcode = formData.barcode?.trim() || Math.floor(100000000000 + Math.random() * 900000000000).toString();
 
       const payload = { 
         ...formData, 
         barcode: finalBarcode, 
-        branchStocks 
+        branchStocks // Envía el objeto completo (los inputs que no vio no se sobrescriben)
       };
 
       const url = productToEdit?.id ? `/api/products/${productToEdit.id}` : '/api/products';
@@ -219,19 +228,21 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
               </div>
             </div>
 
+            {/* 🚀 PRIVACIDAD DE COSTOS: El grid se adapta si se oculta el campo costo */}
             <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-emerald-500" /> Precios y Costos</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {/* 🚀 FIX: Añadido min="0" para evitar precios negativos */}
+              <div className={`grid grid-cols-1 ${canViewCosts ? 'md:grid-cols-2' : ''} gap-4`}>
                 <div className="space-y-2"><Label>Precio Venta (S/) *</Label><Input type="number" min="0" step="0.01" name="price" value={formData.price} onChange={handleChange} required /></div>
-                <div className="space-y-2"><Label>Costo Compra (S/)</Label><Input type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} placeholder="Opcional" /></div>
+                
+                {canViewCosts && (
+                  <div className="space-y-2"><Label>Costo Compra (S/)</Label><Input type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} placeholder="Opcional" /></div>
+                )}
               </div>
             </div>
 
             <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><Barcode className="w-4 h-4 text-orange-500" /> Códigos e Inventario</h3>
               
-              {/* 🚀 NUEVO: Campo de Código de Barras con botón Generar */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><ScanBarcode className="w-4 h-4 text-slate-500"/> Código de Barras</Label>
@@ -246,16 +257,17 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                 <div className="space-y-2"><Label>Código Interno (SKU)</Label><Input name="code" value={formData.code} onChange={handleChange} /></div>
               </div>
 
+              {/* 🚀 PROTECCIÓN: Solo muestra la sucursal a la que tiene permiso de ver */}
               <div className="pt-4 border-t">
                 <Label className="text-slate-600 flex items-center gap-2 mb-3"><Store className="w-4 h-4" /> Stock Físico por Tienda</Label>
-                {branches && branches.length > 0 ? (
+                {visibleBranches.length > 0 ? (
                   <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    {branches.map(branch => (
+                    {visibleBranches.map(branch => (
                       <div key={branch.id} className="flex items-center justify-between gap-4">
                         <span className="text-sm font-medium text-slate-700 truncate">{branch.name}</span>
                         <Input 
                           type="number" 
-                          min="0" // 🚀 FIX HTML: Previene flechas negativas
+                          min="0"
                           placeholder="0" 
                           className="w-24 text-right bg-white" 
                           value={branchStocks[branch.id] || ''} 
@@ -265,14 +277,14 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">No has creado sucursales aún.</p>
+                  <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded border border-dashed">No tienes sucursales asignadas o no cuentas con permisos para editar stock.</p>
                 )}
               </div>
 
               <div className="pt-4 mt-2 border-t flex items-center justify-between bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-indigo-900 flex items-center gap-1"><Globe className="w-4 h-4" /> Stock Global (Web)</span>
-                  <span className="text-[10px] text-indigo-600">Calculado automáticamente de las tiendas</span>
+                  <span className="text-[10px] text-indigo-600">Calculado automáticamente {!canViewOtherBranches ? '(Incluye stock de otras tiendas)' : ''}</span>
                 </div>
                 <div className="text-2xl font-black text-indigo-700">{totalCalculatedStock}</div>
               </div>
