@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useOfflineSales } from '@/hooks/use-offline-sales';
 import { OfflineIndicator } from '@/components/pos/OfflineIndicator';
 import { Button } from '@/components/ui/button';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@/types/payment-method';
 import { toast } from 'sonner';
 import { usePosStore } from '@/store/pos-store';
 import { Trash2, ShoppingCart, Loader2 } from 'lucide-react';

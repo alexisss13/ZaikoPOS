@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@/types/payment-method';
 import { Banknote, CreditCard, Smartphone, Wallet } from 'lucide-react';
 
 interface PaymentModalProps {
