@@ -24,7 +24,11 @@ export async function GET(req: Request) {
     const lowStockCount = await prisma.product.count({
       where: {
         businessId,
-        stock: { some: { quantity: { lte: 5 } } }
+        branchStock: {
+          some: {
+            quantity: { lte: 5 }
+          }
+        }
       }
     });
 
