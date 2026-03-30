@@ -12,6 +12,7 @@ datasource db {
 enum Division {
   JUGUETERIA
   FIESTAS
+  OTROS
 }
 
 enum Role {
@@ -157,6 +158,8 @@ model Category {
   // 👇 NUEVOS CAMPOS POS
   businessId  String?
   business    Business? @relation(fields: [businessId], references: [id])
+
+  ecommerceCode String?
 
   products    Product[]
 
