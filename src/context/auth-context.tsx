@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Role } from '@prisma/client';
+import { Role } from '@/types/role';
 
 export interface UserSession {
   userId: string;
