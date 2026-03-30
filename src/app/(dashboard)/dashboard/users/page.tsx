@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Filter, LayoutGrid
+  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Filter, LayoutGrid, Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,10 +23,13 @@ interface SystemUser {
   role: string;
   isActive: boolean;
   businessId: string | null;
+  branchId: string | null; // 🚀 FIX: Agregamos branchId
+  permissions: Record<string, boolean> | null; // 🚀 FIX: Agregamos permissions
   business?: { name: string } | null;
+  branch?: { name: string } | null;
 }
 
-const ITEMS_PER_PAGE = 8; // 🚀 Lo subí a 8 para que se vea mejor la paginación
+const ITEMS_PER_PAGE = 8; 
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Ingeniero TI',
@@ -83,7 +86,9 @@ export default function UsersPage() {
       name: user.name || '', 
       email: user.email || '', 
       role: user.role, 
-      businessId: user.businessId
+      businessId: user.businessId,
+      branchId: user.branchId, // 🚀 FIX: Pasamos el branchId al modal
+      permissions: user.permissions || {} // 🚀 FIX: Pasamos los permisos
     });
     setIsModalOpen(true);
     setOpenDropdownId(null);
@@ -111,7 +116,6 @@ export default function UsersPage() {
     finally { setOpenDropdownId(null); }
   };
 
-  // 🚀 ESTILOS PARA LOS TABS MODERNOS
   const baseTabClass = "px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-2 cursor-pointer";
   const activeTabClass = "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50";
   const inactiveTabClass = "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
@@ -119,9 +123,8 @@ export default function UsersPage() {
   if (isLoading) return <div className="p-8 text-center text-slate-500">Cargando directorio de personal...</div>;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full">
+    <div className="space-y-6 max-w-7xl mx-auto w-full pb-20">
       
-      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><UserCog className="w-6 h-6 text-primary" /> Personal del Sistema</h1>
@@ -132,10 +135,8 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      {/* 🚀 PANEL DE BÚSQUEDA Y FILTROS PREMIUM */}
       <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
         
-        {/* Fila 1: Buscador y Filtro de Estado */}
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -152,59 +153,24 @@ export default function UsersPage() {
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL" className="font-bold">Todos</SelectItem>
+              <SelectItem value="ALL" className="font-bold">Todos los estados</SelectItem>
               <SelectItem value="ACTIVE" className="text-emerald-600 font-bold">Activos</SelectItem>
               <SelectItem value="INACTIVE" className="text-red-600 font-bold">Suspendidos</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Fila 2: Vistas Segmentadas por Rol */}
         <div className="flex items-center overflow-x-auto hide-scrollbar pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-lg border border-slate-200/60 w-max">
-            
-            <button 
-              onClick={() => setRoleFilter('ALL')} 
-              className={`${baseTabClass} ${roleFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}
-            >
-              Todos los Roles
-            </button>
-
-            {currentUserRole === 'SUPER_ADMIN' && (
-              <button 
-                onClick={() => setRoleFilter('SUPER_ADMIN')} 
-                className={`${baseTabClass} ${roleFilter === 'SUPER_ADMIN' ? activeTabClass : inactiveTabClass}`}
-              >
-                Ingenieros TI
-              </button>
-            )}
-
-            <button 
-              onClick={() => setRoleFilter('OWNER')} 
-              className={`${baseTabClass} ${roleFilter === 'OWNER' ? activeTabClass : inactiveTabClass}`}
-            >
-              Dueños
-            </button>
-            
-            <button 
-              onClick={() => setRoleFilter('MANAGER')} 
-              className={`${baseTabClass} ${roleFilter === 'MANAGER' ? activeTabClass : inactiveTabClass}`}
-            >
-              Jefes Tienda
-            </button>
-            
-            <button 
-              onClick={() => setRoleFilter('CASHIER')} 
-              className={`${baseTabClass} ${roleFilter === 'CASHIER' ? activeTabClass : inactiveTabClass}`}
-            >
-              Cajeros
-            </button>
-
+            <button onClick={() => setRoleFilter('ALL')} className={`${baseTabClass} ${roleFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}>Todos los Roles</button>
+            {currentUserRole === 'SUPER_ADMIN' && <button onClick={() => setRoleFilter('SUPER_ADMIN')} className={`${baseTabClass} ${roleFilter === 'SUPER_ADMIN' ? activeTabClass : inactiveTabClass}`}>Ingenieros TI</button>}
+            <button onClick={() => setRoleFilter('OWNER')} className={`${baseTabClass} ${roleFilter === 'OWNER' ? activeTabClass : inactiveTabClass}`}>Dueños</button>
+            <button onClick={() => setRoleFilter('MANAGER')} className={`${baseTabClass} ${roleFilter === 'MANAGER' ? activeTabClass : inactiveTabClass}`}>Jefes Tienda</button>
+            <button onClick={() => setRoleFilter('CASHIER')} className={`${baseTabClass} ${roleFilter === 'CASHIER' ? activeTabClass : inactiveTabClass}`}>Cajeros</button>
           </div>
         </div>
       </div>
 
-      {/* GRID DE USUARIOS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         {paginatedUsers.length === 0 ? (
           <div className="col-span-full text-center py-16 bg-white border border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center">
@@ -225,7 +191,6 @@ export default function UsersPage() {
               <Card key={user.id} className={`transition-all relative border-slate-200 ${!user.isActive ? 'opacity-70 bg-slate-50' : 'hover:shadow-md'} ${isDropdownOpen ? 'z-50' : 'z-10'}`}>
                 <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   
-                  {/* Avatar y Datos Base */}
                   <div className="flex items-center gap-4 flex-1 min-w-0 w-full">
                     <div className="relative shrink-0">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg text-white shadow-inner ${user.isActive ? 'bg-primary' : 'bg-slate-400'}`}>
@@ -238,23 +203,27 @@ export default function UsersPage() {
                     
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-bold text-slate-900 truncate text-base leading-tight">
-                          {user.name}
-                        </p>
+                        <p className="font-bold text-slate-900 truncate text-base leading-tight">{user.name}</p>
                         {!user.isActive && <Badge variant="destructive" className="text-[9px] py-0 h-4">SUSPENDIDO</Badge>}
                       </div>
                       <p className="text-xs text-slate-500 truncate leading-snug">{user.email}</p>
                     </div>
                   </div>
 
-                  {/* Etiquetas (Rol y Negocio) + Botones */}
                   <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto mt-2 md:mt-0 pl-16 md:pl-0 border-t border-slate-100 md:border-t-0 pt-3 md:pt-0">
-                    
                     <div className="flex items-center gap-2 overflow-hidden">
                       {currentUserRole === 'SUPER_ADMIN' && user.business && (
-                        <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-[120px]">
+                        <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-[120px]" title={user.business.name}>
                           <Building className="w-3 h-3 text-slate-400 shrink-0" /> 
                           <span className="truncate font-medium">{user.business.name}</span>
+                        </div>
+                      )}
+                      
+                      {/* 🚀 FIX: Mostramos la sucursal a la que pertenece */}
+                      {user.branch && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-[120px]" title={user.branch.name}>
+                          <Store className="w-3 h-3 text-slate-400 shrink-0" /> 
+                          <span className="truncate font-medium">{user.branch.name}</span>
                         </div>
                       )}
                       
@@ -291,7 +260,6 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* PAGINACIÓN */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm mt-6">
           <p className="text-sm text-slate-500">Pág. <span className="font-bold text-slate-900">{currentPage}</span> de {totalPages}</p>

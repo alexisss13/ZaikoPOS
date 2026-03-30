@@ -4,14 +4,18 @@ import { hash } from 'bcryptjs';
 import { Role } from '@prisma/client';
 
 export async function GET(req: Request) {
-  // ... (Tu GET se mantiene exactamente igual) ...
   const role = req.headers.get('x-user-role');
   const businessId = req.headers.get('x-business-id');
 
   try {
     if (role === 'SUPER_ADMIN') {
       const allUsers = await prisma.user.findMany({
-        include: { business: { select: { name: true } }, branch: { select: { name: true } } },
+        // 🚀 FIX: Traemos el branchId para que el Select del modal sepa qué elegir
+        select: {
+          id: true, name: true, email: true, role: true, isActive: true, businessId: true, branchId: true, permissions: true,
+          business: { select: { name: true } },
+          branch: { select: { name: true } }
+        },
         orderBy: { createdAt: 'desc' },
       });
       return NextResponse.json(allUsers);
@@ -21,7 +25,11 @@ export async function GET(req: Request) {
     
     const businessUsers = await prisma.user.findMany({
       where: { businessId },
-      include: { branch: { select: { name: true } } }, // 🚀 Incluimos la sucursal para verla en la tabla
+      // 🚀 FIX: Traemos todo incluyendo branchId y permissions
+      select: {
+        id: true, name: true, email: true, role: true, isActive: true, businessId: true, branchId: true, permissions: true,
+        branch: { select: { name: true } }
+      },
       orderBy: { createdAt: 'desc' },
     });
     
@@ -75,8 +83,9 @@ export async function POST(req: Request) {
         password: hashedPassword,
         role: body.role as Role,
         businessId: targetBusinessId || null,
-        branchId: body.branchId === 'NONE' ? null : (body.branchId || null), // 🚀 Guardamos Sucursal
-        permissions: body.permissions || {}, // 🚀 Guardamos Permisos JSON
+        // 🚀 FIX: Aseguramos que se guarde null explícito en base de datos si es NONE
+        branchId: body.branchId === 'NONE' || !body.branchId ? null : body.branchId,
+        permissions: body.permissions || {}, 
       },
       include: { business: { select: { name: true } } }
     });

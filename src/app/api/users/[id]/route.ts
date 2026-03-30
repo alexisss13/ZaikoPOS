@@ -20,7 +20,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
-    // 🚀 FIX: Eliminamos el 'any' y usamos Record para el JSON de permisos
     const updateData: { 
       name?: string; 
       role?: Role; 
@@ -34,9 +33,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (body.role) updateData.role = body.role as Role;
     if (typeof body.isActive === 'boolean') updateData.isActive = body.isActive;
     
+    // 🚀 FIX CRÍTICO: Si mandan 'NONE', explícitamente lo seteamos a null en Prisma
     if (body.branchId !== undefined) {
-      updateData.branchId = body.branchId === 'NONE' ? null : body.branchId;
+      updateData.branchId = (body.branchId === 'NONE' || body.branchId === '') ? null : body.branchId;
     }
+    
     if (body.permissions) {
       updateData.permissions = body.permissions;
     }
