@@ -6,6 +6,7 @@ export async function GET(req: Request) {
   const businessId = req.headers.get('x-business-id');
   const branchId = req.headers.get('x-branch-id');
   const role = req.headers.get('x-user-role');
+  const userId = req.headers.get('x-user-id'); 
 
   if (!businessId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
@@ -13,12 +14,30 @@ export async function GET(req: Request) {
     const firstBusiness = await prisma.business.findFirst({ orderBy: { createdAt: 'asc' } });
     const isPioneer = firstBusiness?.id === businessId;
 
+    let permissions: Record<string, boolean> = {};
+    if (userId) {
+      const user = await prisma.user.findUnique({ 
+        where: { id: userId },
+        select: { permissions: true }
+      });
+      if (user?.permissions) permissions = user.permissions as Record<string, boolean>;
+    }
+
+    const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
+    const canViewOthers = isSuperOrOwner || permissions.canViewOtherBranches || permissions.canManageGlobalProducts;
+
     let branchFilter = {};
-    if ((role === 'MANAGER' || role === 'CASHIER') && branchId) {
+    
+    // 🚀 LA NUEVA REGLA: Si no puedo ver a otros, muestrame mis productos, los globales, Y CUALQUIERA QUE TENGA STOCK EN MI TIENDA
+    if ((role === 'MANAGER' || role === 'CASHIER') && branchId && !canViewOthers) {
       const branch = await prisma.branch.findUnique({ where: { id: branchId } });
       if (branch?.ecommerceCode) {
         branchFilter = {
-          category: { OR: [{ ecommerceCode: branch.ecommerceCode }, { ecommerceCode: null }] }
+          OR: [
+            { category: { ecommerceCode: branch.ecommerceCode } }, // Es de mi marca
+            { category: { ecommerceCode: null } }, // Es global
+            { branchStock: { some: { branchId: branchId, quantity: { gt: 0 } } } } // 🚀 TIENE STOCK FÍSICO EN MI TIENDA
+          ]
         };
       }
     }
@@ -50,7 +69,6 @@ export async function POST(req: Request) {
 
   if (!businessId) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
-  // 🚀 1. VERIFICACIÓN DE PERMISOS EN BACKEND
   let permissions: Record<string, boolean> = {};
   if (userId) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -58,8 +76,9 @@ export async function POST(req: Request) {
   }
 
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
-  const canCreate = isSuperOrOwner || permissions.canCreateProducts;
   const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
+  // 🚀 FIX: Si tienes poder global, OBVIAMENTE puedes crear productos
+  const canCreate = isSuperOrOwner || permissions.canCreateProducts || canManageGlobal; 
 
   if (!canCreate) {
     return NextResponse.json({ error: 'Operación denegada. No tienes permiso para crear productos.' }, { status: 403 });
@@ -79,7 +98,6 @@ export async function POST(req: Request) {
     const category = await prisma.category.findUnique({ where: { id: body.categoryId } });
     const productDivision = category?.division || 'OTROS';
 
-    // 🚀 2. FILTRAR SUCURSALES (Ignora hackeos si intenta enviar stock a otra sucursal sin permiso)
     const branchStockData = Object.entries(body.branchStocks || {})
       .filter(([bId, _]) => canManageGlobal || bId === userBranchId)
       .map(([bId, qty]) => ({

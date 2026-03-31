@@ -14,8 +14,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
-  const canEdit = isSuperOrOwner || permissions.canEditProducts;
   const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
+  // 🚀 FIX: Si tiene permisos globales, automáticamente tiene permiso de editar
+  const canEdit = isSuperOrOwner || permissions.canEditProducts || canManageGlobal;
   const canViewCosts = isSuperOrOwner || permissions.canViewCosts;
 
   if (!canEdit) return NextResponse.json({ error: 'Denegado. No tienes permiso para editar.' }, { status: 403 });
@@ -34,7 +35,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const isGlobalProduct = !product.category?.ecommerceCode;
       const isMyCatalogProduct = product.category?.ecommerceCode === myBranch?.ecommerceCode;
 
-      if (isGlobalProduct || !isMyCatalogProduct) {
+      // 🚀 FIX: Validamos en BD si el producto tiene stock físico en MI tienda
+      const hasStockInMyBranch = await prisma.stock.findFirst({
+        where: { productId: id, branchId: userBranchId!, quantity: { gt: 0 } }
+      });
+
+      if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) {
         return NextResponse.json({ error: 'No tienes permiso de Catálogo Global para editar este producto de otra marca.' }, { status: 403 });
       }
     }
@@ -72,7 +78,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         images: body.image ? [body.image] : product.images,
         price: body.price !== undefined ? parseFloat(body.price) : product.price,
         
-        // 🚀 FIX ELEGANTE: Todo se reduce a number | null. Cero errores de TypeScript.
         cost: canViewCosts && body.cost !== undefined 
           ? (body.cost ? parseFloat(body.cost) : null) 
           : (product.cost ? Number(product.cost) : null),
@@ -94,9 +99,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     return NextResponse.json(updatedProduct);
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return NextResponse.json({ error: 'El Código o Código de Barras ya existe.' }, { status: 400 });
-    }
     return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 });
   }
 }

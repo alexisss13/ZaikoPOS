@@ -54,26 +54,20 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
     branchId: 'NONE',
   });
 
-  // 🚀 PERMISOS GRANULARES ENTERPRISE (EL TOP 7 + LOS ANTERIORES)
   const [permissions, setPermissions] = useState({
-    // 1. INVENTARIO BÁSICO
     canCreateProducts: false,
     canEditProducts: false,
-    // 2. INVENTARIO AVANZADO
     canManageGlobalProducts: false, 
     canViewOtherBranches: false,    
-    canAdjustStock: false,          // Mermas/Pérdidas
-    canTransferStock: false,        // Traslados entre tiendas
-    // 3. CAJA Y VENTAS
+    canAdjustStock: false,          
+    canTransferStock: false,        
     canApplyDiscounts: false,       
     canVoidSales: false,            
-    // 4. ADMINISTRACIÓN DE CAJA
-    canOpenCloseCash: false,        // Abrir/Cerrar Turnos
-    canViewDailySummary: false,     // Ver el "Corte Ciego" o total de caja
-    // 5. REPORTES Y PRIVACIDAD
-    canViewCosts: false,            // Ver costo de compra del proveedor
-    canViewReports: false,          // Ver gráficos y estadísticas
-    canManageCustomers: false,      // Ver/Exportar base de clientes
+    canOpenCloseCash: false,        
+    canViewDailySummary: false,     
+    canViewCosts: false,            
+    canViewReports: false,          
+    canManageCustomers: false,      
     canAccessSettings: false,       
   });
 
@@ -120,7 +114,6 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // 🚀 AUTO-PRESETS INTELIGENTES
   const handleRoleChange = (val: string) => {
     setFormData(prev => ({ ...prev, role: val }));
     
@@ -142,7 +135,6 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
         canAccessSettings: true,
       });
     } else if (val === 'CASHIER') {
-      // CAJERO ULTRA RESTRINGIDO (Solo vende y abre su propia caja)
       setPermissions({
         canCreateProducts: false,
         canEditProducts: false,
@@ -152,9 +144,9 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
         canTransferStock: false,
         canApplyDiscounts: false, 
         canVoidSales: false,
-        canOpenCloseCash: true, // Cajero normal sí puede abrir/cerrar su turno
-        canViewDailySummary: false, // Cajero normal NO ve cuánto dinero debería haber (Corte Ciego)
-        canViewCosts: false, // Cajero NO ve el costo de proveedor
+        canOpenCloseCash: true, 
+        canViewDailySummary: false, 
+        canViewCosts: false, 
         canViewReports: false,
         canManageCustomers: false,
         canAccessSettings: false,
@@ -229,7 +221,6 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
         <ScrollArea className="max-h-[75vh] px-6 py-4">
           <form id="user-form" onSubmit={handleSubmit} className="space-y-6">
             
-            {/* SECCIÓN 1: DATOS PERSONALES */}
             <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2 border-b pb-2"><LayoutDashboard className="w-4 h-4 text-indigo-500" /> Credenciales de Acceso</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -248,7 +239,6 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
               </div>
             </div>
 
-            {/* SECCIÓN 2: ROL Y SUCURSAL */}
             <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2 border-b pb-2"><Store className="w-4 h-4 text-emerald-500" /> Puesto de Trabajo</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -282,12 +272,11 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
               </div>
             </div>
 
-            {/* 🚀 SECCIÓN 3: PERMISOS GRANULARES (RBAC) */}
             {formData.role !== 'SUPER_ADMIN' && (
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-amber-500" /> Control de Permisos Especiales</h3>
                 
-                {/* 📦 BLOQUE 1: INVENTARIO BÁSICO Y AVANZADO */}
+                {/* 📦 BLOQUE 1: INVENTARIO */}
                 <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
                   <div className="bg-slate-50 px-4 py-2 border-b font-semibold text-xs text-slate-500 flex items-center gap-2">
                     <PackageOpen className="w-3.5 h-3.5" /> GESTIÓN DE PRODUCTOS E INVENTARIO
@@ -296,43 +285,44 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     <div className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
                       <div className="space-y-0.5 pr-4">
                         <Label className="text-sm font-bold cursor-pointer" onClick={() => handlePermissionToggle('canCreateProducts')}>Crear Productos</Label>
-                        <p className="text-xs text-slate-500 leading-tight">Permite agregar nuevos productos al sistema, vinculados a su sucursal.</p>
+                        <p className="text-xs text-slate-500 leading-tight">Permite registrar nueva mercadería en su sucursal o crear productos compartidos para la marca.</p>
                       </div>
                       <Switch checked={permissions.canCreateProducts} onCheckedChange={() => handlePermissionToggle('canCreateProducts')} />
                     </div>
                     <div className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
                       <div className="space-y-0.5 pr-4">
                         <Label className="text-sm font-bold cursor-pointer" onClick={() => handlePermissionToggle('canEditProducts')}>Editar Precios y Stock</Label>
-                        <p className="text-xs text-slate-500 leading-tight">Permite modificar información de los productos existentes de su sucursal.</p>
+                        <p className="text-xs text-slate-500 leading-tight">Permite modificar productos de su tienda y actualizar el stock de la mercadería compartida que reciba.</p>
                       </div>
                       <Switch checked={permissions.canEditProducts} onCheckedChange={() => handlePermissionToggle('canEditProducts')} />
                     </div>
                     <div className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
                       <div className="space-y-0.5 pr-4">
                         <Label className="text-sm font-bold cursor-pointer" onClick={() => handlePermissionToggle('canViewOtherBranches')}>Ver Stock Externo (Solo lectura)</Label>
-                        <p className="text-xs text-slate-500 leading-tight">Permite ver si hay stock en otras sucursales para derivar clientes.</p>
+                        <p className="text-xs text-slate-500 leading-tight">Visión ampliada para ver productos exclusivos de otras tiendas y saber si tienen stock físico (Para derivar clientes).</p>
                       </div>
                       <Switch checked={permissions.canViewOtherBranches} onCheckedChange={() => handlePermissionToggle('canViewOtherBranches')} />
                     </div>
+                    
                     {/* AVANZADOS INVENTARIO */}
                     <div className="flex items-center justify-between p-4 hover:bg-orange-50 transition-colors bg-orange-50/20">
                       <div className="space-y-0.5 pr-4">
                         <Label className="text-sm font-bold text-orange-700 cursor-pointer flex items-center gap-1" onClick={() => handlePermissionToggle('canAdjustStock')}><FileWarning className="w-3.5 h-3.5"/> Ajuste de Mermas / Pérdidas</Label>
-                        <p className="text-xs text-orange-600/80 leading-tight">Permite reducir stock manualmente sin registrar una venta (Pérdidas/Robos).</p>
+                        <p className="text-xs text-orange-600/80 leading-tight">Permite reducir stock manualmente sin registrar una venta (Para sincerar inventario por mermas o robos).</p>
                       </div>
                       <Switch checked={permissions.canAdjustStock} onCheckedChange={() => handlePermissionToggle('canAdjustStock')} />
                     </div>
                     <div className="flex items-center justify-between p-4 hover:bg-orange-50 transition-colors bg-orange-50/20">
                       <div className="space-y-0.5 pr-4">
                         <Label className="text-sm font-bold text-orange-700 cursor-pointer flex items-center gap-1" onClick={() => handlePermissionToggle('canTransferStock')}><ArrowRightLeft className="w-3.5 h-3.5"/> Traslados entre Sucursales</Label>
-                        <p className="text-xs text-orange-600/80 leading-tight">Permite enviar productos físicos hacia otra tienda/sucursal.</p>
+                        <p className="text-xs text-orange-600/80 leading-tight">Permite enviar mercadería física propia hacia el almacén de otra tienda del grupo.</p>
                       </div>
                       <Switch checked={permissions.canTransferStock} onCheckedChange={() => handlePermissionToggle('canTransferStock')} />
                     </div>
                     <div className="flex items-center justify-between p-4 hover:bg-red-50 transition-colors bg-red-50/20">
                       <div className="space-y-0.5 pr-4">
-                        <Label className="text-sm font-bold text-red-700 cursor-pointer" onClick={() => handlePermissionToggle('canManageGlobalProducts')}>Acceso al Catálogo Global</Label>
-                        <p className="text-xs text-red-600/80 leading-tight">Crítico: Permite editar productos compartidos y asignar stock a TODAS las tiendas ajenas.</p>
+                        <Label className="text-sm font-bold text-red-700 cursor-pointer" onClick={() => handlePermissionToggle('canManageGlobalProducts')}>Acceso al Catálogo Global (Modo Dios)</Label>
+                        <p className="text-xs text-red-600/80 leading-tight">Crítico: Control absoluto. Puede editar cualquier producto y modificar el stock de TODAS las tiendas libremente.</p>
                       </div>
                       <Switch checked={permissions.canManageGlobalProducts} onCheckedChange={() => handlePermissionToggle('canManageGlobalProducts')} />
                     </div>

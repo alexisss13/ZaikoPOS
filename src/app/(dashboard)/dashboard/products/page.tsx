@@ -35,11 +35,10 @@ export default function ProductsPage() {
   const permissions = user?.permissions || {};
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   
-  const canCreate = isSuperOrOwner || permissions.canCreateProducts;
-  const canEdit = isSuperOrOwner || permissions.canEditProducts;
-  const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
-  // 🚀 FIX: Si puede manejar globales, POR LÓGICA debe poder ver y asignar a otras tiendas
-  const canViewOthers = isSuperOrOwner || permissions.canViewOtherBranches || canManageGlobal;
+  const canManageGlobal = isSuperOrOwner || !!permissions.canManageGlobalProducts;
+  const canCreate = isSuperOrOwner || !!permissions.canCreateProducts || canManageGlobal;
+  const canEdit = isSuperOrOwner || !!permissions.canEditProducts || canManageGlobal;
+  const canViewOthers = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
 
   const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher);
   const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
@@ -66,8 +65,14 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     return products.filter(p => {
-      if (!canViewOthers && p.category?.ecommerceCode && p.category.ecommerceCode !== myCode) {
-        return false;
+      
+      const isGlobalProduct = !p.category?.ecommerceCode;
+      const isMyCatalogProduct = p.category?.ecommerceCode === myCode;
+      // 🚀 FIX: ?? false para garantizar que SIEMPRE sea boolean
+      const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+
+      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
+         if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) return false;
       }
 
       const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -80,7 +85,7 @@ export default function ProductsPage() {
       let matchesCode = true;
       if (codeFilter === 'GENERAL') {
         const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
-        matchesCode = !p.category?.ecommerceCode || storesWithStock > 1;
+        matchesCode = isGlobalProduct || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
       }
       else if (codeFilter !== 'ALL') matchesCode = p.category?.ecommerceCode === codeFilter;
 
@@ -95,7 +100,7 @@ export default function ProductsPage() {
 
       return matchesSearch && matchesCode && matchesCategory && matchesStock;
     });
-  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter, canViewOthers, myCode]);
+  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, myCode, user?.branchId]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -113,7 +118,7 @@ export default function ProductsPage() {
   const downloadBarcodePNG = async () => {
     if (!barcodeProduct || !ticketRef.current) return;
     try {
-      toast.loading('Generando etiqueta...', { id: 'barcode-toast' });
+      toast.loading('Generando etiqueta en alta calidad...', { id: 'barcode-toast' });
       const htmlToImage = await import('html-to-image');
       const dataUrl = await htmlToImage.toPng(ticketRef.current, { 
         pixelRatio: 5, backgroundColor: '#ffffff', style: { margin: '0', border: 'none', borderRadius: '0' }, skipFonts: true, 
@@ -205,17 +210,17 @@ export default function ProductsPage() {
 
                   const isGlobalProduct = !product.category?.ecommerceCode;
                   const isMyCatalogProduct = product.category?.ecommerceCode === myCode;
+                  // 🚀 FIX: ?? false para garantizar que SIEMPRE sea boolean
+                  const hasStockInMyBranch = product.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
                   
                   let canEditThisSpecificProduct = false;
-                  if (isSuperOrOwner) {
-                    canEditThisSpecificProduct = true;
+                  if (canManageGlobal) {
+                    canEditThisSpecificProduct = true; 
                   } else if (canEdit) {
-                    if (isGlobalProduct) {
-                      canEditThisSpecificProduct = !!canManageGlobal;
-                    } else if (isMyCatalogProduct) {
-                      canEditThisSpecificProduct = true;
-                    } else {
-                      canEditThisSpecificProduct = !!canManageGlobal;
+                    if (isGlobalProduct || isMyCatalogProduct) {
+                      canEditThisSpecificProduct = true; 
+                    } else if (hasStockInMyBranch) {
+                      canEditThisSpecificProduct = true; 
                     }
                   }
 
