@@ -28,15 +28,14 @@ export async function GET(req: Request) {
 
     let branchFilter = {};
     
-    // 🚀 LA NUEVA REGLA: Si no puedo ver a otros, muestrame mis productos, los globales, Y CUALQUIERA QUE TENGA STOCK EN MI TIENDA
     if ((role === 'MANAGER' || role === 'CASHIER') && branchId && !canViewOthers) {
       const branch = await prisma.branch.findUnique({ where: { id: branchId } });
       if (branch?.ecommerceCode) {
         branchFilter = {
           OR: [
-            { category: { ecommerceCode: branch.ecommerceCode } }, // Es de mi marca
-            { category: { ecommerceCode: null } }, // Es global
-            { branchStock: { some: { branchId: branchId, quantity: { gt: 0 } } } } // 🚀 TIENE STOCK FÍSICO EN MI TIENDA
+            { category: { ecommerceCode: branch.ecommerceCode } },
+            { category: { ecommerceCode: null } },
+            { branchStock: { some: { branchId: branchId, quantity: { gt: 0 } } } }
           ]
         };
       }
@@ -77,7 +76,6 @@ export async function POST(req: Request) {
 
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
-  // 🚀 FIX: Si tienes poder global, OBVIAMENTE puedes crear productos
   const canCreate = isSuperOrOwner || permissions.canCreateProducts || canManageGlobal; 
 
   if (!canCreate) {
@@ -115,7 +113,8 @@ export async function POST(req: Request) {
         slug: baseSlug,
         categoryId: body.categoryId,
         division: productDivision as Division,
-        images: body.image ? [body.image] : [],
+        // 🚀 FIX: Aceptamos arreglo de imágenes
+        images: body.images || [],
         price: parseFloat(body.price || '0'),
         cost: body.cost ? parseFloat(body.cost) : null,
         wholesalePrice: body.wholesalePrice ? parseFloat(body.wholesalePrice) : null,
@@ -136,9 +135,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json(newProduct);
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return NextResponse.json({ error: 'El Código o Código de Barras ya existe.' }, { status: 400 });
-    }
     return NextResponse.json({ error: 'Error interno al crear producto' }, { status: 500 });
   }
 }

@@ -15,7 +15,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
-  // 🚀 FIX: Si tiene permisos globales, automáticamente tiene permiso de editar
   const canEdit = isSuperOrOwner || permissions.canEditProducts || canManageGlobal;
   const canViewCosts = isSuperOrOwner || permissions.canViewCosts;
 
@@ -35,7 +34,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const isGlobalProduct = !product.category?.ecommerceCode;
       const isMyCatalogProduct = product.category?.ecommerceCode === myBranch?.ecommerceCode;
 
-      // 🚀 FIX: Validamos en BD si el producto tiene stock físico en MI tienda
       const hasStockInMyBranch = await prisma.stock.findFirst({
         where: { productId: id, branchId: userBranchId!, quantity: { gt: 0 } }
       });
@@ -75,7 +73,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         description: body.description ?? product.description,
         slug: finalSlug,
         categoryId: body.categoryId || product.categoryId,
-        images: body.image ? [body.image] : product.images,
+        // 🚀 FIX: Actualiza el arreglo de imágenes si se manda en el body
+        images: body.images !== undefined ? body.images : product.images,
         price: body.price !== undefined ? parseFloat(body.price) : product.price,
         
         cost: canViewCosts && body.cost !== undefined 

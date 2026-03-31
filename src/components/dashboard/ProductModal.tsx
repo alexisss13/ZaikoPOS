@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,20 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Package, Image as ImageIcon, DollarSign, Barcode, Tags, Store, Globe, PowerOff, ScanBarcode } from 'lucide-react';
+import { Loader2, Package, DollarSign, Tags, Store, Globe, PowerOff, ScanBarcode, Plus, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context'; 
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-interface Category { id: string; name: string; }
-interface Branch { id: string; name: string; ecommerceCode: string | null; }
+interface Category { id: string; name: string; ecommerceCode: string | null; }
+// 🚀 FIX: Agregamos logoUrl a la interfaz
+interface Branch { id: string; name: string; ecommerceCode: string | null; logoUrl?: string | null; }
 
 export interface ProductData {
   id?: string;
   title: string;
   description: string;
   categoryId: string;
+  category?: { ecommerceCode: string | null };
   price: string;
   cost: string;
   wholesalePrice: string;
@@ -32,9 +34,9 @@ export interface ProductData {
   barcode: string;
   code: string;
   color: string;
+  groupTag: string; 
   tags: string;
-  image: string; 
-  images?: string[]; 
+  images: string[]; 
   branchStock?: { branchId: string; quantity: number }[]; 
   active: boolean;
 }
@@ -51,26 +53,38 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   const permissions = user?.permissions || {};
   
-  const canViewCosts = isSuperOrOwner || permissions.canViewCosts;
-  const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
-  // 🚀 FIX: Aplicamos la misma lógica del page.tsx para el modal
-  const canViewOtherBranches = isSuperOrOwner || permissions.canViewOtherBranches || canManageGlobal;
+  const canViewCosts = isSuperOrOwner || !!permissions.canViewCosts;
+  const canManageGlobal = isSuperOrOwner || !!permissions.canManageGlobalProducts;
+  const canViewOtherBranches = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher);
   const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
+  
+  // 🚀 Obtenemos solo sucursales que tengan e-commerce habilitado
+  const validBranches = branches?.filter(b => b.ecommerceCode) || [];
+
+  const [selectedCatalog, setSelectedCatalog] = useState<string>('');
 
   const [formData, setFormData] = useState<ProductData>({
     title: '', description: '', categoryId: '', price: '', cost: '', wholesalePrice: '', wholesaleMinCount: '', 
-    discountPercentage: '0', stock: '0', minStock: '5', barcode: '', code: '', color: '', tags: '', image: '', active: true
+    discountPercentage: '0', stock: '0', minStock: '5', barcode: '', code: '', color: '', groupTag: '', tags: '', images: [], active: true
   });
 
   const [branchStocks, setBranchStocks] = useState<Record<string, string>>({});
 
+  // 🚀 Filtramos las categorías de acuerdo al catálogo seleccionado (ya no existe el GLOBAL)
+  const filteredCategories = useMemo(() => {
+    if (!categories || !selectedCatalog) return [];
+    return categories.filter(c => c.ecommerceCode === selectedCatalog);
+  }, [categories, selectedCatalog]);
+
   useEffect(() => {
     if (productToEdit && isOpen) {
+      setSelectedCatalog(productToEdit.category?.ecommerceCode || (validBranches.length > 0 ? validBranches[0].ecommerceCode! : ''));
+      
       setFormData({
         title: productToEdit.title || '',
         description: productToEdit.description || '',
@@ -85,8 +99,9 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
         barcode: productToEdit.barcode || '',
         code: productToEdit.code || '',
         color: productToEdit.color || '',
+        groupTag: productToEdit.groupTag || '',
         tags: Array.isArray(productToEdit.tags) ? productToEdit.tags.join(', ') : (productToEdit.tags || ''),
-        image: productToEdit.images?.[0] || '',
+        images: productToEdit.images || [], 
         active: productToEdit.active ?? true,
       });
 
@@ -97,16 +112,17 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
       setBranchStocks(initialBranchStocks);
 
     } else if (isOpen) {
+      const defaultCatalog = validBranches.length > 0 ? validBranches[0].ecommerceCode! : '';
+      setSelectedCatalog(defaultCatalog);
       setFormData({
         title: '', description: '', categoryId: '', price: '', cost: '', wholesalePrice: '', wholesaleMinCount: '', 
-        discountPercentage: '0', stock: '0', minStock: '5', barcode: '', code: '', color: '', tags: '', image: '', active: true
+        discountPercentage: '0', stock: '0', minStock: '5', barcode: '', code: '', color: '', groupTag: '', tags: '', images: [], active: true
       });
       setBranchStocks({});
     }
-  }, [productToEdit, isOpen]);
+  }, [productToEdit, isOpen, branches]); // 🚀 Agregado branches a dependencias
 
   const totalCalculatedStock = Object.values(branchStocks).reduce((acc, curr) => acc + (parseInt(curr) || 0), 0);
-  
   const visibleBranches = branches?.filter(b => canViewOtherBranches || b.id === user?.branchId) || [];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -135,164 +151,307 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
     try {
       const res = await fetch('https://api.cloudinary.com/v1_1/dwunkgitl/image/upload', { method: 'POST', body: uploadData });
       const data = await res.json();
-      if (data.secure_url) { setFormData(prev => ({ ...prev, image: data.secure_url })); toast.success('Imagen subida'); } 
+      if (data.secure_url) { 
+        setFormData(prev => ({ ...prev, images: [...prev.images, data.secure_url].slice(0, 5) })); 
+        toast.success('Imagen agregada'); 
+      } 
       else throw new Error('Error al subir');
     } catch (error) { toast.error('Error con Cloudinary'); } 
-    finally { setIsUploadingImage(false); }
+    finally { setIsUploadingImage(false); e.target.value = ''; }
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== indexToRemove) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.categoryId) return toast.error('Debes seleccionar una categoría');
+    if (!formData.categoryId) return toast.error('Debes seleccionar una categoría obligatoria');
+    if (!selectedCatalog) return toast.error('Debes seleccionar un catálogo.');
     
     setIsLoading(true);
     try {
       const finalBarcode = formData.barcode?.trim() || Math.floor(100000000000 + Math.random() * 900000000000).toString();
-
-      const payload = { 
-        ...formData, 
-        barcode: finalBarcode, 
-        branchStocks 
-      };
-
+      const payload = { ...formData, barcode: finalBarcode, branchStocks };
       const url = productToEdit?.id ? `/api/products/${productToEdit.id}` : '/api/products';
       const method = productToEdit?.id ? 'PUT' : 'POST';
 
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       
-      toast.success(productToEdit?.id ? 'Producto actualizado' : 'Producto creado');
+      toast.success(productToEdit?.id ? 'Producto actualizado' : 'Producto creado exitosamente');
       onSuccess(); onClose();
     } catch (error: unknown) { 
-      toast.error('Error inesperado'); 
+      toast.error('Error al guardar el producto'); 
     } 
     finally { setIsLoading(false); }
   };
 
+  const getInputClass = (val: string | number | undefined, isTextarea = false) => {
+    const base = "transition-all focus-visible:ring-blue-500 font-medium text-xs sm:text-sm w-full rounded-md border px-3 outline-none";
+    const size = isTextarea ? "min-h-[70px] resize-y py-2" : "h-8 sm:h-9";
+    const state = val && String(val).trim() !== '' && String(val) !== '0'
+      ? "bg-blue-50/40 border-blue-200 text-blue-900 shadow-sm" 
+      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-white";
+    return `${base} ${size} ${state}`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50">
-        <DialogHeader className="px-6 py-4 bg-white border-b">
-          <DialogTitle className="flex items-center gap-2 text-xl"><Package className="w-5 h-5 text-primary" /> {productToEdit ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
-          <DialogDescription>Completa la información para el catálogo virtual y el POS.</DialogDescription>
+      <DialogContent className="w-[95vw] sm:max-w-6xl p-0 overflow-hidden bg-slate-50 font-sans">
+        
+        <DialogHeader className="px-4 py-3 bg-white border-b border-slate-200 flex flex-row items-center shadow-sm relative">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 p-1.5 rounded-lg">
+              <Package className="w-5 h-5 text-blue-600" /> 
+            </div>
+            <div className="flex flex-col items-start pr-4">
+              <DialogTitle className="text-base sm:text-lg font-bold text-slate-800 leading-tight">
+                {productToEdit ? 'Editar Producto' : 'Crear Producto'}
+              </DialogTitle>
+              <DialogDescription className="text-[10px] sm:text-xs text-slate-500">
+                Añade detalles, precios y stock.
+              </DialogDescription>
+            </div>
+          </div>
+
+          {productToEdit && (
+            <div className="hidden sm:flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 ml-4 mr-auto">
+              <PowerOff className={`w-3.5 h-3.5 ${formData.active ? 'text-emerald-500' : 'text-slate-400'}`} />
+              <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide">POS:</span>
+              <Select value={formData.active ? 'true' : 'false'} onValueChange={(v) => setFormData(p => ({...p, active: v === 'true'}))}>
+                <SelectTrigger className={`w-[85px] h-6 text-[10px] font-bold border-none shadow-none focus:ring-0 px-2 ${formData.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true" className="text-emerald-600 font-bold text-xs">ACTIVO</SelectItem>
+                  <SelectItem value="false" className="text-slate-600 font-bold text-xs">OCULTO</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </DialogHeader>
 
-        <ScrollArea className="max-h-[75vh] px-6 py-4">
-          <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
-            
-            {productToEdit && (
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><PowerOff className="w-4 h-4 text-slate-400" /> Estado del Producto</h3>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Si está inactivo, desaparecerá de la web y de la caja.</p>
-                </div>
-                <Select value={formData.active ? 'true' : 'false'} onValueChange={(v) => setFormData(p => ({...p, active: v === 'true'}))}>
-                  <SelectTrigger className="w-[140px] h-8 text-xs font-bold bg-slate-50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true" className="text-emerald-600 font-bold">Activo</SelectItem>
-                    <SelectItem value="false" className="text-red-600 font-bold">Inactivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><Tags className="w-4 h-4 text-indigo-500" /> Info. General</h3>
-              <div className="flex gap-4 items-center mb-2">
-                <div className="w-20 h-20 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center">
-                  {formData.image ? <img src={formData.image} alt="Preview" className="w-full h-full object-cover" /> : <ImageIcon className="w-8 h-8 text-slate-300" />}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <Label className="text-xs font-bold text-slate-600">Foto Principal</Label>
-                  <div className="relative">
-                    <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="text-xs h-9 cursor-pointer" />
-                    {isUploadingImage && <div className="absolute inset-0 bg-white/90 flex items-center justify-center text-xs font-bold text-indigo-600 gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Subiendo...</div>}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2"><Label>Nombre del Producto *</Label><Input name="title" value={formData.title} onChange={handleChange} required /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Categoría *</Label>
-                  <Select value={formData.categoryId} onValueChange={(v) => setFormData(p => ({...p, categoryId: v}))}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>Color / Variante</Label><Input name="color" value={formData.color} onChange={handleChange} placeholder="Ej: Rojo, Talla M..." /></div>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-emerald-500" /> Precios y Costos</h3>
-              <div className={`grid grid-cols-1 ${canViewCosts ? 'md:grid-cols-2' : ''} gap-4`}>
-                <div className="space-y-2"><Label>Precio Venta (S/) *</Label><Input type="number" min="0" step="0.01" name="price" value={formData.price} onChange={handleChange} required /></div>
-                {canViewCosts && (
-                  <div className="space-y-2"><Label>Costo Compra (S/)</Label><Input type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} placeholder="Opcional" /></div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><Barcode className="w-4 h-4 text-orange-500" /> Códigos e Inventario</h3>
+        <ScrollArea className="max-h-[85vh] sm:max-h-[80vh] px-4 py-4 sm:px-5 sm:py-5 overflow-x-hidden">
+          <form id="product-form" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><ScanBarcode className="w-4 h-4 text-slate-500"/> Código de Barras</Label>
-                  <div className="flex gap-2">
-                    <Input name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Escanea o genera..." className="font-mono bg-white" />
-                    <Button type="button" variant="outline" onClick={generateRandomBarcode} className="shrink-0" title="Generar código aleatorio">
-                      Generar
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-slate-400">Si lo dejas vacío, se autogenerará al guardar.</p>
+              {/* ==================================
+                  COLUMNA 1: INFO GENERAL (4/12)
+                  ================================== */}
+              <div className="lg:col-span-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-1.5">
+                  <Tags className="w-3.5 h-3.5 text-blue-500" /> Detalles
+                </h3>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold text-slate-600">Nombre del Producto <span className="text-red-500">*</span></Label>
+                  <input name="title" value={formData.title} onChange={handleChange} className={getInputClass(formData.title)} required />
                 </div>
-                <div className="space-y-2"><Label>Código Interno (SKU)</Label><Input name="code" value={formData.code} onChange={handleChange} /></div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  
+                  {/* 🚀 SELECTOR CON ÍCONOS DE SUCURSAL */}
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-600">Catálogo Base <span className="text-red-500">*</span></Label>
+                    <Select value={selectedCatalog} onValueChange={(v) => { setSelectedCatalog(v); setFormData(p => ({...p, categoryId: ''})); }}>
+                      <SelectTrigger className={`h-8 sm:h-9 text-xs sm:text-sm focus-visible:ring-blue-500 ${selectedCatalog ? 'bg-blue-50/40 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+                        <SelectValue placeholder="Elegir sucursal..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {validBranches.map(b => (
+                          <SelectItem key={b.id} value={b.ecommerceCode!} className="font-medium text-slate-700 py-2">
+                            <div className="flex items-center gap-2.5">
+                              {b.logoUrl ? (
+                                <img src={b.logoUrl} alt={b.name} className="w-4 h-4 rounded-md object-cover border border-slate-200 bg-white" />
+                              ) : (
+                                <Store className="w-3.5 h-3.5 text-blue-500" />
+                              )}
+                              <span>{b.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-600">Categoría <span className="text-red-500">*</span></Label>
+                    <Select value={formData.categoryId} onValueChange={(v) => setFormData(p => ({...p, categoryId: v}))} disabled={!selectedCatalog}>
+                      <SelectTrigger className={`h-8 sm:h-9 text-xs sm:text-sm focus-visible:ring-blue-500 ${formData.categoryId ? 'bg-blue-50/40 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredCategories.length === 0 && <SelectItem value="none" disabled>No hay categorías</SelectItem>}
+                        {filteredCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-600">Agrupador (Tag)</Label>
+                    <input name="groupTag" value={formData.groupTag} onChange={handleChange} className={getInputClass(formData.groupTag)} placeholder="VERANO-25" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-600">Color / Variante</Label>
+                    <div className="flex items-center gap-1.5 relative">
+                      <input name="color" value={formData.color} onChange={handleChange} className={`${getInputClass(formData.color)} pl-8`} placeholder="Rojo, #c02a2a" />
+                      <div className="absolute left-1.5 top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded shadow-sm border border-slate-300 overflow-hidden cursor-pointer hover:scale-105 transition-transform">
+                        <input type="color" name="color" value={(formData.color?.startsWith('#') && formData.color.length === 7) ? formData.color : '#ffffff'} onChange={handleChange} className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer opacity-0" />
+                        <div className="w-full h-full" style={{ backgroundColor: (formData.color?.startsWith('#') && formData.color.length === 7) ? formData.color : '#ffffff' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-1">
+                  <Label className="text-[11px] font-semibold text-slate-600">Descripción Breve</Label>
+                  <textarea name="description" value={formData.description} onChange={handleChange} className={getInputClass(formData.description, true)} placeholder="Material, uso, detalles..." />
+                </div>
               </div>
 
-              <div className="pt-4 border-t">
-                <Label className="text-slate-600 flex items-center gap-2 mb-3"><Store className="w-4 h-4" /> Stock Físico por Tienda</Label>
-                {visibleBranches.length > 0 ? (
-                  <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    {visibleBranches.map(branch => (
-                      <div key={branch.id} className="flex items-center justify-between gap-4">
-                        <span className="text-sm font-medium text-slate-700 truncate">{branch.name}</span>
-                        <Input 
-                          type="number" 
-                          min="0"
-                          placeholder="0" 
-                          className="w-24 text-right bg-white" 
-                          value={branchStocks[branch.id] || ''} 
-                          onChange={(e) => handleBranchStockChange(branch.id, e.target.value)} 
-                        />
+              {/* ==================================
+                  COLUMNA 2: PRECIOS Y CÓDIGOS (4/12)
+                  ================================== */}
+              <div className="lg:col-span-4 flex flex-col gap-4">
+                
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                  <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Finanzas
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1 col-span-2">
+                      <Label className="text-[11px] font-semibold text-slate-600">Precio Público (S/) <span className="text-red-500">*</span></Label>
+                      <input type="number" min="0" step="0.01" name="price" value={formData.price} onChange={handleChange} className={getInputClass(formData.price)} required />
+                    </div>
+                    
+                    {canViewCosts && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold text-slate-600">Costo Compra</Label>
+                        <input type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} className={getInputClass(formData.cost)} placeholder="0.00" />
+                      </div>
+                    )}
+                    
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-600">Desc. Web (%)</Label>
+                      <input type="number" min="0" max="100" name="discountPercentage" value={formData.discountPercentage} onChange={handleChange} className={getInputClass(formData.discountPercentage)} placeholder="0" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-600">Precio Mayorista</Label>
+                      <input type="number" min="0" step="0.01" name="wholesalePrice" value={formData.wholesalePrice} onChange={handleChange} className={`${getInputClass(formData.wholesalePrice)} font-bold text-blue-700`} placeholder="0.00" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-600">Cant. Min. Mayor</Label>
+                      <input type="number" min="0" name="wholesaleMinCount" value={formData.wholesaleMinCount} onChange={handleChange} className={getInputClass(formData.wholesaleMinCount)} placeholder="12" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 flex-1">
+                  <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-1.5">
+                    <ScanBarcode className="w-3.5 h-3.5 text-slate-500" /> Identificación
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] font-semibold text-slate-600">Código de Barras</Label>
+                        <button type="button" onClick={generateRandomBarcode} className="text-[9px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">Auto</button>
+                      </div>
+                      <input name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Escanear..." className={`${getInputClass(formData.barcode)} font-mono`} />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-600">SKU (Referencia)</Label>
+                      <input name="code" value={formData.code} onChange={handleChange} className={`${getInputClass(formData.code)} font-mono`} />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ==================================
+                  COLUMNA 3: GALERÍA Y STOCK (4/12)
+                  ================================== */}
+              <div className="lg:col-span-4 flex flex-col gap-4">
+                
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                  <Label className="text-[11px] font-semibold text-slate-600 flex justify-between">
+                    <span>Imágenes <span className="font-normal text-[9px]">(Hasta 5)</span></span>
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {formData.images.map((img, idx) => (
+                      <div key={idx} className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-slate-200 overflow-hidden group shadow-sm">
+                        <img src={img} alt="Prod" className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
                     ))}
+                    
+                    {formData.images.length < 5 && (
+                      <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-colors flex items-center justify-center cursor-pointer">
+                        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        {isUploadingImage ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> : <Plus className="w-4 h-4 text-slate-400" />}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded border border-dashed">No tienes sucursales asignadas o no cuentas con permisos para editar stock.</p>
-                )}
-              </div>
-
-              <div className="pt-4 mt-2 border-t flex items-center justify-between bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-indigo-900 flex items-center gap-1"><Globe className="w-4 h-4" /> Stock Global (Web)</span>
-                  <span className="text-[10px] text-indigo-600">Calculado automáticamente {!canViewOtherBranches ? '(Incluye stock de otras tiendas)' : ''}</span>
                 </div>
-                <div className="text-2xl font-black text-indigo-700">{totalCalculatedStock}</div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
+                  <div className="p-3 sm:p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Store className="w-3.5 h-3.5 text-blue-500" /> Stock Físico
+                    </h3>
+                    <div className="flex items-center gap-1.5">
+                      <Label className="text-[9px] sm:text-[10px] text-slate-500">Alerta:</Label>
+                      <input type="number" min="0" name="minStock" value={formData.minStock} onChange={handleChange} className={`w-10 sm:w-12 h-6 text-xs px-1 text-center rounded border focus:ring-blue-500 ${formData.minStock && formData.minStock !== '0' ? 'bg-blue-50/30 border-blue-200' : 'bg-white border-slate-200'}`} />
+                    </div>
+                  </div>
+                  
+                  {visibleBranches.length > 0 ? (
+                    <div className="p-2 space-y-1.5 overflow-y-auto hide-scrollbar flex-1 bg-white">
+                      {visibleBranches.map(branch => {
+                        const stockVal = branchStocks[branch.id];
+                        const hasStock = stockVal && stockVal !== '0';
+                        return (
+                          <div key={branch.id} className={`flex items-center justify-between px-3 py-1.5 border rounded-lg transition-colors ${hasStock ? 'bg-blue-50/20 border-blue-200 shadow-sm' : 'bg-slate-50/50 border-slate-100'}`}>
+                            <span className="text-[11px] sm:text-xs font-semibold text-slate-700 truncate mr-2">{branch.name}</span>
+                            <input 
+                              type="number" 
+                              min="0"
+                              className="w-14 sm:w-16 h-6 sm:h-7 text-right font-bold text-xs sm:text-sm bg-transparent border-none focus:ring-0 p-0 text-slate-900" 
+                              value={stockVal || ''} 
+                              placeholder="0"
+                              onChange={(e) => handleBranchStockChange(branch.id, e.target.value)} 
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-[10px] text-slate-400 bg-slate-50 border-t border-dashed">Sin permisos para stock.</div>
+                  )}
+
+                  <div className="p-3 sm:p-4 bg-slate-900 text-white flex items-center justify-between mt-auto">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] sm:text-xs font-bold text-blue-400 flex items-center gap-1.5"><Globe className="w-3 h-3" /> E-commerce</span>
+                      <span className="text-[9px] text-slate-400">Total Global</span>
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black">{totalCalculatedStock} <span className="text-[10px] sm:text-xs font-medium text-slate-500">un.</span></div>
+                  </div>
+                </div>
+
               </div>
             </div>
-            
           </form>
         </ScrollArea>
 
-        <div className="px-6 py-4 bg-white border-t flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="product-form" disabled={isLoading || isUploadingImage}>
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Guardar Producto
+        <div className="px-4 sm:px-6 py-3 bg-white border-t border-slate-200 flex justify-end gap-2 sm:gap-3">
+          <Button type="button" variant="outline" onClick={onClose} className="h-8 sm:h-9 text-[11px] sm:text-xs hover:bg-slate-100">Cancelar</Button>
+          <Button type="submit" form="product-form" className="h-8 sm:h-9 text-[11px] sm:text-xs bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 shadow-sm font-semibold" disabled={isLoading || isUploadingImage}>
+            {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />} Guardar Producto
           </Button>
         </div>
       </DialogContent>

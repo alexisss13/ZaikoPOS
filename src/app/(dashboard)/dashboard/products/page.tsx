@@ -136,7 +136,7 @@ export default function ProductsPage() {
   const inactiveTabClass = "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full pb-20">
+    <div className="space-y-6 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Package className="w-6 h-6 text-primary" /> Inventario</h1>
