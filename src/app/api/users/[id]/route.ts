@@ -27,19 +27,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       password?: string;
       branchId?: string | null;
       permissions?: Record<string, boolean>; 
+      image?: string | null; // 🚀 FIX: Añadimos la imagen al tipado
     } = {};
     
     if (body.name) updateData.name = body.name;
     if (body.role) updateData.role = body.role as Role;
     if (typeof body.isActive === 'boolean') updateData.isActive = body.isActive;
     
-    // 🚀 FIX CRÍTICO: Si mandan 'NONE', explícitamente lo seteamos a null en Prisma
     if (body.branchId !== undefined) {
       updateData.branchId = (body.branchId === 'NONE' || body.branchId === '') ? null : body.branchId;
     }
     
     if (body.permissions) {
       updateData.permissions = body.permissions;
+    }
+
+    // 🚀 FIX: Actualizamos la imagen (permite vaciarla enviando string vacío o null)
+    if (body.image !== undefined) {
+      updateData.image = body.image === '' ? null : body.image;
     }
     
     if (body.password && body.password.trim() !== '') {

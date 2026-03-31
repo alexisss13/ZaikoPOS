@@ -1,21 +1,177 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { 
   Menu, X, LayoutDashboard, ShoppingBag, 
   Package, Users, Store, LogOut, ShieldCheck, 
-  Tags, Building2, LifeBuoy
+  Tags, Building2, Camera, UserCircle, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import useSWR, { mutate } from 'swr';
 
+const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+// 🚀 MINI COMPONENTE: MODAL DE EDICIÓN DE MI PERFIL
+function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { userId } = useAuth();
+  const { data: userData, mutate: mutateMe } = useSWR(isOpen && userId ? '/api/auth/me' : null, fetcher);
+  
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', image: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    if (userData) {
+      setFormData({
+        name: userData.name || '',
+        email: userData.email || '',
+        password: '',
+        image: userData.image || ''
+      });
+    }
+  }, [userData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const uploadData = new FormData();
+    uploadData.append('file', file);
+    uploadData.append('upload_preset', 'zaiko_pos'); 
+    uploadData.append('cloud_name', 'dwunkgitl');
+
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/dwunkgitl/image/upload', { method: 'POST', body: uploadData });
+      const data = await res.json();
+      if (data.secure_url) { 
+        setFormData(prev => ({ ...prev, image: data.secure_url })); 
+        toast.success('Foto actualizada exitosamente'); 
+      } else throw new Error();
+    } catch (error) { 
+      toast.error('Error al subir imagen'); 
+    } finally { 
+      setIsUploading(false); 
+      e.target.value = ''; 
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        image: formData.image.trim() === '' ? null : formData.image,
+        ...(formData.password ? { password: formData.password } : {})
+      };
+      
+      const res = await fetch(`/api/users/${userId}`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload) 
+      });
+      if (!res.ok) throw new Error();
+      
+      toast.success('Perfil actualizado correctamente');
+      
+      await mutateMe(); 
+      mutate('/api/auth/me'); 
+      mutate('/api/users'); 
+      
+      onClose();
+    } catch {
+      toast.error('Error al actualizar perfil');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getInputClass = (val: string) => {
+    const base = "transition-all focus-visible:ring-blue-500 font-medium text-sm w-full rounded-md border px-3 h-10 outline-none";
+    return `${base} ${val.trim() !== '' ? "bg-blue-50/40 border-blue-200 text-blue-900 shadow-sm" : "bg-white border-slate-200 text-slate-700 hover:border-blue-300"}`;
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 font-sans">
+        <DialogHeader className="px-6 py-5 bg-white border-b border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 p-2.5 rounded-xl"><UserCircle className="w-5 h-5 text-blue-600" /></div>
+            <div className="flex flex-col items-start">
+              <DialogTitle className="text-lg font-bold text-slate-800 leading-tight">Configuración de Perfil</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 mt-0.5">Actualiza tus datos y credenciales de acceso.</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="flex items-center gap-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            {formData.image ? (
+              <div className="relative w-16 h-16 rounded-full border-2 border-slate-200 overflow-hidden shadow-sm group shrink-0">
+                <img src={formData.image} alt="Perfil" className="w-full h-full object-cover" />
+                <button type="button" onClick={() => setFormData(p => ({...p, image: ''}))} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative w-16 h-16 rounded-full border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer shadow-sm shrink-0">
+                <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Camera className="w-6 h-6 text-slate-400" />}
+              </div>
+            )}
+            <div className="flex flex-col">
+              <Label className="text-sm font-bold text-slate-700 block mb-1">Foto de Perfil</Label>
+              <span className="text-xs text-slate-500 leading-tight">Haz clic en el icono para subir tu fotografía. Formato 1:1 recomendado.</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-700">Nombre Completo <span className="text-red-500">*</span></Label>
+            <input name="name" value={formData.name} onChange={handleChange} className={getInputClass(formData.name)} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-700">Correo Electrónico <span className="text-red-500">*</span></Label>
+            <input type="email" name="email" value={formData.email} onChange={handleChange} className={getInputClass(formData.email)} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-700">Nueva Contraseña <span className="text-slate-400 font-normal">(Opcional)</span></Label>
+            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••" minLength={6} className={getInputClass(formData.password)} />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-5 border-t border-slate-200 mt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10 text-xs font-bold text-slate-600 hover:bg-slate-200 border-slate-300">Cancelar</Button>
+            <Button type="submit" disabled={isLoading || isUploading} className="h-10 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-md">
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Guardar Cambios
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ------------------------------------------------------------
+// MAIN LAYOUT COMPONENT (Rediseñado a Top Navbar)
+// ------------------------------------------------------------
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); 
+  
   const pathname = usePathname();
-  const { role, name, logout } = useAuth();
+  const { role, name, image, logout } = useAuth();
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -23,142 +179,141 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.location.href = '/login';
   };
 
+  // Nombres acortados para que encajen perfecto en la barra superior
   const tiMenuItems = [
-    { href: '/dashboard', label: 'Resumen Global', icon: LayoutDashboard },
-    { href: '/dashboard/businesses', label: 'Clientes (SaaS)', icon: Building2 },
-    { href: '/dashboard/branches', label: 'Red de Sucursales', icon: Store },
-    { href: '/dashboard/users', label: 'Usuarios Sistema', icon: Users },
-    { href: '/dashboard/audit', label: 'Logs del Sistema', icon: ShieldCheck },
+    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
+    { href: '/dashboard/businesses', label: 'Clientes', icon: Building2 },
+    { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
+    { href: '/dashboard/users', label: 'Usuarios', icon: Users },
+    { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck },
   ];
 
   const shopMenuItems = [
-    { href: '/dashboard', label: 'Resumen Tienda', icon: LayoutDashboard },
+    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/products', label: 'Inventario', icon: Package },
     { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
-    { href: '/dashboard/users', label: 'Mi Personal', icon: Users },
-    { href: '/dashboard/branches', label: 'Mis Sucursales', icon: Store },
-    { href: '/dashboard/audit', label: 'Auditoría Caja', icon: ShieldCheck },
-    { href: '/pos', label: 'Ir al POS', icon: ShoppingBag },
+    { href: '/dashboard/users', label: 'Personal', icon: Users },
+    { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
+    { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck },
   ];
 
   const menuItems = role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
+    <div className="flex flex-col h-screen bg-slate-50 font-sans overflow-hidden">
       
-      {/* SIDEBAR DESKTOP */}
-      <aside className={`hidden md:flex flex-col bg-slate-950 text-slate-400 transition-all duration-300 shadow-xl border-r border-slate-800 ${isCollapsed ? 'w-20' : 'w-64'}`}>
-        <div className="h-16 flex items-center justify-center border-b border-slate-800 bg-slate-950">
-          {!isCollapsed ? (
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-1.5 rounded-lg shadow-md shadow-blue-600/20">
-                <Store className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-lg font-black text-white tracking-wide truncate">
-                {role === 'SUPER_ADMIN' ? 'F&F TI' : 'F&F ADMIN'}
-              </span>
-            </div>
-          ) : (
+      {/* 🚀 NAVBAR SUPERIOR */}
+      <header className="h-16 bg-slate-950 text-white flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-md z-30 border-b border-slate-900">
+        
+        {/* LADO IZQUIERDO: Logo y Menú Desktop */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-1.5 rounded-lg shadow-md shadow-blue-600/20">
               <Store className="h-5 w-5 text-white" />
             </div>
+            <span className="font-black tracking-tight text-lg text-slate-100 hidden sm:block">
+              F&F <span className="text-blue-500">ADMIN</span>
+            </span>
+          </div>
+
+          {/* Menú Horizontal (Solo Desktop) */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {menuItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <span className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    isActive 
+                      ? 'bg-slate-800 text-white font-bold' 
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 font-medium'
+                  }`}>
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* LADO DERECHO: Botón POS, Perfil y Menú Móvil */}
+        <div className="flex items-center gap-3 md:gap-5">
+          
+          {/* Botón Ir al POS (Destacado) */}
+          {role !== 'SUPER_ADMIN' && (
+            <Link href="/pos" className="hidden sm:flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md shadow-emerald-500/20">
+              <ShoppingBag className="w-4 h-4" /> IR AL POS
+            </Link>
           )}
-        </div>
 
-        <nav className="flex-1 overflow-y-auto py-6 space-y-1.5 px-3">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.href} href={item.href}>
-                <span className={`flex items-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-blue-600 text-white font-semibold shadow-md' 
-                    : 'hover:bg-slate-900 hover:text-slate-200'
-                } ${isCollapsed ? 'justify-center' : 'justify-start'}`}>
-                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                  {!isCollapsed && <span className="ml-3 truncate">{item.label}</span>}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {role === 'SUPER_ADMIN' && !isCollapsed && (
-          <div className="mx-4 mb-4 p-3 bg-slate-900 rounded-xl border border-slate-800">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">
-              <LifeBuoy className="w-3 h-3 text-blue-500" /> Soporte TI
-            </div>
-            <p className="text-[10px] text-slate-400 leading-tight">
-              Monitorizando ecosistema F&F. Sistema estable.
-            </p>
-          </div>
-        )}
-
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
-          <Button variant="ghost" className={`w-full text-red-400 hover:text-red-300 hover:bg-red-950/50 ${isCollapsed ? 'px-0 justify-center' : 'justify-start'}`} onClick={handleLogout}>
-            <LogOut className="w-5 h-5" />
-            {!isCollapsed && <span className="ml-3 font-medium">Cerrar Sistema</span>}
-          </Button>
-        </div>
-      </aside>
-
-      {/* ÁREA DE CONTENIDO */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b flex items-center justify-between px-4 sm:px-6 shadow-sm z-10">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="hidden md:flex text-slate-500 hover:bg-slate-100">
-              <Menu className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(true)} className="md:hidden text-slate-500">
-              <Menu className="w-5 h-5" />
-            </Button>
-            <h2 className="font-bold text-slate-800 hidden md:block">
-              {role === 'SUPER_ADMIN' ? 'Infraestructura SaaS' : 'Control Administrativo F&F'}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-4">
+          {/* Info y Foto de Perfil */}
+          <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l border-slate-800">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-900 leading-none">{name}</p>
-              <p className="text-[10px] uppercase font-black tracking-widest text-blue-600 mt-1">
-                {role === 'SUPER_ADMIN' ? 'Ingeniero de Sistemas' : role}
+              <p className="text-sm font-bold leading-none text-slate-100">{name}</p>
+              <p className="text-[10px] text-blue-400 uppercase mt-1 font-black tracking-widest">
+                {role === 'SUPER_ADMIN' ? 'Ingeniero TI' : role}
               </p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md border-2 border-white ring-2 ring-blue-100">
-              {name?.charAt(0).toUpperCase()}
-            </div>
+            <button 
+              onClick={() => setIsProfileModalOpen(true)}
+              className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md border-2 border-slate-800 overflow-hidden hover:scale-105 hover:border-blue-400 transition-all outline-none"
+              title="Editar Mi Perfil"
+            >
+              {image ? (
+                <img src={image} alt={name || 'User'} className="w-full h-full object-cover" />
+              ) : (
+                name?.charAt(0).toUpperCase()
+              )}
+            </button>
+
+            {/* 🚀 NUEVO: Botón de Cerrar Sesión en Desktop */}
+            <button 
+              onClick={handleLogout}
+              className="hidden sm:flex w-10 h-10 rounded-full bg-slate-900 text-red-400 hover:text-red-300 hover:bg-red-950/50 items-center justify-center transition-all outline-none border border-slate-800 ml-1 shadow-sm"
+              title="Cerrar Sesión Segura"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-        </header>
 
-        <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-8">
-          {children}
-        </main>
-      </div>
-
-      {/* SIDEBAR MOBILE */}
-      <aside className={`fixed inset-y-0 left-0 bg-slate-950 text-slate-300 w-64 transform transition-transform duration-300 z-40 md:hidden border-r border-slate-800 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
-          <span className="text-lg font-black text-white tracking-wider flex items-center gap-2">
-            <Store className="w-5 h-5 text-blue-500" /> F&F SAAS
-          </span>
-          <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(false)} className="text-slate-400">
-            <X className="w-5 h-5" />
+          {/* Menú Hamburguesa Móvil */}
+          <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden text-slate-300 hover:text-white hover:bg-slate-800 ml-1">
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
         </div>
-        <nav className="py-4 px-2 space-y-1.5">
+      </header>
+
+      {/* MENÚ MÓVIL DESPLEGABLE (Debajo del Navbar) */}
+      <div className={`lg:hidden bg-slate-950 border-b border-slate-800 transition-all duration-300 overflow-hidden z-20 ${isMobileMenuOpen ? 'max-h-96 border-b' : 'max-h-0 border-transparent'}`}>
+        <nav className="p-4 space-y-2 flex flex-col">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link key={item.href} href={item.href} onClick={() => setIsMobileOpen(false)}>
-                <span className={`flex items-center px-4 py-3 rounded-lg ${isActive ? 'bg-blue-600 text-white font-bold shadow-md' : 'text-slate-400 hover:bg-slate-900'}`}>
-                  <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                  <span className="ml-3 font-medium">{item.label}</span>
+              <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                <span className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm ${isActive ? 'bg-blue-600 text-white font-bold shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-900 font-medium'}`}>
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
                 </span>
               </Link>
             )
           })}
+          {role !== 'SUPER_ADMIN' && (
+            <Link href="/pos" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg text-sm bg-emerald-500 text-white font-bold shadow-md">
+              <ShoppingBag className="w-5 h-5" /> IR AL POS
+            </Link>
+          )}
+          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-950/50 font-bold text-left w-full">
+            <LogOut className="w-5 h-5" /> Cerrar Sesión
+          </button>
         </nav>
-      </aside>
+      </div>
+
+      {/* ÁREA DE CONTENIDO */}
+      <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-8">
+        {children}
+      </main>
+
+      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </div>
   );
 }

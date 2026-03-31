@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Filter, LayoutGrid, Store
+  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Filter, Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,8 +23,9 @@ interface SystemUser {
   role: string;
   isActive: boolean;
   businessId: string | null;
-  branchId: string | null; // 🚀 FIX: Agregamos branchId
-  permissions: Record<string, boolean> | null; // 🚀 FIX: Agregamos permissions
+  branchId: string | null; 
+  permissions: Record<string, boolean> | null; 
+  image?: string | null; 
   business?: { name: string } | null;
   branch?: { name: string } | null;
 }
@@ -48,7 +49,7 @@ const ROLE_COLORS: Record<string, string> = {
 const POS_ROLES = ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'CASHIER'];
 
 export default function UsersPage() {
-  const { role: currentUserRole } = useAuth();
+  const { role: currentUserRole, userId: currentUserId } = useAuth();
   const { data: users, isLoading, mutate } = useSWR<SystemUser[]>('/api/users', fetcher);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,10 +61,22 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
-  const filteredUsers = useMemo(() => {
+  // 1. Primero filtramos usuarios base (excluyendo a uno mismo)
+  const baseUsers = useMemo(() => {
     if (!users) return [];
-    return users.filter(user => {
-      if (!POS_ROLES.includes(user.role)) return false;
+    return users.filter(user => user.id !== currentUserId && POS_ROLES.includes(user.role));
+  }, [users, currentUserId]);
+
+  // 2. Extraemos qué roles realmente existen en la lista para mostrar u ocultar botones
+  const availableRoles = useMemo(() => {
+    const roles = new Set<string>();
+    baseUsers.forEach(u => roles.add(u.role));
+    return Array.from(roles);
+  }, [baseUsers]);
+
+  // 3. Aplicamos filtros de búsqueda, estado y rol
+  const filteredUsers = useMemo(() => {
+    return baseUsers.filter(user => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower));
       const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
@@ -71,7 +84,7 @@ export default function UsersPage() {
 
       return matchesSearch && matchesRole && matchesStatus;
     });
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  }, [baseUsers, searchTerm, roleFilter, statusFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -87,8 +100,9 @@ export default function UsersPage() {
       email: user.email || '', 
       role: user.role, 
       businessId: user.businessId,
-      branchId: user.branchId, // 🚀 FIX: Pasamos el branchId al modal
-      permissions: user.permissions || {} // 🚀 FIX: Pasamos los permisos
+      branchId: user.branchId, 
+      permissions: user.permissions || {}, 
+      image: user.image || '', 
     });
     setIsModalOpen(true);
     setOpenDropdownId(null);
@@ -142,13 +156,13 @@ export default function UsersPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
               placeholder="Buscar por nombre o correo..." 
-              className="pl-9 bg-slate-50/50 h-10 border-slate-200 focus-visible:bg-white transition-colors"
+              className="pl-9 bg-slate-50/50 h-10 border-slate-200 focus-visible:bg-white transition-colors focus-visible:ring-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[180px] shrink-0 bg-slate-50/50 h-10">
+            <SelectTrigger className="w-full md:w-[180px] shrink-0 bg-slate-50/50 h-10 focus-visible:ring-blue-500">
               <Filter className="w-4 h-4 mr-2 text-slate-400" />
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -160,13 +174,14 @@ export default function UsersPage() {
           </Select>
         </div>
 
+        {/* 🚀 FIX: Los botones solo se renderizan si existe personal con ese rol (Y siempre sale el "Todos") */}
         <div className="flex items-center overflow-x-auto hide-scrollbar pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-lg border border-slate-200/60 w-max">
-            <button onClick={() => setRoleFilter('ALL')} className={`${baseTabClass} ${roleFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}>Todos los Roles</button>
-            {currentUserRole === 'SUPER_ADMIN' && <button onClick={() => setRoleFilter('SUPER_ADMIN')} className={`${baseTabClass} ${roleFilter === 'SUPER_ADMIN' ? activeTabClass : inactiveTabClass}`}>Ingenieros TI</button>}
-            <button onClick={() => setRoleFilter('OWNER')} className={`${baseTabClass} ${roleFilter === 'OWNER' ? activeTabClass : inactiveTabClass}`}>Dueños</button>
-            <button onClick={() => setRoleFilter('MANAGER')} className={`${baseTabClass} ${roleFilter === 'MANAGER' ? activeTabClass : inactiveTabClass}`}>Jefes Tienda</button>
-            <button onClick={() => setRoleFilter('CASHIER')} className={`${baseTabClass} ${roleFilter === 'CASHIER' ? activeTabClass : inactiveTabClass}`}>Cajeros</button>
+            <button onClick={() => setRoleFilter('ALL')} className={`${baseTabClass} ${roleFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}>Todos</button>
+            {availableRoles.includes('SUPER_ADMIN') && currentUserRole === 'SUPER_ADMIN' && <button onClick={() => setRoleFilter('SUPER_ADMIN')} className={`${baseTabClass} ${roleFilter === 'SUPER_ADMIN' ? activeTabClass : inactiveTabClass}`}>Ingenieros TI</button>}
+            {availableRoles.includes('OWNER') && <button onClick={() => setRoleFilter('OWNER')} className={`${baseTabClass} ${roleFilter === 'OWNER' ? activeTabClass : inactiveTabClass}`}>Dueños</button>}
+            {availableRoles.includes('MANAGER') && <button onClick={() => setRoleFilter('MANAGER')} className={`${baseTabClass} ${roleFilter === 'MANAGER' ? activeTabClass : inactiveTabClass}`}>Jefes Tienda</button>}
+            {availableRoles.includes('CASHIER') && <button onClick={() => setRoleFilter('CASHIER')} className={`${baseTabClass} ${roleFilter === 'CASHIER' ? activeTabClass : inactiveTabClass}`}>Cajeros</button>}
           </div>
         </div>
       </div>
@@ -179,7 +194,7 @@ export default function UsersPage() {
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-1">No se encontraron usuarios</h3>
             <p className="text-sm text-slate-500 mb-4">Intenta cambiando los filtros de búsqueda.</p>
-            <Button variant="link" onClick={() => { setSearchTerm(''); setRoleFilter('ALL'); setStatusFilter('ALL'); }} className="text-primary">
+            <Button variant="link" onClick={() => { setSearchTerm(''); setRoleFilter('ALL'); setStatusFilter('ALL'); }} className="text-blue-600">
               Limpiar filtros
             </Button>
           </div>
@@ -193,8 +208,12 @@ export default function UsersPage() {
                   
                   <div className="flex items-center gap-4 flex-1 min-w-0 w-full">
                     <div className="relative shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg text-white shadow-inner ${user.isActive ? 'bg-primary' : 'bg-slate-400'}`}>
-                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      <div className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center font-black text-lg text-white shadow-inner ${user.isActive ? 'bg-blue-600' : 'bg-slate-400'}`}>
+                        {user.image ? (
+                          <img src={user.image} alt={user.name || 'Usuario'} className="w-full h-full object-cover" />
+                        ) : (
+                          user.name ? user.name.charAt(0).toUpperCase() : 'U'
+                        )}
                       </div>
                       {!user.isActive && (
                         <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full shadow-sm"></span>
@@ -219,7 +238,6 @@ export default function UsersPage() {
                         </div>
                       )}
                       
-                      {/* 🚀 FIX: Mostramos la sucursal a la que pertenece */}
                       {user.branch && (
                         <div className="flex items-center gap-1.5 text-[10px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-[120px]" title={user.branch.name}>
                           <Store className="w-3 h-3 text-slate-400 shrink-0" /> 

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Role } from '@/types/role';
-import useSWR from 'swr'; // 🚀 IMPORTAMOS SWR
+import useSWR from 'swr'; 
 
 export interface UserSession {
   userId: string;
@@ -10,6 +10,7 @@ export interface UserSession {
   branchId: string;
   role: Role;
   name: string;
+  image?: string | null; // 🚀 FIX: Agregamos el tipado para la foto de perfil
   permissions?: Record<string, boolean>;
 }
 
@@ -52,22 +53,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   };
 
-  // 🚀 MAGIA EN TIEMPO REAL: Si hay sesión, consultamos los permisos más recientes de la BD
-  // Refresca automáticamente si el dueño hace cambios en el panel.
   const { data: liveData } = useSWR(session?.userId ? '/api/auth/me' : null, fetcher, { 
-    refreshInterval: 15000 // Revisa cada 15 segundos silenciosamente
+    refreshInterval: 15000 
   });
 
-  // Fusionamos los datos en vivo con los del LocalStorage
   const effectivePermissions = liveData?.permissions || session?.permissions || {};
   const effectiveRole = liveData?.role || session?.role || Role.USER;
   const effectiveBranchId = liveData?.branchId || session?.branchId || '';
+  // 🚀 FIX: Leemos la imagen de la BD en tiempo real, si no hay, intentamos con la del login
+  const effectiveImage = liveData?.image !== undefined ? liveData.image : session?.image;
 
   const effectiveUser = session ? {
       ...session,
       permissions: effectivePermissions,
       role: effectiveRole,
-      branchId: effectiveBranchId
+      branchId: effectiveBranchId,
+      image: effectiveImage // 🚀 Lo guardamos en el objeto de usuario efectivo
   } : null;
 
   return (
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       branchId: effectiveBranchId,
       role: effectiveRole, 
       name: session?.name || 'Invitado',
+      image: effectiveImage, // 🚀 Exportamos la imagen al resto de la app
       permissions: effectivePermissions,
       isAuthenticated: !!session,
       setSession,

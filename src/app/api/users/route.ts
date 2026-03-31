@@ -10,9 +10,10 @@ export async function GET(req: Request) {
   try {
     if (role === 'SUPER_ADMIN') {
       const allUsers = await prisma.user.findMany({
-        // 🚀 FIX: Traemos el branchId para que el Select del modal sepa qué elegir
         select: {
-          id: true, name: true, email: true, role: true, isActive: true, businessId: true, branchId: true, permissions: true,
+          id: true, name: true, email: true, role: true, isActive: true, 
+          businessId: true, branchId: true, permissions: true, 
+          image: true, // 🚀 FIX: Traemos la imagen
           business: { select: { name: true } },
           branch: { select: { name: true } }
         },
@@ -25,9 +26,10 @@ export async function GET(req: Request) {
     
     const businessUsers = await prisma.user.findMany({
       where: { businessId },
-      // 🚀 FIX: Traemos todo incluyendo branchId y permissions
       select: {
-        id: true, name: true, email: true, role: true, isActive: true, businessId: true, branchId: true, permissions: true,
+        id: true, name: true, email: true, role: true, isActive: true, 
+        businessId: true, branchId: true, permissions: true, 
+        image: true, // 🚀 FIX: Traemos la imagen
         branch: { select: { name: true } }
       },
       orderBy: { createdAt: 'desc' },
@@ -83,9 +85,9 @@ export async function POST(req: Request) {
         password: hashedPassword,
         role: body.role as Role,
         businessId: targetBusinessId || null,
-        // 🚀 FIX: Aseguramos que se guarde null explícito en base de datos si es NONE
         branchId: body.branchId === 'NONE' || !body.branchId ? null : body.branchId,
         permissions: body.permissions || {}, 
+        image: body.image || null, // 🚀 FIX: Guardamos la imagen
       },
       include: { business: { select: { name: true } } }
     });
