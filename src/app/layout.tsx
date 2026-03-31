@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // O la fuente que uses
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-// 👇 1. IMPORTAR EL PROVIDER
 import { AuthProvider } from "@/context/auth-context";
 
-const inter = Inter({ subsets: ["latin"] });
+// 1. Configuramos DM Sans
+const dmSans = DM_Sans({ 
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Zaiko POS",
@@ -18,9 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={inter.className}>
-        {/* 👇 2. ENVOLVER TODO EN AUTHPROVIDER */}
+    <html lang="es" suppressHydrationWarning>
+      {/* 2. Inyectamos la variable y clases utilitarias globales */}
+      <body className={`${dmSans.variable} font-sans antialiased`}>
         <AuthProvider>
           {children}
           <Toaster />
