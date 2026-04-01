@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useState, useMemo } from 'react';
-import { Search, LayoutGrid, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, Package, SplitSquareHorizontal, Tag, ChevronRight, CheckCircle2, User, Receipt, Unlock, RotateCcw, UserPlus, X, Store, Globe } from 'lucide-react';
+import { Search, LayoutGrid, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, Package, SplitSquareHorizontal, Tag, ChevronRight, CheckCircle2, User, Receipt, Unlock, RotateCcw, UserPlus, X, Store, Globe, ArrowRightLeft, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,38 +14,46 @@ import { toast } from 'sonner';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
+interface BranchBasic { id: string; name: string; ecommerceCode: string | null; }
 interface Category { id: string; name: string; ecommerceCode?: string | null; }
 interface Product {
   id: string; title: string; price: number; wholesalePrice: number | null;
   wholesaleMinCount: number | null; discountPercentage: number;
   images: string[]; barcode: string | null; categoryId: string;
+  code?: string | null;
   branchStock?: { branchId: string; quantity: number }[];
   category?: { name: string; ecommerceCode: string | null };
 }
 interface CartItem extends Product { cartQuantity: number; }
 
 export default function PosPage() {
-  const { user } = useAuth();
+  // 🚀 FIX: Extraemos 'userId' directamente del hook useAuth
+  const { user, userId } = useAuth();
   
   const { data: products, isLoading: loadingProducts } = useSWR<Product[]>('/api/products', fetcher);
   const { data: categories, isLoading: loadingCats } = useSWR<Category[]>('/api/categories', fetcher);
-  const { data: currentBranch } = useSWR(user?.branchId && user.branchId !== 'NONE' ? `/api/branches/${user.branchId}` : null, fetcher);
+  const { data: branches } = useSWR<BranchBasic[]>('/api/branches', fetcher);
+  
+  const currentBranch = branches?.find(b => b.id === user?.branchId);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // 🚀 ESTADOS DEL CARRITO Y CLIENTE
   const [saleState, setSaleState] = useState<'DRAFT' | 'PAID'>('DRAFT');
   const [customerDoc, setCustomerDoc] = useState('');
   const [showCustomerInput, setShowCustomerInput] = useState(false);
   const [globalDiscountType, setGlobalDiscountType] = useState<'FIXED' | 'PERCENT'>('FIXED');
   const [globalDiscountValue, setGlobalDiscountValue] = useState('');
 
-  // 🚀 ESTADOS DEL MODAL DE COBRO
   const [showPayment, setShowPayment] = useState(false);
   const [payMethod, setPayMethod] = useState<'CASH' | 'CARD' | 'SPLIT'>('CASH');
   const [cashReceived, setCashReceived] = useState('');
+
+  const [transferProduct, setTransferProduct] = useState<Product | null>(null);
+  const [transferFromBranch, setTransferFromBranch] = useState<string>('');
+  const [transferQty, setTransferQty] = useState('');
+  const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
 
   const getLocalStock = (product: Product) => {
     if (user?.branchId && user.branchId !== 'NONE') {
@@ -54,9 +62,6 @@ export default function PosPage() {
     return product.branchStock?.reduce((acc, curr) => acc + curr.quantity, 0) || 0;
   };
 
-  // ========================================================
-  // 🔐 LÓGICA DE PERMISOS ESTRICTA
-  // ========================================================
   const isSuperOrOwner = user?.role === 'SUPER_ADMIN' || user?.role === 'OWNER';
   const permissions = user?.permissions || {};
   const canManageGlobal = isSuperOrOwner || !!permissions.canManageGlobalProducts;
@@ -77,7 +82,6 @@ export default function PosPage() {
     });
   }, [products, categories, myCode, user?.branchId, canViewOthers]);
 
-  // 🚀 AGRUPACIÓN DE CATEGORÍAS PARA EL SIDEBAR
   const groupedCategories = useMemo(() => {
     if (!categories || !allowedProducts) return { myStore: [], others: {} as Record<string, Category[]>, shared: [] };
     
@@ -114,6 +118,19 @@ export default function PosPage() {
   const addToCart = (product: Product) => {
     if (saleState === 'PAID') return toast.error('Venta bloqueada. Libere la caja primero.');
     const localStock = getLocalStock(product);
+    
+    if (localStock <= 0) {
+      const globalStock = product.branchStock?.reduce((acc, curr) => acc + curr.quantity, 0) || 0;
+      if (globalStock > 0) {
+        setTransferProduct(product);
+        setTransferQty('1');
+        setTransferFromBranch('');
+      } else {
+        toast.error('Producto agotado totalmente en todas las sucursales.');
+      }
+      return; 
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -123,7 +140,6 @@ export default function PosPage() {
         }
         return prev.map(item => item.id === product.id ? { ...item, cartQuantity: item.cartQuantity + 1 } : item);
       }
-      if (localStock <= 0) { toast.error('Agotado'); return prev; }
       return [...prev, { ...product, cartQuantity: 1 }];
     });
   };
@@ -147,7 +163,6 @@ export default function PosPage() {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
-  // 🚀 CÁLCULOS FINANCIEROS
   const calculateItemFinancials = (item: CartItem) => {
     let baseUnitPrice = Number(item.price);
     let isWholesaleApplied = false;
@@ -179,7 +194,6 @@ export default function PosPage() {
   const finalGlobalTotal = Math.max(0, itemsSubtotal - globalDiscountAmount);
   const totalSavings = itemSavings + globalDiscountAmount;
 
-  // 🚀 LÓGICA DE COBRO
   const openPaymentModal = (method: 'CASH' | 'CARD' | 'SPLIT') => {
     setPayMethod(method); setCashReceived(''); setShowPayment(true);
   };
@@ -216,15 +230,53 @@ export default function PosPage() {
     toast.error('Pago anulado. Venta devuelta a borrador.');
   };
 
+  const handleSubmitTransfer = async () => {
+    if (!transferFromBranch || !transferQty || Number(transferQty) < 1) {
+      toast.error('Selecciona una sucursal y cantidad válida.');
+      return;
+    }
+    
+    setIsSubmittingTransfer(true);
+    try {
+      const payload = {
+        productId: transferProduct?.id,
+        fromBranchId: transferFromBranch,
+        toBranchId: user?.branchId,
+        requestedById: userId, // 🚀 FIX: Usamos userId directamente
+        quantity: Number(transferQty)
+      };
+
+      const res = await fetch('/api/stock-transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Error al procesar solicitud');
+      }
+      
+      toast.success('Solicitud enviada. Te notificaremos cuando la aprueben.');
+      setTransferProduct(null);
+    } catch (error: unknown) {
+      // 🚀 FIX: Eliminamos el 'any' y validamos si el error es instancia de Error
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Error al enviar la solicitud.');
+      }
+    } finally {
+      setIsSubmittingTransfer(false);
+    }
+  };
+
   return (
     <div className="flex h-full w-full bg-slate-200/50 p-2 gap-2 animate-in fade-in duration-300 font-sans text-sm">
       
-      {/* 📁 COLUMNA 1: MENÚ DE CATEGORÍAS CON AGRUPACIÓN VISUAL */}
       <aside className="w-48 bg-white rounded-xl shadow-sm border border-slate-200 hidden lg:flex flex-col overflow-hidden">
         <div className="px-3 py-2.5 border-b border-slate-100 shrink-0">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            Catálogo
-          </span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Catálogo</span>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           <button onClick={() => setSelectedCategory('ALL')} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all mb-2 ${selectedCategory === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
@@ -237,7 +289,6 @@ export default function PosPage() {
             </div>
           ) : (
             <>
-              {/* BLOQUE: MI SUCURSAL */}
               {groupedCategories.myStore.length > 0 && (
                 <div className="space-y-0.5 pt-1">
                   <div className="px-2.5 py-1 mb-0.5">
@@ -254,7 +305,6 @@ export default function PosPage() {
                 </div>
               )}
 
-              {/* BLOQUE: OTRAS SUCURSALES */}
               {Object.entries(groupedCategories.others).map(([code, cats]) => (
                 <div key={code} className="space-y-0.5 pt-2">
                   <div className="px-2.5 py-1 mb-0.5">
@@ -271,7 +321,6 @@ export default function PosPage() {
                 </div>
               ))}
 
-              {/* BLOQUE: COMPARTIDOS / GLOBALES */}
               {groupedCategories.shared.length > 0 && (
                 <div className="space-y-0.5 pt-2 pb-2">
                   <div className="px-2.5 py-1 mb-0.5">
@@ -292,7 +341,6 @@ export default function PosPage() {
         </div>
       </aside>
 
-      {/* 📦 COLUMNA 2: ÁREA PRINCIPAL DE PRODUCTOS */}
       <main className={`flex-1 bg-white rounded-xl shadow-sm border flex flex-col overflow-hidden min-w-0 transition-colors ${saleState === 'PAID' ? 'border-emerald-200 bg-emerald-50/10 opacity-70 pointer-events-none' : 'border-slate-200'}`}>
         <div className="p-2 border-b border-slate-100 shrink-0 flex items-center gap-2">
           <div className="relative flex-1">
@@ -317,38 +365,53 @@ export default function PosPage() {
               </div>
             ) : filteredProducts.map(product => {
               const localStock = getLocalStock(product);
+              const globalStock = product.branchStock?.reduce((acc, curr) => acc + curr.quantity, 0) || 0;
+              const externalStock = globalStock - localStock;
+              
               const isOutOfStock = localStock <= 0;
               const hasDiscount = product.discountPercentage > 0;
               const hasWholesale = product.wholesalePrice && product.wholesaleMinCount;
 
               return (
-                <div key={product.id} onClick={() => !isOutOfStock && addToCart(product)} className={`group relative flex flex-col gap-1.5 p-1.5 rounded-xl transition-all select-none ${isOutOfStock ? 'opacity-40 grayscale cursor-not-allowed' : 'cursor-pointer bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 hover:shadow-sm'}`}>
-                  <div className="aspect-square bg-slate-100 rounded-lg relative overflow-hidden shrink-0 border border-slate-100">
+                <div key={product.id} onClick={() => addToCart(product)} className={`group relative flex flex-col gap-1.5 p-1.5 rounded-xl transition-all select-none ${isOutOfStock ? 'opacity-80 bg-slate-50 hover:bg-slate-100 border border-slate-200 border-dashed cursor-pointer' : 'cursor-pointer bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 hover:shadow-sm'}`}>
+                  <div className={`aspect-square bg-slate-100 rounded-lg relative overflow-hidden shrink-0 border border-slate-100 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}>
                     {product.images?.[0] ? (
                       <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover mix-blend-multiply" draggable={false} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-300"><Package className="w-5 h-5" /></div>
                     )}
                     <div className="absolute top-1 right-1 flex flex-col items-end gap-0.5">
-                      <span className="text-[9px] font-bold bg-white/90 text-slate-700 px-1 py-0.5 rounded shadow-sm leading-none backdrop-blur-md">{localStock}</span>
-                      {hasDiscount && <span className="text-[9px] font-bold bg-slate-900 text-white px-1 py-0.5 rounded shadow-sm leading-none">-{product.discountPercentage}%</span>}
+                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded shadow-sm leading-none backdrop-blur-md ${isOutOfStock ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-700'}`}>
+                        {localStock}
+                      </span>
+                      {hasDiscount && !isOutOfStock && <span className="text-[9px] font-bold bg-slate-900 text-white px-1 py-0.5 rounded shadow-sm leading-none">-{product.discountPercentage}%</span>}
                     </div>
                   </div>
                   <div className="px-0.5 pb-0.5 flex flex-col justify-between flex-1">
                     <p className="font-medium text-slate-700 text-[11px] leading-tight line-clamp-2" title={product.title}>{product.title}</p>
                     <div className="mt-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-slate-900 font-bold text-xs">S/ {Number(product.price).toFixed(2)}</p>
-                        {hasDiscount && <p className="text-[9px] text-slate-400 line-through">S/ {(Number(product.price) * (1 / (1 - product.discountPercentage / 100))).toFixed(2)}</p>}
-                      </div>
-                      {hasWholesale && (
-                        <p className="text-[9px] font-medium text-slate-500 mt-0.5 leading-none flex items-center gap-0.5" title={`Precio por mayor a partir de ${product.wholesaleMinCount} unidades`}>
-                          <Tag className="w-2.5 h-2.5 text-blue-500" /> 
-                          Mayor S/{Number(product.wholesalePrice).toFixed(2)}
-                          <span className="bg-blue-50 text-blue-600 px-1 py-0.5 rounded text-[8px] font-bold ml-auto">
-                            ≥{product.wholesaleMinCount}u
-                          </span>
+                      {isOutOfStock && externalStock > 0 ? (
+                        <p className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 flex items-center gap-1 mt-1 hover:bg-amber-100 transition-colors">
+                          <ArrowRightLeft className="w-2.5 h-2.5" /> Pedir Traslado
                         </p>
+                      ) : isOutOfStock ? (
+                        <p className="text-[9px] font-bold text-red-500 mt-1">Agotado Totalmente</p>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-slate-900 font-bold text-xs">S/ {Number(product.price).toFixed(2)}</p>
+                            {hasDiscount && <p className="text-[9px] text-slate-400 line-through">S/ {(Number(product.price) * (1 / (1 - product.discountPercentage / 100))).toFixed(2)}</p>}
+                          </div>
+                          {hasWholesale && (
+                            <p className="text-[9px] font-medium text-slate-500 mt-0.5 leading-none flex items-center gap-0.5" title={`Precio por mayor a partir de ${product.wholesaleMinCount} unidades`}>
+                              <Tag className="w-2.5 h-2.5 text-blue-500" /> 
+                              Mayor S/{Number(product.wholesalePrice).toFixed(2)}
+                              <span className="bg-blue-50 text-blue-600 px-1 py-0.5 rounded text-[8px] font-bold ml-auto">
+                                ≥{product.wholesaleMinCount}u
+                              </span>
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -359,9 +422,7 @@ export default function PosPage() {
         </div>
       </main>
 
-      {/* 🛒 COLUMNA 3: TICKET DE VENTA Y COBRO */}
       <aside className={`w-[300px] xl:w-[340px] flex flex-col rounded-xl border shadow-sm shrink-0 overflow-hidden transition-colors duration-300 ${saleState === 'PAID' ? 'border-emerald-300 bg-emerald-50/30 shadow-emerald-500/10' : 'border-slate-200 bg-white'}`}>
-        
         <div className={`h-10 px-3 border-b flex items-center justify-between shrink-0 transition-colors ${saleState === 'PAID' ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-slate-50 border-slate-100'}`}>
           <span className="font-semibold text-xs flex items-center gap-1.5">
             {saleState === 'PAID' ? <CheckCircle2 className="w-4 h-4" /> : <ShoppingBag className="w-3.5 h-3.5" />} 
@@ -422,14 +483,9 @@ export default function PosPage() {
           )}
         </div>
 
-        {/* 🚀 PANEL FINANCIERO INFERIOR */}
         <div className={`border-t shrink-0 flex flex-col p-3 gap-3 transition-colors ${saleState === 'PAID' ? 'border-emerald-200 bg-white/50' : 'border-slate-200 bg-slate-50'}`}>
-          
-          {/* Entradas de Cliente y Descuento Global (Solo en DRAFT) */}
           {saleState === 'DRAFT' && cart.length > 0 && (
             <div className="flex flex-col gap-2 mb-1 animate-in fade-in duration-300">
-              
-              {/* Toggle de Cliente Opcional */}
               {!showCustomerInput ? (
                 <div className="flex items-center">
                   <button onClick={() => setShowCustomerInput(true)} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors bg-white border border-slate-200 px-2 py-1.5 rounded-md shadow-sm w-max">
@@ -490,7 +546,6 @@ export default function PosPage() {
             </div>
           </div>
 
-          {/* 🚀 BOTONERA DINÁMICA POR ESTADO DE VENTA */}
           {saleState === 'DRAFT' ? (
             <Button onClick={() => openPaymentModal('CASH')} disabled={cart.length === 0} className="w-full h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-md transition-all active:scale-[0.98]">
               Amortizar (Pagar) <ChevronRight className="w-3.5 h-3.5 ml-1" />
@@ -513,27 +568,24 @@ export default function PosPage() {
         </div>
       </aside>
 
-      {/* 🚀 MODAL CLÍNICO DE COBRO */}
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
         <DialogContent className="sm:max-w-sm font-sans p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-xl">
-          <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-            <div>
-              <h3 className="text-xs font-bold text-slate-800">Recibir Pago</h3>
-              <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Complete la transacción para continuar.</p>
+          <DialogHeader className="p-4 border-b border-slate-100 bg-slate-50 flex flex-row items-center justify-between m-0 space-y-0">
+            <div className="flex flex-col text-left">
+              <DialogTitle className="text-xs font-bold text-slate-800">Recibir Pago</DialogTitle>
+              <DialogDescription className="text-[10px] text-slate-500 leading-tight mt-0.5">Complete la transacción para continuar.</DialogDescription>
             </div>
             <div className="flex bg-slate-200/50 p-1 rounded-md gap-1">
               <button onClick={() => setPayMethod('CASH')} className={`p-1.5 rounded transition-colors ${payMethod === 'CASH' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`} title="Efectivo"><Banknote className="w-3.5 h-3.5" /></button>
               <button onClick={() => setPayMethod('CARD')} className={`p-1.5 rounded transition-colors ${payMethod === 'CARD' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`} title="Tarjeta"><CreditCard className="w-3.5 h-3.5" /></button>
               <button onClick={() => setPayMethod('SPLIT')} className={`p-1.5 rounded transition-colors ${payMethod === 'SPLIT' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`} title="Mixto"><SplitSquareHorizontal className="w-3.5 h-3.5" /></button>
             </div>
-          </div>
-          
+          </DialogHeader>
           <div className="p-4 space-y-4 bg-white">
             <div className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
               <span className="text-xs font-semibold text-slate-600">Total a cobrar:</span>
               <span className="text-base font-black text-slate-900 tabular-nums">S/ {finalGlobalTotal.toFixed(2)}</span>
             </div>
-
             {payMethod === 'CASH' && (
               <div className="space-y-3 animate-in fade-in duration-200">
                 <div className="space-y-1.5">
@@ -547,7 +599,6 @@ export default function PosPage() {
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-4 gap-1.5">
                   {[finalGlobalTotal, 20, 50, 100].map((amt, i) => (
                     <Button key={i} variant="outline" onClick={() => handleQuickCash(amt)} className="h-8 text-[10px] font-semibold border-slate-200 hover:bg-slate-100 text-slate-700 px-0">
@@ -555,7 +606,6 @@ export default function PosPage() {
                     </Button>
                   ))}
                 </div>
-
                 <div className={`px-3 py-2 rounded-lg flex items-center justify-between border transition-colors ${numericCash > 0 && isValidCash ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100'}`}>
                   <span className="text-xs font-semibold text-slate-600">Vuelto:</span>
                   <span className={`text-base font-black tabular-nums ${numericCash > 0 && isValidCash ? 'text-emerald-700' : 'text-slate-400'}`}>
@@ -564,7 +614,6 @@ export default function PosPage() {
                 </div>
               </div>
             )}
-
             {payMethod !== 'CASH' && (
               <div className="py-6 text-center animate-in fade-in duration-200 bg-slate-50 rounded-lg border border-slate-100 border-dashed">
                 <p className="text-xs font-medium text-slate-600 mb-1">Esperando confirmación...</p>
@@ -572,7 +621,6 @@ export default function PosPage() {
               </div>
             )}
           </div>
-
           <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
             <Button variant="outline" className="flex-1 h-9 text-xs font-semibold text-slate-600 border-slate-200 bg-white" onClick={() => setShowPayment(false)}>Cancelar</Button>
             <Button 
@@ -581,6 +629,80 @@ export default function PosPage() {
               onClick={handleAmortizar}
             >
               Confirmar Operación
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!transferProduct} onOpenChange={() => setTransferProduct(null)}>
+        <DialogContent className="sm:max-w-md font-sans p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-xl">
+          <DialogHeader className="p-4 border-b border-slate-100 bg-slate-50 flex flex-col items-start justify-center m-0">
+            <DialogTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <ArrowRightLeft className="w-4 h-4 text-amber-600" /> Solicitar Traslado de Stock
+            </DialogTitle>
+            <DialogDescription className="text-[11px] text-slate-500 mt-1">
+              Este producto está agotado en tu sucursal. Pide stock a otra tienda para poder venderlo.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-4 space-y-4 bg-white">
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="w-12 h-12 rounded bg-white border flex items-center justify-center shrink-0 overflow-hidden">
+                {transferProduct?.images?.[0] ? (
+                  <img src={transferProduct.images[0]} alt="" className="w-full h-full object-cover mix-blend-multiply" />
+                ) : (
+                  <Package className="w-5 h-5 text-slate-300" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-xs text-slate-800 line-clamp-1">{transferProduct?.title}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5 font-mono">{transferProduct?.barcode || transferProduct?.code}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Sucursal Origen (Con Stock)</Label>
+                <Select value={transferFromBranch} onValueChange={setTransferFromBranch}>
+                  <SelectTrigger className="w-full text-xs h-9 bg-white border-slate-200">
+                    <SelectValue placeholder="Selecciona la tienda..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {transferProduct?.branchStock
+                      ?.filter(bs => bs.branchId !== user?.branchId && bs.quantity > 0)
+                      .map(bs => {
+                        const branchInfo = branches?.find(b => b.id === bs.branchId);
+                        return (
+                          <SelectItem key={bs.branchId} value={bs.branchId} className="text-xs">
+                            {branchInfo?.name || 'Sucursal Desconocida'} <span className="text-amber-600 font-bold ml-1">({bs.quantity} disp.)</span>
+                          </SelectItem>
+                        );
+                      })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Cantidad a Solicitar</Label>
+                <Input 
+                  type="number" min="1" placeholder="Ej: 2"
+                  value={transferQty} onChange={(e) => setTransferQty(e.target.value)}
+                  className="h-9 text-xs font-bold bg-white border-slate-200 focus-visible:ring-amber-500" 
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
+            <Button variant="outline" className="flex-1 h-9 text-xs font-semibold text-slate-600 border-slate-200 bg-white" onClick={() => setTransferProduct(null)}>
+              Cancelar
+            </Button>
+            <Button 
+              className="flex-1 h-9 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-sm" 
+              disabled={!transferFromBranch || !transferQty || isSubmittingTransfer}
+              onClick={handleSubmitTransfer}
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" /> Enviar Solicitud
             </Button>
           </div>
         </DialogContent>
