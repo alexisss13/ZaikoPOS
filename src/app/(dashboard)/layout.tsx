@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { 
   Menu, X, LayoutDashboard, ShoppingBag, 
   Package, Users, Store, LogOut, ShieldCheck, 
-  Tags, Building2, Camera, UserCircle, Loader2
+  Tags, Building2, Camera, UserCircle, Loader2, Bell, Check, ArrowRightLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -18,7 +18,18 @@ import useSWR, { mutate } from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-// 🚀 MINI COMPONENTE: MODAL DE EDICIÓN DE MI PERFIL
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  type: string;
+}
+
+// ------------------------------------------------------------
+// COMPONENTE: MODAL DE EDICIÓN DE PERFIL (Sincronizado)
+// ------------------------------------------------------------
 function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { userId } = useAuth();
   const { data: userData, mutate: mutateMe } = useSWR(isOpen && userId ? '/api/auth/me' : null, fetcher);
@@ -169,9 +180,20 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); 
+  const [showNotifs, setShowNotifs] = useState(false);
   
   const pathname = usePathname();
-  const { role, name, image, logout } = useAuth();
+  const router = useRouter(); // 🚀 Para redirecciones dinámicas
+  const { role, name, image, logout, userId } = useAuth();
+
+  // 🚀 Obtenemos notificaciones del usuario activo
+  const { data: notifications, mutate: mutateNotifs, isLoading: loadingNotifs } = useSWR<Notification[]>(
+    userId ? `/api/notifications?userId=${userId}` : null, 
+    fetcher, 
+    { refreshInterval: 15000 }
+  );
+
+  const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -179,7 +201,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.location.href = '/login';
   };
 
-  // Nombres acortados para que encajen perfecto en la barra superior
+  // 🚀 Función para manejar el clic en una notificación
+  const handleNotificationClick = async (notif: Notification) => {
+    setShowNotifs(false); // Cierra el modal de notificaciones
+
+    // 1. Marcar como leída si no lo está
+    if (!notif.read) {
+      try {
+        await fetch(`/api/notifications/${notif.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ read: true })
+        });
+        mutateNotifs();
+      } catch (error) {
+        console.error("Error al marcar como leída:", error);
+      }
+    }
+
+    // 2. Redirección basada en el tipo
+    if (notif.type === 'TRANSFER_REQUEST' || notif.type === 'TRANSFER_UPDATE') {
+      router.push('/dashboard/transfers');
+    }
+  };
+
   const tiMenuItems = [
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/businesses', label: 'Clientes', icon: Building2 },
@@ -194,6 +239,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
     { href: '/dashboard/users', label: 'Personal', icon: Users },
     { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
+    { href: '/dashboard/transfers', label: 'Traslados', icon: ArrowRightLeft }, // 🚀 Añadido el acceso directo
     { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck },
   ];
 
@@ -248,7 +294,71 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Info y Foto de Perfil */}
           <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l border-slate-800">
-            <div className="text-right hidden sm:block">
+            
+            {/* 🚀 CAMPANA DE NOTIFICACIONES */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifs(!showNotifs)}
+                className="relative p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors outline-none"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-slate-950">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 🚀 PANEL DESPLEGABLE DE NOTIFICACIONES */}
+              {showNotifs && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
+                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-4">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                          {unreadCount} Nuevas
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="max-h-80 overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
+                      {loadingNotifs ? (
+                        <div className="p-6 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin" /> Cargando...
+                        </div>
+                      ) : notifications?.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                          <Bell className="w-6 h-6 text-slate-300" />
+                          No tienes notificaciones
+                        </div>
+                      ) : (
+                        notifications?.map(n => (
+                          <button 
+                            key={n.id} 
+                            onClick={() => handleNotificationClick(n)}
+                            className={`w-full p-3 rounded-lg border text-left flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.read ? 'bg-white border-blue-200 shadow-sm hover:border-blue-400' : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-100'}`}
+                          >
+                            <div className="flex justify-between items-start gap-2 w-full">
+                              <span className={`text-xs leading-tight ${!n.read ? 'font-bold text-blue-900' : 'font-semibold text-slate-800'}`}>
+                                {n.title}
+                              </span>
+                              <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap shrink-0">
+                                {new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 leading-snug">{n.message}</p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="text-right hidden sm:block ml-2">
               <p className="text-sm font-bold leading-none text-slate-100">{name}</p>
               <p className="text-[10px] text-blue-400 uppercase mt-1 font-black tracking-widest">
                 {role === 'SUPER_ADMIN' ? 'Ingeniero TI' : role}

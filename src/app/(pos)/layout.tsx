@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { 
   Store, ArrowLeft, Clock, Wifi, LogOut, 
-  Camera, UserCircle, Loader2, X 
+  Camera, UserCircle, Loader2, X, Bell, Check
 } from 'lucide-react';
 import { CashGuard } from '@/components/pos/CashGuard'; 
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,14 @@ import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
 
 // ------------------------------------------------------------
 // COMPONENTE: MODAL DE EDICIÓN DE PERFIL (Sincronizado)
@@ -108,7 +116,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         <DialogHeader className="px-6 py-5 bg-white border-b border-slate-200 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="bg-blue-100 p-2.5 rounded-xl"><UserCircle className="w-5 h-5 text-blue-600" /></div>
-            <div className="flex flex-col items-start">
+            <div className="flex flex-col items-start text-left">
               <DialogTitle className="text-lg font-bold text-slate-800 leading-tight">Configuración de Perfil</DialogTitle>
               <DialogDescription className="text-xs text-slate-500 mt-0.5">Actualiza tus datos desde la caja registradora.</DialogDescription>
             </div>
@@ -162,14 +170,24 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   );
 }
 
-
 // ------------------------------------------------------------
 // MAIN POS LAYOUT COMPONENT
 // ------------------------------------------------------------
 export default function PosLayout({ children }: { children: React.ReactNode }) {
-  const { name, role, image, logout } = useAuth();
+  // 🚀 FIX: Extraemos 'userId' de useAuth
+  const { name, role, image, logout, userId } = useAuth();
   const [time, setTime] = useState<Date | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  // 🚀 Pasamos el userId al endpoint
+  const { data: notifications, mutate: mutateNotifs, isLoading: loadingNotifs } = useSWR<Notification[]>(
+    userId ? `/api/notifications?userId=${userId}` : null, 
+    fetcher, 
+    { refreshInterval: 15000 }
+  );
+
+  const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   useEffect(() => {
     const timeoutId = setTimeout(() => setTime(new Date()), 0);
@@ -183,13 +201,25 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
     window.location.href = '/login';
   };
 
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ read: true })
+      });
+      mutateNotifs();
+    } catch (error) {
+      toast.error('Error al marcar notificación');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden font-sans">
       
-      {/* NAVBAR SUPERIOR: Replicando la estructura geométrica del Dashboard */}
+      {/* NAVBAR SUPERIOR */}
       <header className="h-16 bg-slate-950 text-white flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-md z-30 border-b border-slate-900">
         
-        {/* LADO IZQUIERDO: Logo y Navegación de Retorno */}
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-1.5 rounded-lg shadow-md shadow-blue-600/20">
@@ -210,20 +240,81 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        {/* LADO DERECHO: Herramientas Operativas y Autenticación */}
         <div className="flex items-center gap-3 md:gap-5">
           <div className="hidden md:flex items-center gap-2 text-slate-300 bg-slate-900 px-3 py-2 rounded-lg text-xs font-mono border border-slate-800 font-medium tracking-wider">
             <Clock className="w-4 h-4 text-blue-500" />
             {time ? time.toLocaleTimeString('es-PE', { hour: '2-digit', minute:'2-digit', second:'2-digit' }) : '--:--:--'}
           </div>
           
-          {/* 🚀 FIX: Solo el ícono de Wifi y con un diseño minimalista */}
           <div className="hidden sm:flex items-center justify-center text-emerald-400 bg-emerald-400/10 p-2 rounded-lg border border-emerald-400/20" title="Sistema en línea">
             <Wifi className="w-4 h-4" />
           </div>
           
           <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l border-slate-800">
-            <div className="text-right hidden sm:block">
+            
+            {/* 🚀 CAMPANA DE NOTIFICACIONES */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifs(!showNotifs)}
+                className="relative p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors outline-none"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-slate-950">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 🚀 PANEL DESPLEGABLE DE NOTIFICACIONES */}
+              {showNotifs && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
+                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-4">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                          {unreadCount} Nuevas
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="max-h-80 overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
+                      {loadingNotifs ? (
+                        <div className="p-6 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin" /> Cargando...
+                        </div>
+                      ) : notifications?.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                          <Bell className="w-6 h-6 text-slate-300" />
+                          No tienes notificaciones
+                        </div>
+                      ) : (
+                        notifications?.map(n => (
+                          <div key={n.id} className={`p-3 rounded-lg border text-left flex flex-col gap-1.5 transition-colors ${!n.read ? 'bg-white border-blue-100 shadow-sm' : 'bg-transparent border-transparent opacity-60 hover:opacity-100'}`}>
+                            <div className="flex justify-between items-start gap-2">
+                              <span className="text-xs font-bold text-slate-800 leading-tight">{n.title}</span>
+                              <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap">
+                                {new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 leading-snug">{n.message}</p>
+                            {!n.read && (
+                              <button onClick={() => handleMarkAsRead(n.id)} className="mt-1 text-[9px] font-bold text-blue-600 hover:text-blue-800 self-end flex items-center gap-1 bg-blue-50 px-2 py-1 rounded transition-colors">
+                                <Check className="w-3 h-3" /> Marcar leída
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="text-right hidden sm:block ml-2">
               <p className="text-sm font-bold leading-none text-slate-100">{name}</p>
               <p className="text-[10px] text-blue-400 uppercase mt-1 font-black tracking-widest">{role}</p>
             </div>
@@ -253,7 +344,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* ÁREA DE CONTENIDO POS CON PROTECCIÓN DE ESTADO (CAJA) */}
+      {/* ÁREA DE CONTENIDO POS */}
       <main className="flex-1 overflow-hidden relative bg-slate-50">
         <CashGuard>
           {children}
