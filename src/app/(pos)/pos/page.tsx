@@ -2,11 +2,10 @@
 
 import useSWR from 'swr';
 import { useState, useMemo } from 'react';
-import { Search, LayoutGrid, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, Package, SplitSquareHorizontal, Tag, ChevronRight, CheckCircle2, User, Receipt, Unlock, RotateCcw } from 'lucide-react';
+import { Search, LayoutGrid, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, Package, SplitSquareHorizontal, Tag, ChevronRight, CheckCircle2, User, Receipt, Unlock, RotateCcw, UserPlus, X, Store, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,12 +14,13 @@ import { toast } from 'sonner';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-interface Category { id: string; name: string; }
+interface Category { id: string; name: string; ecommerceCode?: string | null; }
 interface Product {
   id: string; title: string; price: number; wholesalePrice: number | null;
   wholesaleMinCount: number | null; discountPercentage: number;
   images: string[]; barcode: string | null; categoryId: string;
   branchStock?: { branchId: string; quantity: number }[];
+  category?: { name: string; ecommerceCode: string | null };
 }
 interface CartItem extends Product { cartQuantity: number; }
 
@@ -29,6 +29,7 @@ export default function PosPage() {
   
   const { data: products, isLoading: loadingProducts } = useSWR<Product[]>('/api/products', fetcher);
   const { data: categories, isLoading: loadingCats } = useSWR<Category[]>('/api/categories', fetcher);
+  const { data: currentBranch } = useSWR(user?.branchId && user.branchId !== 'NONE' ? `/api/branches/${user.branchId}` : null, fetcher);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -37,6 +38,7 @@ export default function PosPage() {
   // 🚀 ESTADOS DEL CARRITO Y CLIENTE
   const [saleState, setSaleState] = useState<'DRAFT' | 'PAID'>('DRAFT');
   const [customerDoc, setCustomerDoc] = useState('');
+  const [showCustomerInput, setShowCustomerInput] = useState(false);
   const [globalDiscountType, setGlobalDiscountType] = useState<'FIXED' | 'PERCENT'>('FIXED');
   const [globalDiscountValue, setGlobalDiscountValue] = useState('');
 
@@ -52,14 +54,62 @@ export default function PosPage() {
     return product.branchStock?.reduce((acc, curr) => acc + curr.quantity, 0) || 0;
   };
 
-  const filteredProducts = useMemo(() => {
+  // ========================================================
+  // 🔐 LÓGICA DE PERMISOS ESTRICTA
+  // ========================================================
+  const isSuperOrOwner = user?.role === 'SUPER_ADMIN' || user?.role === 'OWNER';
+  const permissions = user?.permissions || {};
+  const canManageGlobal = isSuperOrOwner || !!permissions.canManageGlobalProducts;
+  const canViewOthers = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
+  const myCode = currentBranch?.ecommerceCode;
+
+  const allowedProducts = useMemo(() => {
     if (!products) return [];
+    if (canViewOthers) return products;
+
     return products.filter(p => {
+      const catEcommerceCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
+      const isGlobalProduct = !catEcommerceCode;
+      const isMyCatalogProduct = catEcommerceCode === myCode;
+      const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+
+      return isGlobalProduct || isMyCatalogProduct || hasStockInMyBranch;
+    });
+  }, [products, categories, myCode, user?.branchId, canViewOthers]);
+
+  // 🚀 AGRUPACIÓN DE CATEGORÍAS PARA EL SIDEBAR
+  const groupedCategories = useMemo(() => {
+    if (!categories || !allowedProducts) return { myStore: [], others: {} as Record<string, Category[]>, shared: [] };
+    
+    const validCategoryIds = new Set(allowedProducts.map(p => p.categoryId));
+    const validCats = categories.filter(c => validCategoryIds.has(c.id));
+
+    const myStore: Category[] = [];
+    const others: Record<string, Category[]> = {};
+    const shared: Category[] = [];
+
+    validCats.forEach(cat => {
+      if (!cat.ecommerceCode) {
+        shared.push(cat);
+      } else if (myCode && cat.ecommerceCode === myCode) {
+        myStore.push(cat);
+      } else {
+        if (!others[cat.ecommerceCode]) others[cat.ecommerceCode] = [];
+        others[cat.ecommerceCode].push(cat);
+      }
+    });
+
+    return { myStore, others, shared };
+  }, [categories, allowedProducts, myCode]);
+
+  const filteredProducts = useMemo(() => {
+    if (!allowedProducts) return [];
+    return allowedProducts.filter(p => {
       const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.barcode?.includes(searchTerm);
       const matchesCat = selectedCategory === 'ALL' || p.categoryId === selectedCategory;
       return matchesSearch && matchesCat;
     });
-  }, [products, searchTerm, selectedCategory]);
+  }, [allowedProducts, searchTerm, selectedCategory]);
 
   const addToCart = (product: Product) => {
     if (saleState === 'PAID') return toast.error('Venta bloqueada. Libere la caja primero.');
@@ -97,7 +147,7 @@ export default function PosPage() {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
-  // 🚀 CÁLCULOS FINANCIEROS (Ítems + Descuento Global)
+  // 🚀 CÁLCULOS FINANCIEROS
   const calculateItemFinancials = (item: CartItem) => {
     let baseUnitPrice = Number(item.price);
     let isWholesaleApplied = false;
@@ -129,7 +179,7 @@ export default function PosPage() {
   const finalGlobalTotal = Math.max(0, itemsSubtotal - globalDiscountAmount);
   const totalSavings = itemSavings + globalDiscountAmount;
 
-  // 🚀 LÓGICA DE COBRO Y ESTADOS
+  // 🚀 LÓGICA DE COBRO
   const openPaymentModal = (method: 'CASH' | 'CARD' | 'SPLIT') => {
     setPayMethod(method); setCashReceived(''); setShowPayment(true);
   };
@@ -155,6 +205,7 @@ export default function PosPage() {
   const handleLiberar = () => {
     setCart([]);
     setCustomerDoc('');
+    setShowCustomerInput(false);
     setGlobalDiscountValue('');
     setSaleState('DRAFT');
     toast.success('Caja liberada para nueva venta');
@@ -168,21 +219,76 @@ export default function PosPage() {
   return (
     <div className="flex h-full w-full bg-slate-200/50 p-2 gap-2 animate-in fade-in duration-300 font-sans text-sm">
       
-      {/* 📁 COLUMNA 1: MENÚ DE CATEGORÍAS */}
+      {/* 📁 COLUMNA 1: MENÚ DE CATEGORÍAS CON AGRUPACIÓN VISUAL */}
       <aside className="w-48 bg-white rounded-xl shadow-sm border border-slate-200 hidden lg:flex flex-col overflow-hidden">
         <div className="px-3 py-2.5 border-b border-slate-100 shrink-0">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filtros de Catálogo</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Catálogo
+          </span>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          <button onClick={() => setSelectedCategory('ALL')} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <button onClick={() => setSelectedCategory('ALL')} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all mb-2 ${selectedCategory === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
             <LayoutGrid className="w-3.5 h-3.5" /> Todo el inventario
           </button>
-          {categories?.map(cat => (
-            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === cat.id ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat.id ? 'bg-blue-400' : 'bg-slate-300'}`} />
-              <span className="truncate">{cat.name}</span>
-            </button>
-          ))}
+          
+          {loadingCats || loadingProducts ? (
+            <div className="p-2 space-y-2">
+              <Skeleton className="h-6 w-full rounded-md" /><Skeleton className="h-6 w-[80%] rounded-md" />
+            </div>
+          ) : (
+            <>
+              {/* BLOQUE: MI SUCURSAL */}
+              {groupedCategories.myStore.length > 0 && (
+                <div className="space-y-0.5 pt-1">
+                  <div className="px-2.5 py-1 mb-0.5">
+                    <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Store className="w-3 h-3" /> {currentBranch?.name || 'Mi Tienda'}
+                    </span>
+                  </div>
+                  {groupedCategories.myStore.map(cat => (
+                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === cat.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat.id ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                      <span className="truncate">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* BLOQUE: OTRAS SUCURSALES */}
+              {Object.entries(groupedCategories.others).map(([code, cats]) => (
+                <div key={code} className="space-y-0.5 pt-2">
+                  <div className="px-2.5 py-1 mb-0.5">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Store className="w-3 h-3" /> Tienda: {code}
+                    </span>
+                  </div>
+                  {cats.map(cat => (
+                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === cat.id ? 'bg-slate-100 text-slate-800 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat.id ? 'bg-slate-400' : 'bg-slate-200'}`} />
+                      <span className="truncate">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+
+              {/* BLOQUE: COMPARTIDOS / GLOBALES */}
+              {groupedCategories.shared.length > 0 && (
+                <div className="space-y-0.5 pt-2 pb-2">
+                  <div className="px-2.5 py-1 mb-0.5">
+                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Globe className="w-3 h-3" /> Catálogo General
+                    </span>
+                  </div>
+                  {groupedCategories.shared.map(cat => (
+                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === cat.id ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat.id ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      <span className="truncate">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </aside>
 
@@ -192,8 +298,8 @@ export default function PosPage() {
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input 
-              autoFocus placeholder="Buscar producto o código..." 
-              className="pl-8 h-8 text-xs bg-slate-50 border-slate-200 focus-visible:ring-blue-500 rounded-md shadow-none"
+              autoFocus placeholder="Buscar producto o código de barras..." 
+              className="pl-8 h-8 text-xs placeholder:text-[11px] placeholder:text-slate-400 bg-slate-50 border-slate-200 focus-visible:ring-blue-500 rounded-md shadow-none"
               value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} disabled={saleState === 'PAID'}
             />
           </div>
@@ -205,6 +311,10 @@ export default function PosPage() {
               Array(12).fill(0).map((_, i) => (
                 <div key={i} className="bg-white rounded-lg border border-slate-100 p-2"><Skeleton className="aspect-square w-full rounded-md" /><Skeleton className="h-3 w-full mt-2" /></div>
               ))
+            ) : filteredProducts.length === 0 ? (
+              <div className="col-span-full h-32 flex items-center justify-center text-slate-400 text-xs font-medium">
+                No hay productos disponibles en esta categoría o sucursal.
+              </div>
             ) : filteredProducts.map(product => {
               const localStock = getLocalStock(product);
               const isOutOfStock = localStock <= 0;
@@ -231,7 +341,15 @@ export default function PosPage() {
                         <p className="text-slate-900 font-bold text-xs">S/ {Number(product.price).toFixed(2)}</p>
                         {hasDiscount && <p className="text-[9px] text-slate-400 line-through">S/ {(Number(product.price) * (1 / (1 - product.discountPercentage / 100))).toFixed(2)}</p>}
                       </div>
-                      {hasWholesale && <p className="text-[9px] font-medium text-slate-500 mt-0.5 leading-none flex items-center gap-0.5"><Tag className="w-2.5 h-2.5" /> Mayor S/{Number(product.wholesalePrice).toFixed(2)}</p>}
+                      {hasWholesale && (
+                        <p className="text-[9px] font-medium text-slate-500 mt-0.5 leading-none flex items-center gap-0.5" title={`Precio por mayor a partir de ${product.wholesaleMinCount} unidades`}>
+                          <Tag className="w-2.5 h-2.5 text-blue-500" /> 
+                          Mayor S/{Number(product.wholesalePrice).toFixed(2)}
+                          <span className="bg-blue-50 text-blue-600 px-1 py-0.5 rounded text-[8px] font-bold ml-auto">
+                            ≥{product.wholesaleMinCount}u
+                          </span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -310,10 +428,34 @@ export default function PosPage() {
           {/* Entradas de Cliente y Descuento Global (Solo en DRAFT) */}
           {saleState === 'DRAFT' && cart.length > 0 && (
             <div className="flex flex-col gap-2 mb-1 animate-in fade-in duration-300">
-              <div className="relative">
-                <User className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                <Input placeholder="DNI / RUC Cliente (Opcional)" value={customerDoc} onChange={(e) => setCustomerDoc(e.target.value)} className="pl-7 h-8 text-xs bg-white border-slate-200 focus-visible:ring-blue-500 shadow-sm" />
-              </div>
+              
+              {/* Toggle de Cliente Opcional */}
+              {!showCustomerInput ? (
+                <div className="flex items-center">
+                  <button onClick={() => setShowCustomerInput(true)} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors bg-white border border-slate-200 px-2 py-1.5 rounded-md shadow-sm w-max">
+                    <UserPlus className="w-3.5 h-3.5" /> Vincular Cliente (Opcional)
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 animate-in slide-in-from-left-2 duration-200">
+                  <div className="relative flex-1">
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-500" />
+                    <Input 
+                      autoFocus placeholder="DNI / RUC Cliente..." 
+                      value={customerDoc} onChange={(e) => setCustomerDoc(e.target.value)} 
+                      className="pl-8 h-8 text-xs placeholder:text-[11px] placeholder:text-slate-400 bg-blue-50/30 border-blue-200 focus-visible:ring-blue-500 shadow-sm" 
+                    />
+                  </div>
+                  <button 
+                    onClick={() => { setShowCustomerInput(false); setCustomerDoc(''); }} 
+                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors shrink-0"
+                    title="Remover cliente"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <div className="flex gap-1.5">
                 <Select value={globalDiscountType} onValueChange={(val: 'FIXED' | 'PERCENT') => setGlobalDiscountType(val)}>
                   <SelectTrigger className="w-[60px] h-8 text-xs font-bold bg-white border-slate-200 shadow-sm px-2">
@@ -324,7 +466,7 @@ export default function PosPage() {
                     <SelectItem value="PERCENT">%</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input type="number" placeholder="Descuento Global" value={globalDiscountValue} onChange={(e) => setGlobalDiscountValue(e.target.value)} className="flex-1 h-8 text-xs bg-white border-slate-200 focus-visible:ring-blue-500 shadow-sm tabular-nums" />
+                <Input type="number" placeholder="Descuento extra..." value={globalDiscountValue} onChange={(e) => setGlobalDiscountValue(e.target.value)} className="flex-1 h-8 text-xs placeholder:text-[11px] placeholder:text-slate-400 bg-white border-slate-200 focus-visible:ring-blue-500 shadow-sm tabular-nums" />
               </div>
             </div>
           )}
@@ -400,7 +542,7 @@ export default function PosPage() {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">S/</span>
                     <Input 
                       type="number" autoFocus placeholder="0.00"
-                      className="pl-8 h-10 text-sm font-bold text-slate-900 border-slate-200 focus-visible:ring-slate-800 rounded-lg tabular-nums shadow-sm" 
+                      className="pl-8 h-10 text-sm font-bold placeholder:text-slate-300 placeholder:text-sm text-slate-900 border-slate-200 focus-visible:ring-slate-800 rounded-lg tabular-nums shadow-sm" 
                       value={cashReceived} onChange={(e) => setCashReceived(e.target.value)}
                     />
                   </div>

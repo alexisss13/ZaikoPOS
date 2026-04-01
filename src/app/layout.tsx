@@ -13,7 +13,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Zaiko POS",
+  title: "F&F POS",
   description: "Sistema de Punto de Venta SaaS",
 };
 
