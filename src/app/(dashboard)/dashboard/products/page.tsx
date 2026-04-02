@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, Search, Package, Edit, Trash2, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Link as LinkIcon, PowerOff, Download, Filter, LayoutGrid
+  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProductModal, ProductData } from '@/components/dashboard/ProductModal';
 import Barcode from 'react-barcode';
 import { useAuth } from '@/context/auth-context';
@@ -25,8 +24,8 @@ interface Product extends ProductData {
   active: boolean; 
 }
 
-interface Branch { id: string; ecommerceCode: string | null; name: string; }
-interface Category { id: string; name: string; }
+interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
+interface Category { id: string; name: string; ecommerceCode?: string | null; }
 
 const ITEMS_PER_PAGE = 10;
 
@@ -55,20 +54,55 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [stockFilter, setStockFilter] = useState('ALL');
   
+  const [showCatFilter, setShowCatFilter] = useState(false);
+  const [showStockFilter, setShowStockFilter] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [canEditSelected, setCanEditSelected] = useState(false);
   
   const [barcodeProduct, setBarcodeProduct] = useState<Product | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
 
+  const getBranchByCode = (code: string) => branches?.find(b => b.ecommerceCode === code);
+
+  // 🚀 1. LÓGICA DE CATEGORÍAS DINÁMICAS (Solo muestra categorías que tienen productos en la pestaña actual)
+  const availableCategories = useMemo(() => {
+    if (!categories || !products) return [];
+
+    const baseProducts = products.filter(p => {
+      const catEcommerceCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
+      const isGlobalProduct = !catEcommerceCode;
+      const isMyCatalogProduct = catEcommerceCode === myCode;
+      const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+
+      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
+         if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) return false;
+      }
+      if (codeFilter === 'INACTIVE') return !p.active; 
+      if (!p.active) return false;
+
+      let matchesCode = true;
+      if (codeFilter === 'GENERAL') {
+        const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
+        matchesCode = isGlobalProduct || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
+      }
+      else if (codeFilter !== 'ALL') matchesCode = catEcommerceCode === codeFilter;
+
+      return matchesCode;
+    });
+
+    const activeCategoryIds = new Set(baseProducts.map(p => p.categoryId));
+    return categories.filter(c => activeCategoryIds.has(c.id));
+  }, [products, categories, codeFilter, myCode, user?.branchId, isSuperOrOwner, canViewOthers, canManageGlobal]);
+
+
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     return products.filter(p => {
-      
       const isGlobalProduct = !p.category?.ecommerceCode;
       const isMyCatalogProduct = p.category?.ecommerceCode === myCode;
-      // 🚀 FIX: ?? false para garantizar que SIEMPRE sea boolean
       const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
 
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
@@ -111,6 +145,7 @@ export default function ProductsPage() {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Producto dado de baja (Inactivo)');
+      setIsModalOpen(false);
       mutate();
     } catch (e: unknown) { toast.error('Error inesperado'); }
   };
@@ -131,76 +166,166 @@ export default function ProductsPage() {
     } catch (error) { toast.error('Error al generar la imagen.', { id: 'barcode-toast' }); }
   };
 
-  const baseTabClass = "px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-2 cursor-pointer";
-  const activeTabClass = "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50";
-  const inactiveTabClass = "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
-
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Package className="w-6 h-6 text-primary" /> Inventario</h1>
-          <p className="text-slate-500 text-sm mt-1">Gestiona el stock de tus sucursales y tienda web.</p>
-        </div>
-        {canCreate && (
-          <Button onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }} className="gap-2 shadow-md w-full sm:w-auto">
-            <Plus className="w-4 h-4" /> Nuevo Producto
-          </Button>
-        )}
-      </div>
+    <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
+      
+      {/* 🚀 TOOLBAR SUPERIOR ULTRA-LIMPIA Y ELEGANTE */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+        
+        <h1 className="text-[26px] font-black text-slate-900 tracking-tight shrink-0">Productos</h1>
+        
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          
+          {/* 🚀 BUSCADOR ANIMADO EXPANDIBLE */}
+          <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
+            <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
+              {/* Icono grueso sin fondo */}
+              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+            </div>
+            <Input 
+              placeholder="Buscar producto, SKU..." 
+              value={searchTerm} 
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+              className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" 
+            />
+          </div>
 
-      <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input placeholder="Buscar por nombre, código o SKU..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="pl-9 h-10 w-full bg-slate-50/50 focus-visible:bg-white transition-colors" />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Select value={categoryFilter} onValueChange={(v) => {setCategoryFilter(v); setCurrentPage(1);}}>
-              <SelectTrigger className="w-full sm:w-[220px] h-10 bg-slate-50/50">
-                <LayoutGrid className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                <SelectValue placeholder="Todas las categorías" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="font-bold">Todas las categorías</SelectItem>
-                {categories?.map((cat) => (<SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
-            <Select value={stockFilter} onValueChange={(v) => {setStockFilter(v); setCurrentPage(1);}}>
-              <SelectTrigger className="w-full sm:w-[180px] h-10 bg-slate-50/50">
-                <Filter className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                <SelectValue placeholder="Filtro Stock" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="font-bold">Filtrar Stock</SelectItem>
-                <SelectItem value="LOW" className="text-amber-600 font-bold">Stock Bajo</SelectItem>
-                <SelectItem value="OUT" className="text-red-600 font-bold">Agotados</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="flex items-center overflow-x-auto hide-scrollbar pt-2 border-t border-slate-100">
-          <div className="flex items-center gap-1 bg-slate-100/70 p-1 rounded-lg border border-slate-200/60 w-max">
-            <button onClick={() => {setCodeFilter('ALL'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'ALL' ? activeTabClass : inactiveTabClass}`}>Todos</button>
-            <button onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'GENERAL' ? activeTabClass : inactiveTabClass}`}><LinkIcon className="w-3.5 h-3.5" /> Compartidos</button>
-            
-            {visibleCodes.map(code => (<button key={code} onClick={() => {setCodeFilter(code); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === code ? activeTabClass : inactiveTabClass}`}>{code}</button>))}
-            
-            <div className="w-px h-5 bg-slate-300 mx-1" />
-            <button onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1)}} className={`${baseTabClass} ${codeFilter === 'INACTIVE' ? 'bg-red-50 text-red-600 shadow-sm ring-1 ring-red-200/50' : 'text-slate-500 hover:text-red-600 hover:bg-red-50/50'}`}><PowerOff className="w-3.5 h-3.5" /> Ocultos</button>
-          </div>
+          {canCreate && (
+            <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+              <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
-              <tr><th className="px-6 py-4">Producto</th><th className="px-6 py-4">Categoría</th><th className="px-6 py-4">Precio (S/)</th><th className="px-6 py-4">Inventario</th><th className="px-6 py-4 text-right">Acciones</th></tr>
+      {/* 🚀 CONTENEDOR DE LA TABLA */}
+      <div className="bg-white rounded-2xl shadow-sm flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
+        
+        {/* PESTAÑAS DE SUCURSALES (SUBHEADER) */}
+        <div className="flex items-center gap-1 px-4 py-3 border-b border-slate-100 overflow-x-auto hide-scrollbar w-full bg-white shrink-0">
+          <button 
+            onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" /> Todos
+          </button>
+          <button 
+            onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'GENERAL' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+          >
+            <Globe className="w-3.5 h-3.5" /> Compartidos
+          </button>
+          
+          <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
+
+          {visibleCodes.map(code => {
+            const b = getBranchByCode(code);
+            const isActive = codeFilter === code;
+            return (
+              <button 
+                key={code} 
+                onClick={() => {setCodeFilter(code); setCurrentPage(1); setCategoryFilter('ALL');}} 
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${isActive ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
+                {b?.logoUrl ? <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover bg-white" alt=""/> : <Store className="w-3.5 h-3.5"/>}
+                {b?.name || code}
+              </button>
+            )
+          })}
+
+          <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
+
+          <button 
+            onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'INACTIVE' ? 'bg-red-100 text-red-800 shadow-sm' : 'text-slate-500 hover:text-red-700 hover:bg-red-50'}`}
+          >
+            <PowerOff className="w-3.5 h-3.5" /> Inactivos
+          </button>
+        </div>
+
+        {/* TABLA PRINCIPAL CON FILTROS INCRUSTADOS */}
+        <div className="overflow-x-auto flex-1 relative">
+          
+          {/* Capa invisible para cerrar filtros clickeando afuera */}
+          {(showCatFilter || showStockFilter) && (
+            <div className="fixed inset-0 z-20" onClick={() => {setShowCatFilter(false); setShowStockFilter(false);}} />
+          )}
+
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead className="bg-white border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-30 shadow-sm">
+              <tr>
+                <th className="px-5 py-3.5 font-semibold">Producto</th>
+                
+                {/* 🚀 CATEGORÍA CON FILTRO DINÁMICO */}
+                <th className="px-5 py-3.5 font-semibold relative select-none w-[200px]">
+                  <div 
+                    className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${categoryFilter !== 'ALL' || showCatFilter ? 'text-slate-900 bg-slate-100' : ''}`}
+                    onClick={() => {setShowCatFilter(!showCatFilter); setShowStockFilter(false);}}
+                  >
+                    Categoría y Catálogo <Filter className={`w-3.5 h-3.5 ${categoryFilter !== 'ALL' ? 'text-blue-600 fill-blue-600' : ''}`} />
+                  </div>
+                  
+                  {/* POPOVER CATEGORÍA DINÁMICO */}
+                  {showCatFilter && (
+                    <div className="absolute top-10 left-3 w-[220px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 max-h-60 overflow-y-auto custom-scrollbar">
+                      <button onClick={() => {setCategoryFilter('ALL'); setShowCatFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${categoryFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
+                        Todas las categorías {categoryFilter === 'ALL' && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                      <div className="h-px bg-slate-100 my-1 mx-2" />
+                      
+                      {availableCategories.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-slate-400 text-center italic">Sin categorías aquí</div>
+                      )}
+
+                      {availableCategories.map((cat) => (
+                        <button key={cat.id} onClick={() => {setCategoryFilter(cat.id); setShowCatFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors flex items-center justify-between ${categoryFilter === cat.id ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                          <span className="truncate pr-2">{cat.name}</span>
+                          {categoryFilter === cat.id && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </th>
+
+                <th className="px-5 py-3.5 font-semibold w-[120px]">Precio (S/)</th>
+                
+                {/* 🚀 INVENTARIO CON FILTRO */}
+                <th className="px-5 py-3.5 font-semibold relative select-none w-[150px]">
+                  <div 
+                    className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${stockFilter !== 'ALL' || showStockFilter ? 'text-slate-900 bg-slate-100' : ''}`}
+                    onClick={() => {setShowStockFilter(!showStockFilter); setShowCatFilter(false);}}
+                  >
+                    Inventario <Filter className={`w-3.5 h-3.5 ${stockFilter !== 'ALL' ? 'text-blue-600 fill-blue-600' : ''}`} />
+                  </div>
+
+                  {/* POPOVER STOCK */}
+                  {showStockFilter && (
+                    <div className="absolute top-10 left-3 w-[160px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
+                      <button onClick={() => {setStockFilter('ALL'); setShowStockFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
+                        Todo el Stock {stockFilter === 'ALL' && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => {setStockFilter('LOW'); setShowStockFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'LOW' ? 'bg-amber-50 text-amber-700' : 'text-amber-600 hover:bg-amber-50/50'}`}>
+                        Stock Bajo {stockFilter === 'LOW' && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => {setStockFilter('OUT'); setShowStockFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'OUT' ? 'bg-red-50 text-red-700' : 'text-red-600 hover:bg-red-50/50'}`}>
+                        Agotados {stockFilter === 'OUT' && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  )}
+                </th>
+              </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? ( Array(5).fill(0).map((_, i) => (<tr key={i}><td colSpan={5} className="p-4"><Skeleton className="h-12 w-full" /></td></tr>)) ) : paginatedProducts.length === 0 ? (
-                <tr><td colSpan={5} className="py-16 text-center"><div className="flex flex-col items-center justify-center text-slate-500 space-y-3"><Package className="w-10 h-10 text-slate-300" /><p className="font-medium text-slate-600">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p><Button variant="link" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button></div></td></tr>
+            <tbody className="divide-y divide-slate-50/80">
+              {isLoading ? ( Array(5).fill(0).map((_, i) => (<tr key={i}><td colSpan={4} className="p-4"><Skeleton className="h-10 w-full rounded-xl" /></td></tr>)) ) : paginatedProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
+                      <Package className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                      <p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p>
+                      <Button variant="link" className="text-xs h-6 text-slate-500 hover:text-slate-800" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 paginatedProducts.map((product: Product) => {
                   
@@ -210,7 +335,6 @@ export default function ProductsPage() {
 
                   const isGlobalProduct = !product.category?.ecommerceCode;
                   const isMyCatalogProduct = product.category?.ecommerceCode === myCode;
-                  // 🚀 FIX: ?? false para garantizar que SIEMPRE sea boolean
                   const hasStockInMyBranch = product.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
                   
                   let canEditThisSpecificProduct = false;
@@ -224,59 +348,58 @@ export default function ProductsPage() {
                     }
                   }
 
+                  const bCode = product.category?.ecommerceCode;
+                  const productBranch = bCode ? getBranchByCode(bCode) : null;
+
                   return (
-                    <tr key={product.id} className={`hover:bg-slate-50 transition-colors group ${!product.active ? 'opacity-75 bg-slate-50' : ''}`}>
-                      <td className="px-6 py-3">
+                    <tr 
+                      key={product.id} 
+                      onClick={() => { setSelectedProduct(product); setCanEditSelected(canEditThisSpecificProduct); setIsModalOpen(true); }}
+                      className={`hover:bg-slate-50 transition-colors group text-xs cursor-pointer ${!product.active ? 'opacity-60 bg-slate-50/50' : ''}`}
+                    >
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded border overflow-hidden bg-white shrink-0 flex items-center justify-center ${!product.active ? 'grayscale' : ''}`}>
+                          <div className={`w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center ${!product.active ? 'grayscale' : ''}`}>
                             {product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="w-4 h-4 text-slate-300" />}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-slate-900 leading-tight">{product.title}</p>
-                              {!product.active && <Badge variant="destructive" className="text-[9px] py-0 h-4">INACTIVO</Badge>}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-bold text-slate-700 truncate leading-tight group-hover:text-slate-900 transition-colors text-sm">{product.title}</p>
+                              {!product.active && <Badge variant="destructive" className="text-[8px] px-1 py-0 h-3.5 leading-none bg-red-100 text-red-700 border-none shadow-none">INACTIVO</Badge>}
                             </div>
                             {(product.barcode || product.code) && (
-                              <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono mt-0.5"><BarcodeIcon className="w-3 h-3" /> {product.barcode || product.code}</div>
+                              <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono mt-1"><BarcodeIcon className="w-3 h-3" /> {product.barcode || product.code}</div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3">
-                        <div className="flex flex-col items-start gap-1">
-                          <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal truncate max-w-[150px]">{product.category?.name || 'Sin Categoría'}</Badge>
-                          {product.category?.ecommerceCode ? (
-                            <span className="text-[9px] font-bold text-indigo-600 flex items-center gap-1 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100"><LinkIcon className="w-2.5 h-2.5" /> {product.category.ecommerceCode}</span>
-                          ) : (<span className="text-[9px] font-bold text-slate-500 border px-1.5 py-0.5 rounded bg-white">Compartido</span>)}
+                      <td className="px-5 py-3">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className="font-medium text-slate-500 truncate max-w-[140px] leading-none group-hover:text-slate-700 transition-colors">{product.category?.name || 'Sin Categoría'}</span>
+                          {bCode ? (
+                            <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
+                              {productBranch?.logoUrl ? <img src={productBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover bg-white" alt=""/> : <Store className="w-3 h-3 text-slate-500" />} 
+                              {productBranch?.name || bCode}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-slate-600 flex items-center gap-1 leading-none border border-slate-200 px-1.5 py-0.5 rounded-md bg-slate-50 w-max"><Globe className="w-2.5 h-2.5 text-slate-400" /> Compartido</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-6 py-3">
-                        <p className="font-bold text-slate-900">S/ {Number(product.price).toFixed(2)}</p>
+                      <td className="px-5 py-3">
+                        <p className="font-bold text-slate-800 leading-tight text-sm">S/ {Number(product.price).toFixed(2)}</p>
                         {hasWholesale && (
-                          <div className="mt-1"><span className="text-[10px] text-emerald-700 font-bold bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-200">Mayorista: S/ {Number(product.wholesalePrice).toFixed(2)}</span></div>
+                          <p className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">Mayor: S/ {Number(product.wholesalePrice).toFixed(2)}</p>
                         )}
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-5 py-3">
                         <div className="flex flex-col gap-1">
-                          <Badge variant="outline" className={Number(product.stock) <= 0 ? 'border-red-200 text-red-600 bg-red-50 text-[10px]' : Number(product.stock) <= Number(product.minStock) ? 'border-amber-200 text-amber-600 bg-amber-50 text-[10px]' : 'border-blue-200 text-blue-700 bg-blue-50 text-[10px]'}>Web: {product.stock}</Badge>
-                          <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-200 bg-white">
-                            {!canViewOthers ? 'Tu Local:' : 'Físico:'} {totalPhysicalStock}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          {(product.barcode || product.code) && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 hover:bg-slate-200" onClick={() => setBarcodeProduct(product)}><BarcodeIcon className="w-4 h-4" /></Button>
-                          )}
-                          
-                          {canEditThisSpecificProduct && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100" onClick={() => { setSelectedProduct(product); setIsModalOpen(true); }}><Edit className="w-4 h-4" /></Button>
-                          )}
-                          
-                          {canEditThisSpecificProduct && product.active && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-100" onClick={() => handleDelete(product.id as string)}><Trash2 className="w-4 h-4" /></Button>
-                          )}
+                          <span className={`text-[11px] font-bold leading-none ${Number(product.stock) <= 0 ? 'text-red-500' : Number(product.stock) <= Number(product.minStock) ? 'text-amber-500' : 'text-slate-600'}`}>
+                            Web: {product.stock}
+                          </span>
+                          <span className="text-[11px] text-slate-500 leading-none group-hover:text-slate-700 transition-colors">
+                            {!canViewOthers ? 'Local:' : 'Físico:'} <span className="font-bold text-slate-800">{totalPhysicalStock}</span>
+                          </span>
                         </div>
                       </td>
                     </tr>
@@ -286,26 +409,37 @@ export default function ProductsPage() {
             </tbody>
           </table>
         </div>
+        
+        {/* Paginación Plana */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t flex justify-between items-center bg-slate-50">
-            <span className="text-sm text-slate-500">Pág. {currentPage} de {totalPages}</span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="w-4 h-4" /></Button>
+          <div className="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-white">
+            <span className="text-[11px] font-medium text-slate-500">Pág. {currentPage} de {totalPages}</span>
+            <div className="flex gap-1.5">
+              <Button variant="outline" className="h-8 px-2.5 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
+              <Button variant="outline" className="h-8 px-2.5 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="w-4 h-4" /></Button>
             </div>
           </div>
         )}
       </div>
 
-      {canCreate || canEdit ? (
-        <ProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => mutate()} productToEdit={selectedProduct} />
-      ) : null}
+      {isModalOpen && (
+        <ProductModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onSuccess={() => mutate()} 
+          productToEdit={selectedProduct} 
+          canEdit={canEditSelected}
+          onDelete={handleDelete}
+          onPrintBarcode={(p) => setBarcodeProduct(p as unknown as Product)}
+        />
+      )}
 
+      {/* ETIQUETA MODAL */}
       <Dialog open={!!barcodeProduct} onOpenChange={() => setBarcodeProduct(null)}>
-        <DialogContent className="sm:max-w-sm text-center border-none shadow-2xl p-6 bg-slate-100">
+        <DialogContent className="sm:max-w-sm text-center border-none shadow-2xl p-6 bg-slate-100 rounded-2xl">
           <DialogHeader className="mb-2"><DialogTitle className="text-center text-slate-500 text-xs uppercase tracking-widest font-bold">Vista Previa Etiqueta</DialogTitle></DialogHeader>
           <div className="flex flex-col items-center justify-center overflow-hidden">
-            <div ref={ticketRef} id="barcode-ticket" className="bg-white px-6 py-5 flex flex-col items-center justify-center w-full max-w-[320px] text-black border border-slate-300">
+            <div ref={ticketRef} id="barcode-ticket" className="bg-white px-6 py-5 flex flex-col items-center justify-center w-full max-w-[320px] text-black shadow-sm rounded-xl">
               <h3 className="font-black text-black text-center text-[16px] leading-tight uppercase w-full mb-4 px-2 line-clamp-3">{barcodeProduct?.title}</h3>
               <div className="w-full flex justify-center bg-white overflow-hidden">
                 {barcodeProduct && <Barcode value={barcodeProduct.barcode || barcodeProduct.code || '000000'} width={2} height={60} fontSize={16} textMargin={8} margin={10} format="CODE128" background="#ffffff" lineColor="#000000" renderer="canvas" />}
@@ -313,8 +447,8 @@ export default function ProductsPage() {
             </div>
           </div>
           <div className="flex gap-3 w-full mt-6">
-            <Button onClick={() => setBarcodeProduct(null)} className="flex-1" variant="outline">Cerrar</Button>
-            <Button onClick={downloadBarcodePNG} className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800 text-white"><Download className="w-4 h-4"/> Descargar</Button>
+            <Button onClick={() => setBarcodeProduct(null)} className="flex-1 h-10 text-xs rounded-xl border-slate-200 text-slate-600" variant="outline">Cerrar</Button>
+            <Button onClick={downloadBarcodePNG} className="flex-1 h-10 text-xs gap-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-white shadow-md"><Download className="w-4 h-4"/> Descargar</Button>
           </div>
         </DialogContent>
       </Dialog>
