@@ -25,6 +25,7 @@ interface Product extends ProductData {
 }
 
 interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
+// 🚀 FIX: Añadimos ecommerceCode a la interfaz de Category
 interface Category { id: string; name: string; ecommerceCode?: string | null; }
 
 const ITEMS_PER_PAGE = 10;
@@ -67,7 +68,6 @@ export default function ProductsPage() {
 
   const getBranchByCode = (code: string) => branches?.find(b => b.ecommerceCode === code);
 
-  // 🚀 1. LÓGICA DE CATEGORÍAS DINÁMICAS (Solo muestra categorías que tienen productos en la pestaña actual)
   const availableCategories = useMemo(() => {
     if (!categories || !products) return [];
 
@@ -169,17 +169,15 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
-      {/* 🚀 TOOLBAR SUPERIOR ULTRA-LIMPIA Y ELEGANTE */}
+      {/* 🚀 TOOLBAR SUPERIOR */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         
         <h1 className="text-[26px] font-black text-slate-900 tracking-tight shrink-0">Productos</h1>
         
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           
-          {/* 🚀 BUSCADOR ANIMADO EXPANDIBLE */}
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              {/* Icono grueso sin fondo */}
               <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
             </div>
             <Input 
@@ -190,63 +188,83 @@ export default function ProductsPage() {
             />
           </div>
 
+          {/* 🚀 BOTÓN CON ACENTO ESMERALDA (Igual al de Categorías) */}
           {canCreate && (
-            <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+            <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-5 shadow-md rounded-full transition-all shrink-0">
               <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* 🚀 CONTENEDOR DE LA TABLA */}
       <div className="bg-white rounded-2xl shadow-sm flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         
-        {/* PESTAÑAS DE SUCURSALES (SUBHEADER) */}
-        <div className="flex items-center gap-1 px-4 py-3 border-b border-slate-100 overflow-x-auto hide-scrollbar w-full bg-white shrink-0">
-          <button 
-            onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" /> Todos
-          </button>
-          <button 
-            onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'GENERAL' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
-          >
-            <Globe className="w-3.5 h-3.5" /> Compartidos
-          </button>
+        {/* 🚀 SUBHEADER: TABS Y PAGINACIÓN INTEGRADA (A la derecha) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-100 w-full bg-white shrink-0">
           
-          <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
+          <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar w-full sm:w-auto flex-1">
+            <button 
+              onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> Todos
+            </button>
+            <button 
+              onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'GENERAL' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+            >
+              <Globe className="w-3.5 h-3.5" /> Compartidos
+            </button>
+            
+            <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
 
-          {visibleCodes.map(code => {
-            const b = getBranchByCode(code);
-            const isActive = codeFilter === code;
-            return (
-              <button 
-                key={code} 
-                onClick={() => {setCodeFilter(code); setCurrentPage(1); setCategoryFilter('ALL');}} 
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${isActive ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
-              >
-                {b?.logoUrl ? <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover bg-white" alt=""/> : <Store className="w-3.5 h-3.5"/>}
-                {b?.name || code}
-              </button>
-            )
-          })}
+            {visibleCodes.map(code => {
+              const b = getBranchByCode(code);
+              const isActive = codeFilter === code;
+              return (
+                <button 
+                  key={code} 
+                  onClick={() => {setCodeFilter(code); setCurrentPage(1); setCategoryFilter('ALL');}} 
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${isActive ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  {b?.logoUrl ? <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover bg-white" alt=""/> : <Store className="w-3.5 h-3.5"/>}
+                  {b?.name || code}
+                </button>
+              )
+            })}
 
-          <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
+            <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
 
-          <button 
-            onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL');}} 
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'INACTIVE' ? 'bg-red-100 text-red-800 shadow-sm' : 'text-slate-500 hover:text-red-700 hover:bg-red-50'}`}
-          >
-            <PowerOff className="w-3.5 h-3.5" /> Inactivos
-          </button>
+            <button 
+              onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'INACTIVE' ? 'bg-red-100 text-red-800 shadow-sm' : 'text-slate-500 hover:text-red-700 hover:bg-red-50'}`}
+            >
+              <PowerOff className="w-3.5 h-3.5" /> Inactivos
+            </button>
+          </div>
+
+          {/* 🚀 Paginación a la derecha del subheader */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3 shrink-0 py-1 pl-2 sm:border-l sm:border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline-block">
+                Pág {currentPage} de {totalPages}
+              </span>
+              <div className="flex gap-1.5">
+                <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* TABLA PRINCIPAL CON FILTROS INCRUSTADOS */}
-        <div className="overflow-x-auto flex-1 relative">
+        {/* TABLA PRINCIPAL */}
+        <div className="overflow-x-auto flex-1 relative custom-scrollbar">
           
-          {/* Capa invisible para cerrar filtros clickeando afuera */}
           {(showCatFilter || showStockFilter) && (
             <div className="fixed inset-0 z-20" onClick={() => {setShowCatFilter(false); setShowStockFilter(false);}} />
           )}
@@ -256,16 +274,15 @@ export default function ProductsPage() {
               <tr>
                 <th className="px-5 py-3.5 font-semibold">Producto</th>
                 
-                {/* 🚀 CATEGORÍA CON FILTRO DINÁMICO */}
+                {/* 🚀 CATEGORÍA (Hover oscuro, sin azules) */}
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[200px]">
                   <div 
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${categoryFilter !== 'ALL' || showCatFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => {setShowCatFilter(!showCatFilter); setShowStockFilter(false);}}
                   >
-                    Categoría y Catálogo <Filter className={`w-3.5 h-3.5 ${categoryFilter !== 'ALL' ? 'text-blue-600 fill-blue-600' : ''}`} />
+                    Categoría y Catálogo <Filter className={`w-3.5 h-3.5 ${categoryFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
                   </div>
                   
-                  {/* POPOVER CATEGORÍA DINÁMICO */}
                   {showCatFilter && (
                     <div className="absolute top-10 left-3 w-[220px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 max-h-60 overflow-y-auto custom-scrollbar">
                       <button onClick={() => {setCategoryFilter('ALL'); setShowCatFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${categoryFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
@@ -289,16 +306,15 @@ export default function ProductsPage() {
 
                 <th className="px-5 py-3.5 font-semibold w-[120px]">Precio (S/)</th>
                 
-                {/* 🚀 INVENTARIO CON FILTRO */}
+                {/* 🚀 INVENTARIO (Hover oscuro) */}
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[150px]">
                   <div 
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${stockFilter !== 'ALL' || showStockFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => {setShowStockFilter(!showStockFilter); setShowCatFilter(false);}}
                   >
-                    Inventario <Filter className={`w-3.5 h-3.5 ${stockFilter !== 'ALL' ? 'text-blue-600 fill-blue-600' : ''}`} />
+                    Inventario <Filter className={`w-3.5 h-3.5 ${stockFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
                   </div>
 
-                  {/* POPOVER STOCK */}
                   {showStockFilter && (
                     <div className="absolute top-10 left-3 w-[160px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
                       <button onClick={() => {setStockFilter('ALL'); setShowStockFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
@@ -322,7 +338,7 @@ export default function ProductsPage() {
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
                       <Package className="w-10 h-10 text-slate-200" strokeWidth={1} />
                       <p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p>
-                      <Button variant="link" className="text-xs h-6 text-slate-500 hover:text-slate-800" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button>
+                      <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button>
                     </div>
                   </td>
                 </tr>
@@ -364,6 +380,7 @@ export default function ProductsPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
+                              {/* HOVER TEXTO NEGRO */}
                               <p className="font-bold text-slate-700 truncate leading-tight group-hover:text-slate-900 transition-colors text-sm">{product.title}</p>
                               {!product.active && <Badge variant="destructive" className="text-[8px] px-1 py-0 h-3.5 leading-none bg-red-100 text-red-700 border-none shadow-none">INACTIVO</Badge>}
                             </div>
@@ -376,6 +393,7 @@ export default function ProductsPage() {
                       <td className="px-5 py-3">
                         <div className="flex flex-col items-start gap-1.5">
                           <span className="font-medium text-slate-500 truncate max-w-[140px] leading-none group-hover:text-slate-700 transition-colors">{product.category?.name || 'Sin Categoría'}</span>
+                          {/* ETIQUETAS GRISES ELEGANTES */}
                           {bCode ? (
                             <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
                               {productBranch?.logoUrl ? <img src={productBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover bg-white" alt=""/> : <Store className="w-3 h-3 text-slate-500" />} 
@@ -387,7 +405,7 @@ export default function ProductsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3">
-                        <p className="font-bold text-slate-800 leading-tight text-sm">S/ {Number(product.price).toFixed(2)}</p>
+                        <p className="font-black text-slate-800 leading-tight text-sm">S/ {Number(product.price).toFixed(2)}</p>
                         {hasWholesale && (
                           <p className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">Mayor: S/ {Number(product.wholesalePrice).toFixed(2)}</p>
                         )}
@@ -409,17 +427,6 @@ export default function ProductsPage() {
             </tbody>
           </table>
         </div>
-        
-        {/* Paginación Plana */}
-        {totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-white">
-            <span className="text-[11px] font-medium text-slate-500">Pág. {currentPage} de {totalPages}</span>
-            <div className="flex gap-1.5">
-              <Button variant="outline" className="h-8 px-2.5 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-              <Button variant="outline" className="h-8 px-2.5 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="w-4 h-4" /></Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {isModalOpen && (
