@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+// 1. Definimos el tipo del contexto según Next.js 15+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function PATCH(
+  req: Request, 
+  context: RouteContext // Cambiamos la firma aquí
+) {
   try {
-    const { id } = params;
+    // 2. 🚀 FIX CRÍTICO: Esperamos a que los params se resuelvan
+    const { id } = await context.params;
+    
     const body = await req.json();
     const { status } = body; // 'APPROVED' o 'REJECTED'
 
@@ -30,7 +40,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           data: { quantity: { decrement: transfer.quantity } }
         });
 
-        // Sumamos a la tienda de destino (usamos upsert por si el producto nunca había estado ahí)
+        // Sumamos a la tienda de destino
         await tx.stock.upsert({
           where: { branchId_productId: { branchId: transfer.toBranchId, productId: transfer.productId } },
           create: { branchId: transfer.toBranchId, productId: transfer.productId, quantity: transfer.quantity },
