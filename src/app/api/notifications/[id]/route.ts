@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+// Definimos el tipo según la nueva convención de Next.js
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function PATCH(
+  req: Request,
+  context: RouteContext // Los params ahora vienen en una Promise
+) {
   try {
-    const { id } = params;
+    // 🚀 FIX: Esperamos a que los params se resuelvan
+    const { id } = await context.params;
+    
     const body = await req.json();
+
+    if (typeof body.read !== 'boolean') {
+      return NextResponse.json({ error: 'El campo "read" es obligatorio' }, { status: 400 });
+    }
 
     const notification = await prisma.notification.update({
       where: { id },
