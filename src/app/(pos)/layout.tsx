@@ -23,9 +23,6 @@ interface Notification {
 
 interface Branch { id: string; name: string; logoUrl?: string | null; }
 
-// ------------------------------------------------------------
-// COMPONENTE: MODAL DE EDICIÓN DE PERFIL (Rediseño Flat)
-// ------------------------------------------------------------
 function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { userId } = useAuth();
   const { data: userData, mutate: mutateMe } = useSWR(isOpen && userId ? '/api/auth/me' : null, fetcher);
@@ -37,10 +34,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   useEffect(() => {
     if (userData) {
       setFormData({
-        name: userData.name || '',
-        email: userData.email || '',
-        password: '',
-        image: userData.image || ''
+        name: userData.name || '', email: userData.email || '', password: '', image: userData.image || ''
       });
     }
   }, [userData]);
@@ -78,16 +72,12 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     setIsLoading(true);
     try {
       const payload = {
-        name: formData.name,
-        email: formData.email,
-        image: formData.image.trim() === '' ? null : formData.image,
+        name: formData.name, email: formData.email, image: formData.image.trim() === '' ? null : formData.image,
         ...(formData.password ? { password: formData.password } : {})
       };
       
       const res = await fetch(`/api/users/${userId}`, { 
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload) 
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) 
       });
       if (!res.ok) throw new Error();
       
@@ -119,7 +109,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <UserCircle className="w-5 h-5 text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left">
-            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">Configuración de Perfil</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">Configuración de Perfil</DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-0.5 font-medium">Actualiza tus datos desde la caja registradora.</DialogDescription>
           </div>
         </DialogHeader>
@@ -161,10 +151,10 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           </div>
 
           <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 rounded-xl shadow-sm">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10 text-xs font-semibold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 rounded-xl shadow-sm">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading || isUploading} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all">
+            <Button type="submit" disabled={isLoading || isUploading} className="h-10 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all">
               {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               Guardar Cambios
             </Button>
@@ -175,9 +165,6 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   );
 }
 
-// ------------------------------------------------------------
-// MAIN POS LAYOUT COMPONENT (App Shell "Floating Canvas")
-// ------------------------------------------------------------
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const { role, image, logout, userId, branchId } = useAuth();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -202,9 +189,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   const handleMarkAsRead = async (id: string) => {
     try {
       await fetch(`/api/notifications/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ read: true })
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true })
       });
       mutateNotifs();
     } catch (error) {
@@ -212,7 +197,6 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Lógica Dinámica de Icono/Logo superior
   let TopLogo;
   if (role === 'SUPER_ADMIN') {
     TopLogo = <ShieldCheck className="w-5 h-5 text-slate-800" />;
@@ -229,44 +213,35 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   const tooltipLabelLogo = role === 'SUPER_ADMIN' ? 'Sistemas TI' : role === 'OWNER' ? 'Gerencia Global' : currentBranch?.name || 'Mi Sucursal';
 
   return (
-    // 🚀 FONDO DEL APP SHELL GRIS CLARO
     <div className="flex h-screen w-full bg-slate-100 sm:py-2 sm:pl-1 sm:pr-2 lg:py-3 lg:pl-1 lg:pr-3 gap-2 lg:gap-3 font-sans overflow-hidden">
       
-      {/* 🚀 SIDEBAR ESCRITORIO CLARO (Invisible, integrado al fondo) */}
       <TooltipProvider delayDuration={0}>
         <aside className="w-[64px] h-full flex flex-col items-center py-4 shrink-0 hidden lg:flex relative z-40 bg-transparent border-none">
-          
-          {/* Top Logo Dinámico */}
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 border border-slate-200/60 mb-6 cursor-default shadow-sm overflow-hidden">
                 {TopLogo}
               </div>
             </TooltipTrigger>
-            <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
+            <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
               {tooltipLabelLogo}
             </TooltipContent>
           </Tooltip>
 
-          {/* En el POS no necesitamos menú de navegación central */}
           <nav className="flex flex-col gap-2 w-full px-2 flex-1 items-center" />
 
-          {/* 🚀 BOTTOM ACTION AREA (Reflejado 1:1 con el Administrador) */}
           <div className="flex flex-col gap-3 w-full px-2 items-center mt-auto">
-            
-            {/* Volver al Admin */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link href="/dashboard" className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors shadow-sm ring-1 ring-blue-100">
                   <LayoutDashboard className="w-5 h-5" />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
+              <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
                 Volver al Administrador
               </TooltipContent>
             </Tooltip>
 
-            {/* Notificaciones */}
             <div className="relative flex w-full justify-center">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -275,19 +250,18 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
                     {unreadCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full shadow-sm ring-2 ring-slate-100" />}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
+                <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
                   Notificaciones
                 </TooltipContent>
               </Tooltip>
 
-              {/* Panel de Notificaciones Flotante */}
               {showNotifs && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
                   <div className="absolute left-[4.5rem] bottom-0 w-80 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-left-4 ml-2">
                     <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
-                      {unreadCount > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">{unreadCount} Nuevas</span>}
+                      <h3 className="text-sm font-semibold text-slate-800">Notificaciones</h3>
+                      {unreadCount > 0 && <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">{unreadCount} Nuevas</span>}
                     </div>
                     <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
                       {loadingNotifs ? (
@@ -298,12 +272,12 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
                         notifications?.map(n => (
                           <div key={n.id} className={`w-full p-3 rounded-xl border text-left flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.read ? 'bg-white border-slate-300 shadow-sm' : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-100'}`}>
                             <div className="flex justify-between items-start gap-2 w-full">
-                              <span className={`text-xs leading-tight ${!n.read ? 'font-bold text-slate-900' : 'font-semibold text-slate-600'}`}>{n.title}</span>
+                              <span className={`text-xs leading-tight ${!n.read ? 'font-semibold text-slate-900' : 'font-medium text-slate-600'}`}>{n.title}</span>
                               <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap shrink-0">{new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                             <p className="text-[11px] text-slate-500 leading-snug">{n.message}</p>
                             {!n.read && (
-                              <button onClick={() => handleMarkAsRead(n.id)} className="mt-1 text-[9px] font-bold text-blue-600 hover:text-blue-800 self-end flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">
+                              <button onClick={() => handleMarkAsRead(n.id)} className="mt-1 text-[9px] font-semibold text-blue-600 hover:text-blue-800 self-end flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">
                                 <Check className="w-3 h-3" /> Marcar leída
                               </button>
                             )}
@@ -318,26 +292,24 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
 
             <div className="w-6 h-px bg-slate-200 my-1" />
 
-            {/* Perfil */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={() => setIsProfileModalOpen(true)} className="relative w-9 h-9 rounded-full overflow-hidden ring-2 ring-transparent hover:ring-slate-300 transition-all shadow-sm">
                   {image ? <img src={image} className="w-full h-full object-cover" alt="User" /> : <UserCircle className="w-full h-full text-slate-400 bg-white" />}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
+              <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
                 Mi Perfil
               </TooltipContent>
             </Tooltip>
 
-            {/* Logout */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={handleLogout} className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:bg-white hover:shadow-sm hover:text-red-500 transition-colors">
                   <LogOut className="w-5 h-5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
+              <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
                 Cerrar Sesión
               </TooltipContent>
             </Tooltip>
@@ -345,21 +317,17 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         </aside>
       </TooltipProvider>
 
-      {/* ========================================================
-          🚀 LIENZO FLOTANTE (CANVAS POS)
-          ======================================================== */}
-      <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-2xl overflow-hidden relative shadow-2xl lg:shadow-[0_0_20px_rgba(0,0,0,0.05)] border-l border-t border-b border-slate-200/60 my-2 lg:my-0 mr-2 lg:mr-0">
+      {/* 🚀 MISMO CONTENEDOR BLANCO DEL ADMIN */}
+      <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
         
-        {/* HEADER SOLO PARA MÓVILES (Ultra Limpio y Fusionado al lienzo) */}
         <header className="lg:hidden h-14 bg-white text-slate-900 flex items-center justify-between px-4 shrink-0 shadow-sm border-b border-slate-200 z-30">
           <div className="flex items-center gap-2">
             <div className="bg-slate-900 p-1.5 rounded shadow-sm"><Store className="h-4 w-4 text-white" /></div>
-            <span className="font-bold text-sm text-slate-900">
+            <span className="font-semibold text-sm text-slate-900">
               F&F <span className="text-blue-600">POS</span>
             </span>
           </div>
 
-          {/* 🚀 Controles directos en el header (Sin menú hamburguesa porque es POS) */}
           <div className="flex items-center gap-1">
             <Link href="/dashboard" className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
               <LayoutDashboard className="w-5 h-5" />
@@ -376,24 +344,21 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* 🚀 ÁREA DE CONTENIDO POS */}
-        <main className="flex-1 overflow-hidden relative bg-slate-50/50">
-          
-          {/* Notificaciones Móvil (Desplegable) */}
+        <main className="flex-1 overflow-hidden relative bg-white">
           {showNotifs && (
             <div className="lg:hidden absolute top-2 right-2 w-[calc(100%-1rem)] sm:w-80 p-2 z-50 animate-in fade-in slide-in-from-top-4">
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
                 <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
+                  <h3 className="text-sm font-semibold text-slate-800">Notificaciones</h3>
                   <button onClick={() => setShowNotifs(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">
                   {loadingNotifs ? <div className="p-6 text-center text-xs text-slate-400">Cargando...</div> : notifications?.length === 0 ? <div className="p-6 text-center text-xs text-slate-400">Sin notificaciones</div> : notifications?.map(n => (
                     <div key={n.id} className={`w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-colors ${!n.read ? 'bg-white border-slate-300 shadow-sm' : 'bg-transparent border-transparent opacity-60'}`}>
-                      <div className="flex justify-between w-full"><span className="text-xs font-bold text-slate-900">{n.title}</span><span className="text-[9px] text-slate-400">{new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                      <div className="flex justify-between w-full"><span className="text-xs font-semibold text-slate-900">{n.title}</span><span className="text-[9px] text-slate-400">{new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span></div>
                       <p className="text-[11px] text-slate-500">{n.message}</p>
                       {!n.read && (
-                        <button onClick={() => handleMarkAsRead(n.id)} className="mt-1 text-[9px] font-bold text-blue-600 hover:text-blue-800 self-end flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md transition-colors">
+                        <button onClick={() => handleMarkAsRead(n.id)} className="mt-1 text-[9px] font-semibold text-blue-600 hover:text-blue-800 self-end flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md transition-colors">
                           <Check className="w-3 h-3" /> Marcar leída
                         </button>
                       )}
@@ -404,11 +369,9 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          {/* Carga el flujo de Caja y Componentes de Ventas */}
           <CashGuard>
             {children}
           </CashGuard>
-
         </main>
       </div>
 
