@@ -325,7 +325,7 @@ export default function PosPage() {
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
               disabled={saleState === 'PAID'}
-              className="w-full h-full pr-10 pl-5 bg-white border border-slate-200 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 rounded-full sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 sm:translate-x-4 sm:group-hover:translate-x-0 focus-within:translate-x-0 text-sm font-medium" 
+              className="w-full h-full pr-10 pl-5 bg-white border border-slate-200 shadow-sm focus-visible:ring-2 rounded-full sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 sm:translate-x-4 sm:group-hover:translate-x-0 focus-within:translate-x-0 text-sm font-medium" 
             />
           </div>
         </div>
@@ -359,7 +359,7 @@ export default function PosPage() {
                     title={bInfo?.name || code}
                     key={code} 
                     onClick={() => {setCodeFilter(code); setSelectedCategory('ALL');}} 
-                    className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all overflow-hidden ${codeFilter === code ? 'ring-2 ring-blue-500 ring-offset-1 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200'}`}
+                    className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all overflow-hidden ${codeFilter === code ? 'ring-2 ring-slate-200 ring-offset-1 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200'}`}
                   >
                     {bInfo?.logoUrl ? <img src={bInfo.logoUrl} className="w-full h-full object-cover bg-white" alt="" /> : <Store className="w-4 h-4 text-slate-500" />}
                   </button>
