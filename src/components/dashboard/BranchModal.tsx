@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Store, ReceiptText, Palette, Tags } from 'lucide-react';
+import { Loader2, Store, ReceiptText, Palette, Tags, X, Camera, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -43,6 +42,8 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
   const { role: currentUserRole } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false); 
+  
+  // Estados para los acordeones
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showBranding, setShowBranding] = useState(false);
   
@@ -111,6 +112,10 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
     finally { setIsUploadingImage(false); }
   };
 
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, logoUrl: '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -158,143 +163,203 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
     }
   };
 
+  // 🚀 MEJORA UI: Inputs con diseño plano "Flat"
+  const getInputClass = (val: string | undefined) => {
+    const base = "transition-all focus-visible:ring-1 focus-visible:ring-slate-300 font-medium text-sm w-full rounded-xl border px-3 h-10 outline-none";
+    const state = val && val.trim() !== ''
+      ? "bg-white border-slate-200 text-slate-900 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]" 
+      : "bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100";
+    return `${base} ${state}`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto hide-scrollbar">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Store className="w-5 h-5 text-primary" />
-            {branchToEdit ? 'Editar Sucursal' : 'Nueva Sucursal'}
-          </DialogTitle>
-          <DialogDescription>
-            Configura los datos y la identidad visual de esta tienda.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-white font-sans border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
+        
+        {/* 🚀 HEADER PLANO */}
+        <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
+          <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
+            <Store className="w-5 h-5 text-slate-700" />
+          </div>
+          <div className="flex flex-col items-start text-left">
+            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
+              {branchToEdit ? 'Editar Sucursal' : 'Nueva Sucursal'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-0.5 font-medium">
+              Configura los datos, ubicación y la identidad visual de esta tienda.
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Nombre de Tienda (Sede)</Label>
-              <Input name="name" value={formData.name} onChange={handleChange} placeholder="Ej: Festamas Chimbote" required />
-            </div>
-            <div className="space-y-2">
-              <Label>Teléfono Local</Label>
-              <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="Ej: 01 234 5678" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Dirección Comercial</Label>
-            <Input name="address" value={formData.address} onChange={handleChange} placeholder="Av. Larco 123, Lima" />
-          </div>
-
-          {currentUserRole === 'SUPER_ADMIN' && (
-            <div className="space-y-4 pt-2 border-t">
-              <div className="space-y-2 pt-2">
-                <Label>Pertenece a la Empresa:</Label>
-                <Select value={formData.businessId} onValueChange={(v) => setFormData(p => ({...p, businessId: v}))} disabled={!!branchToEdit}>
-                  <SelectTrigger className="border-blue-200 bg-blue-50">
-                    <SelectValue placeholder="Seleccionar Negocio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NONE" disabled>Selecciona un cliente</SelectItem>
-                    {businesses?.map((biz: SimpleBusiness) => (
-                      <SelectItem key={biz.id} value={biz.id}>{biz.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 🚀 EL PUENTE E-COMMERCE (SOLO VISIBLE PARA TI) */}
-              <div className="space-y-2 bg-purple-50 p-3 rounded-lg border border-purple-100">
-                <Label className="flex items-center gap-2 text-purple-700">
-                  <Tags className="w-4 h-4" /> Vínculo E-commerce (División)
-                </Label>
-                <Input 
-                  name="ecommerceCode" 
-                  value={formData.ecommerceCode} 
-                  onChange={handleChange} 
-                  placeholder="Dejar en blanco para autogenerar..." 
-                  className="uppercase font-mono bg-white"
-                />
-                <p className="text-[10px] text-purple-600">
-                  Si se deja en blanco, tomará el nombre de la tienda. Modifícalo solo si quieres apuntar a una división específica del catálogo (Ej: JUGUETERIA).
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* BRANDING */}
-          <div className="pt-2 border-t">
-            <button type="button" onClick={() => setShowBranding(!showBranding)} className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">
-              <Palette className="w-4 h-4" /> {showBranding ? 'Ocultar Diseño' : 'Personalizar Marca / Logo'}
-            </button>
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 overflow-x-hidden relative custom-scrollbar bg-slate-50/30">
+          <form id="branch-form" onSubmit={handleSubmit} className="space-y-6">
             
-            {showBranding && (
-              <div className="mt-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg space-y-5 animate-in fade-in slide-in-from-top-2">
-                
-                {/* 🚀 UPLOAD DE LOGO */}
-                <div className="space-y-3">
-                  <Label className="text-xs font-bold text-slate-700">Logo de la Sucursal</Label>
-                  <div className="flex items-center gap-4">
-                    {formData.logoUrl ? (
-                      <div className="w-14 h-14 rounded-lg border border-slate-200 overflow-hidden bg-white shrink-0 shadow-sm">
-                        <img src={formData.logoUrl} alt="Logo preview" className="w-full h-full object-contain p-1" />
-                      </div>
-                    ) : (
-                      <div className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center shrink-0">
-                        <Store className="w-6 h-6 text-slate-300" />
-                      </div>
-                    )}
-                    <div className="flex-1 space-y-2">
-                      <div className="relative">
-                        <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 file:font-medium file:cursor-pointer cursor-pointer text-xs h-10" />
-                        {isUploadingImage && (
-                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-md border text-xs font-bold text-indigo-600 gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" /> Subiendo...
+            {/* DATOS GENERALES */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
+                <Store className="w-4 h-4 text-slate-400" /> Información General
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Nombre de Tienda (Sede) <span className="text-red-500">*</span></Label>
+                  <input name="name" value={formData.name} onChange={handleChange} placeholder="Ej: Festamas Chimbote" className={getInputClass(formData.name)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Teléfono Local</Label>
+                  <input name="phone" value={formData.phone} onChange={handleChange} placeholder="Ej: 01 234 5678" className={getInputClass(formData.phone)} />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Dirección Comercial</Label>
+                <input name="address" value={formData.address} onChange={handleChange} placeholder="Av. Principal 123, Ciudad" className={getInputClass(formData.address)} />
+              </div>
+            </div>
+
+            {/* SUPER ADMIN: ASIGNACIÓN */}
+            {currentUserRole === 'SUPER_ADMIN' && (
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+                <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
+                  <Tags className="w-4 h-4 text-slate-400" /> Vínculo de Sistema
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Pertenece a la Empresa <span className="text-red-500">*</span></Label>
+                    <Select value={formData.businessId} onValueChange={(v) => setFormData(p => ({...p, businessId: v}))} disabled={!!branchToEdit}>
+                      <SelectTrigger className={`h-10 text-sm rounded-xl focus-visible:ring-1 focus-visible:ring-slate-300 transition-all ${formData.businessId !== 'NONE' ? 'bg-white border-slate-200 shadow-sm font-bold text-slate-900' : 'bg-slate-50 border-transparent text-slate-500'}`}>
+                        <SelectValue placeholder="Seleccionar Negocio" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-none shadow-xl">
+                        <SelectItem value="NONE" disabled>Selecciona un cliente</SelectItem>
+                        {businesses?.map((biz: SimpleBusiness) => (
+                          <SelectItem key={biz.id} value={biz.id} className="py-2.5 px-3 font-medium text-slate-700">{biz.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">E-commerce (Catálogo)</Label>
+                    <input 
+                      name="ecommerceCode" 
+                      value={formData.ecommerceCode} 
+                      onChange={handleChange} 
+                      placeholder="Auto-generado si se omite" 
+                      className={`${getInputClass(formData.ecommerceCode)} font-mono tracking-wide`}
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Modifícalo si es una división específica (Ej: JUGUETES).</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BRANDING E IDENTIDAD VISUAL (ACORDEÓN FLAT) */}
+            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
+              <button type="button" onClick={() => setShowBranding(!showBranding)} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${showBranding ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
+                <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide">
+                  <Palette className={`w-4 h-4 ${showBranding ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> Marca y Logo
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showBranding ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <div className={`grid transition-all duration-300 ease-in-out ${showBranding ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                  <div className="p-5 space-y-5">
+                    
+                    {/* Logo Upload */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-slate-700">Logo de la Sucursal</Label>
+                      <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-dashed border-slate-200">
+                        {formData.logoUrl ? (
+                          <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-white shrink-0 shadow-sm relative group p-1">
+                            <img src={formData.logoUrl} alt="Preview" className="w-full h-full object-contain" />
+                            <button type="button" onClick={removeImage} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="relative w-14 h-14 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer group">
+                            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                            {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
                           </div>
                         )}
+                        <div className="flex-1 relative flex flex-col justify-center">
+                          <span className="text-xs text-slate-500 font-medium px-2">Haz clic o sube una imagen (JPG, PNG).</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 pt-2 border-t border-indigo-100/50">
-                  <Label className="text-xs font-bold text-slate-700">Colores Representativos</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="flex flex-col items-center gap-1"><div className="w-full h-10 rounded overflow-hidden border border-slate-200 shadow-sm"><input type="color" name="colorPrimary" value={formData.colorPrimary} onChange={handleChange} className="w-full h-14 -mt-2 cursor-pointer" /></div><span className="text-[10px] text-slate-500 uppercase font-bold">Principal</span></div>
-                    <div className="flex flex-col items-center gap-1"><div className="w-full h-10 rounded overflow-hidden border border-slate-200 shadow-sm"><input type="color" name="colorSecondary" value={formData.colorSecondary} onChange={handleChange} className="w-full h-14 -mt-2 cursor-pointer" /></div><span className="text-[10px] text-slate-500 uppercase font-bold">Secundario</span></div>
-                    <div className="flex flex-col items-center gap-1"><div className="w-full h-10 rounded overflow-hidden border border-slate-200 bg-white shadow-sm"><input type="color" name="colorOptional" value={formData.colorOptional} onChange={handleChange} className="w-full h-14 -mt-2 cursor-pointer" /></div><span className="text-[10px] text-slate-500 uppercase font-bold">Opcional</span></div>
+
+                    {/* Colores */}
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <Label className="text-xs font-bold text-slate-700">Colores Representativos</Label>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold text-center">Principal</Label>
+                          <div className="w-full h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative hover:scale-105 transition-transform cursor-pointer">
+                            <input type="color" name="colorPrimary" value={formData.colorPrimary} onChange={handleChange} className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer opacity-0 z-10" />
+                            <div className="w-full h-full" style={{ backgroundColor: formData.colorPrimary }} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold text-center">Secundario</Label>
+                          <div className="w-full h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative hover:scale-105 transition-transform cursor-pointer">
+                            <input type="color" name="colorSecondary" value={formData.colorSecondary} onChange={handleChange} className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer opacity-0 z-10" />
+                            <div className="w-full h-full" style={{ backgroundColor: formData.colorSecondary }} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold text-center">Opcional</Label>
+                          <div className="w-full h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative hover:scale-105 transition-transform cursor-pointer">
+                            <input type="color" name="colorOptional" value={formData.colorOptional} onChange={handleChange} className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer opacity-0 z-10" />
+                            <div className="w-full h-full bg-white" style={{ backgroundColor: formData.colorOptional }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="pt-2 border-t">
-            <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">
-              <ReceiptText className="w-4 h-4" /> {showAdvanced ? 'Ocultar Datos de Facturación' : 'Configurar RUC Independiente'}
-            </button>
-            {showAdvanced && (
-              <div className="mt-4 p-4 bg-slate-50 border rounded-lg space-y-4 animate-in fade-in slide-in-from-top-2">
-                <p className="text-xs text-slate-500">Llena estos campos SOLO si esta sucursal emitirá boletas/facturas con un RUC distinto.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label className="text-xs">RUC Independiente</Label><Input name="customRuc" value={formData.customRuc} onChange={handleChange} placeholder="Ej: 10123456789" /></div>
-                  <div className="space-y-2"><Label className="text-xs">Razón Social</Label><Input name="customLegalName" value={formData.customLegalName} onChange={handleChange} placeholder="Ej: Juan Pérez EIRL" /></div>
+            {/* CONFIGURACIÓN DE RUC INDEPENDIENTE (ACORDEÓN FLAT) */}
+            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
+              <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${showAdvanced ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
+                <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide">
+                  <ReceiptText className={`w-4 h-4 ${showAdvanced ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> RUC Independiente / Facturación
                 </div>
-                <div className="space-y-2"><Label className="text-xs">Dirección Fiscal</Label><Input name="customAddress" value={formData.customAddress} onChange={handleChange} placeholder="Si es distinta a la dirección comercial" /></div>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <div className={`grid transition-all duration-300 ease-in-out ${showAdvanced ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                  <div className="p-5 space-y-4 bg-slate-50/30">
+                    <p className="text-xs text-slate-500 font-medium">Llena estos campos SOLO si esta sucursal emitirá boletas/facturas con un RUC distinto a la sede principal (Franquicias).</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">RUC Independiente</Label><input name="customRuc" value={formData.customRuc} onChange={handleChange} placeholder="Ej: 10123456789" className={getInputClass(formData.customRuc)} /></div>
+                      <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Razón Social</Label><input name="customLegalName" value={formData.customLegalName} onChange={handleChange} placeholder="Ej: Juan Pérez EIRL" className={getInputClass(formData.customLegalName)} /></div>
+                    </div>
+                    <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Dirección Fiscal</Label><input name="customAddress" value={formData.customAddress} onChange={handleChange} placeholder="Si es distinta a la dirección comercial" className={getInputClass(formData.customAddress)} /></div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isUploadingImage}>Cancelar</Button>
-            <Button type="submit" disabled={isLoading || isUploadingImage}>
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {branchToEdit ? 'Guardar Cambios' : 'Crear Sucursal'}
-            </Button>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        {/* 🚀 FOOTER PLANO */}
+        <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0 z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold hover:bg-slate-50 text-slate-600 rounded-xl border-slate-200">
+            Cancelar
+          </Button>
+          <Button type="submit" form="branch-form" disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all">
+            {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            {branchToEdit ? 'Guardar Cambios' : 'Crear Sucursal'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

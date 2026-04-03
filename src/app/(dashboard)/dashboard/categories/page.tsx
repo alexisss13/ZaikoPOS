@@ -126,7 +126,7 @@ export default function CategoriesPage() {
           </div>
 
           {canCreate && (
-            <Button onClick={handleOpenNew} className="h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+            <Button onClick={handleOpenNew} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
               <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nueva Categoría</span>
             </Button>
           )}
@@ -228,7 +228,7 @@ export default function CategoriesPage() {
                   {/* Información Compacta */}
                   <div className="p-3 sm:p-4 flex flex-col gap-1 flex-1 bg-white">
                     {/* 🚀 FIX: font-bold en lugar de font-black */}
-                    <h3 className="font-bold text-slate-800 text-sm leading-tight group-hover:text-emerald-600 transition-colors line-clamp-1" title={cat.name}>
+                    <h3 className="font-bold text-slate-800 text-sm leading-tight group-hover:text-slate-700 transition-colors line-clamp-1" title={cat.name}>
                       {cat.name}
                     </h3>
                     <p className="text-[10px] text-slate-400 font-mono truncate">/{cat.slug}</p>

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Tags, Image as ImageIcon, Store } from 'lucide-react';
+import { Loader2, Tags, Image as ImageIcon, Store, X } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -31,7 +31,7 @@ interface Branch {
   id: string;
   name: string;
   ecommerceCode: string | null;
-  logoUrl?: string | null; // 🚀 Listo para recibir el logo de la BD
+  logoUrl?: string | null;
 }
 
 export function CategoryModal({ isOpen, onClose, onSuccess, categoryToEdit }: CategoryModalProps) {
@@ -60,7 +60,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categoryToEdit }: Ca
       const defaultBranch = validBranches.length > 0 ? validBranches[0].ecommerceCode! : '';
       setFormData({ name: '', slug: '', ecommerceCode: defaultBranch, image: '' });
     }
-  }, [categoryToEdit, isOpen, branches]); // Se re-ejecuta cuando cargan las sucursales
+  }, [categoryToEdit, isOpen, branches]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -120,68 +120,61 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categoryToEdit }: Ca
     finally { setIsLoading(false); }
   };
 
+  // 🚀 MEJORA UI: Inputs con diseño plano "Flat"
   const getInputClass = (val: string | undefined) => {
-    const base = "transition-all focus-visible:ring-blue-500 font-medium text-sm w-full rounded-md border px-3 h-10 outline-none";
+    const base = "transition-all focus-visible:ring-1 focus-visible:ring-slate-300 font-medium text-sm w-full rounded-xl border px-3 h-10 outline-none";
     const state = val && val.trim() !== ''
-      ? "bg-blue-50/40 border-blue-200 text-blue-900 shadow-sm" 
-      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-white";
+      ? "bg-white border-slate-200 text-slate-900 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]" 
+      : "bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100";
     return `${base} ${state}`;
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 font-sans">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-white font-sans border-none shadow-2xl rounded-2xl">
         
-        <DialogHeader className="px-5 py-4 sm:px-6 bg-white border-b border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Tags className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="flex flex-col items-start">
-              <DialogTitle className="text-lg sm:text-xl font-bold text-slate-800 leading-tight">
-                {categoryToEdit ? 'Editar Categoría' : 'Nueva Categoría'}
-              </DialogTitle>
-              <DialogDescription className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-                Define los pasillos virtuales de tu tienda.
-              </DialogDescription>
-            </div>
+        {/* 🚀 HEADER PLANO */}
+        <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4">
+          <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
+            <Tags className="w-5 h-5 text-slate-700" />
+          </div>
+          <div className="flex flex-col items-start text-left">
+            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
+              {categoryToEdit ? 'Editar Categoría' : 'Nueva Categoría'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-0.5 font-medium">
+              Define los pasillos virtuales de tu tienda.
+            </DialogDescription>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           
-          {/* Subida de Imagen */}
+          {/* Subida de Imagen Flat Design */}
           <div className="space-y-2 pb-2">
-            <Label className="text-xs font-semibold text-slate-700">Imagen Representativa (Opcional)</Label>
-            <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <Label className="text-xs font-bold text-slate-700">Imagen Representativa (Opcional)</Label>
+            <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-dashed border-slate-200">
               {formData.image ? (
-                <div className="w-14 h-14 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0 shadow-sm">
+                <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-white shrink-0 shadow-sm relative group">
                   <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => setFormData(p => ({...p, image: ''}))} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ) : (
-                <div className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0">
-                  <ImageIcon className="w-5 h-5 text-slate-400" />
+                <div className="relative w-14 h-14 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer group">
+                  <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <ImageIcon className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
                 </div>
               )}
               <div className="flex-1 relative flex flex-col justify-center">
-                <Input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageUpload} 
-                  disabled={isUploadingImage} 
-                  className="file:bg-blue-50 file:text-blue-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:cursor-pointer text-xs h-9 cursor-pointer hover:file:bg-blue-100 transition-all border-slate-200 focus-visible:ring-blue-500" 
-                />
-                {isUploadingImage && (
-                  <div className="absolute inset-0 bg-white/90 flex items-center justify-center rounded-md border border-blue-100 text-xs font-bold text-blue-600 gap-2 z-10 shadow-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Subiendo archivo...
-                  </div>
-                )}
+                <span className="text-xs text-slate-500 font-medium px-2">Haz clic en el cuadro o sube un archivo (JPG, PNG).</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-700">Nombre de la Categoría <span className="text-red-500">*</span></Label>
+            <Label className="text-xs font-bold text-slate-700">Nombre de la Categoría <span className="text-red-500">*</span></Label>
             <input 
               name="name" 
               value={formData.name} 
@@ -194,35 +187,34 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categoryToEdit }: Ca
           
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <Label className="text-xs font-semibold text-slate-700">Ruta E-commerce (Slug)</Label>
-              <span className="text-[10px] text-slate-400 font-medium">Auto-generado si se omite</span>
+              <Label className="text-xs font-bold text-slate-700">Ruta E-commerce (Slug)</Label>
+              <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">Opcional</span>
             </div>
-            {/* 🚀 FIX: Tamaño de letra igualado, solo mantenemos la fuente mono */}
             <input 
               name="slug" 
               value={formData.slug} 
               onChange={handleChange} 
               placeholder="ej-juguetes-de-madera" 
-              className={`${getInputClass(formData.slug)} font-mono tracking-wider`} 
+              className={`${getInputClass(formData.slug)} font-mono tracking-wide text-sm`} 
             />
           </div>
 
-          {/* 🚀 SELECTOR DE SUCURSAL CON LOGOS (Sin opción Global) */}
+          {/* SELECTOR DE SUCURSAL */}
           {validBranches.length > 0 && (
             <div className="space-y-1.5 pt-2">
-              <Label className="text-xs font-semibold text-slate-700">Catálogo / Sucursal <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold text-slate-700">Catálogo / Sucursal <span className="text-red-500">*</span></Label>
               <Select value={formData.ecommerceCode} onValueChange={(v) => setFormData(p => ({...p, ecommerceCode: v}))}>
-                <SelectTrigger className={`h-10 text-sm focus-visible:ring-blue-500 ${formData.ecommerceCode ? 'bg-blue-50/40 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+                <SelectTrigger className={`h-10 text-sm rounded-xl focus-visible:ring-1 focus-visible:ring-slate-300 transition-all ${formData.ecommerceCode ? 'bg-white border-slate-200 shadow-sm font-bold text-slate-900' : 'bg-slate-50 border-transparent text-slate-500'}`}>
                   <SelectValue placeholder="Elige una sucursal..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-none shadow-xl">
                   {validBranches.map(b => (
-                    <SelectItem key={b.ecommerceCode} value={b.ecommerceCode!} className="font-medium text-slate-700 py-2">
+                    <SelectItem key={b.ecommerceCode} value={b.ecommerceCode!} className="font-medium text-slate-700 py-2.5 px-3">
                       <div className="flex items-center gap-2.5">
                         {b.logoUrl ? (
-                          <img src={b.logoUrl} alt={b.name} className="w-5 h-5 rounded-md object-cover border border-slate-200 bg-white" />
+                          <img src={b.logoUrl} alt={b.name} className="w-4 h-4 rounded-sm object-cover border border-slate-200 bg-white" />
                         ) : (
-                          <Store className="w-4 h-4 text-blue-500" />
+                          <Store className="w-4 h-4 text-slate-400" />
                         )}
                         <span>{b.name}</span>
                       </div>
@@ -233,11 +225,12 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categoryToEdit }: Ca
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-slate-200">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isUploadingImage} className="h-9 text-xs font-bold text-slate-600 hover:bg-slate-200">
+          {/* 🚀 FOOTER DEL MODAL */}
+          <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-slate-100">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 rounded-xl shadow-sm">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading || isUploadingImage} className="h-9 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-sm">
+            <Button type="submit" disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all">
               {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />} 
               Guardar Categoría
             </Button>

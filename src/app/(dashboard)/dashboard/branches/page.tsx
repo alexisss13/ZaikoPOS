@@ -128,7 +128,7 @@ export default function BranchesPage() {
             />
           </div>
 
-          <Button onClick={handleOpenNew} className="h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+          <Button onClick={handleOpenNew} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
             <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nueva Sede</span>
           </Button>
         </div>
