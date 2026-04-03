@@ -1,10 +1,12 @@
+// src/app/(pos)/layout.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { 
-  Store, LayoutDashboard, LogOut, Camera, UserCircle, Loader2, X, Bell, Check, ShieldCheck, Globe, Receipt
+  Store, LayoutDashboard, LogOut, Camera, UserCircle, Loader2, X, Bell, Check, ShieldCheck, Globe, Receipt, ShoppingCart
 } from 'lucide-react';
 import { CashGuard } from '@/components/pos/CashGuard'; 
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,6 @@ import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CashSidebarButton } from '@/components/pos/CashSidebarButton';
-import { SalesHistoryModal } from '@/components/pos/SalesHistoryModal';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -169,9 +170,9 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const { role, image, logout, userId, branchId } = useAuth();
+  const pathname = usePathname();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const { data: currentBranch } = useSWR<Branch>(branchId && branchId !== 'NONE' ? `/api/branches/${branchId}` : null, fetcher);
 
@@ -215,6 +216,8 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
 
   const tooltipLabelLogo = role === 'SUPER_ADMIN' ? 'Sistemas TI' : role === 'OWNER' ? 'Gerencia Global' : currentBranch?.name || 'Mi Sucursal';
 
+  const isHistoryRoute = pathname === '/history' || pathname?.startsWith('/history');
+
   return (
     <div className="flex h-screen w-full bg-slate-100 sm:py-2 sm:pl-1 sm:pr-2 lg:py-3 lg:pl-1 lg:pr-3 gap-2 lg:gap-3 font-sans overflow-hidden">
       
@@ -232,20 +235,38 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
           </Tooltip>
           
           <nav className="flex flex-col gap-4 w-full px-2 flex-1 items-center mt-6">
+            
+            {/* TERMINAL POS */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <button 
-                  onClick={() => setIsHistoryOpen(true)}
-                  className="relative flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm transition-all outline-none border border-transparent hover:border-slate-200/60"
+                <Link 
+                  href="/pos"
+                  className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all outline-none border hover:shadow-sm ${!isHistoryRoute ? 'bg-slate-900 text-white border-slate-900' : 'text-slate-500 hover:bg-white hover:text-slate-900 border-transparent hover:border-slate-200/60'}`}
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
+                Terminal de Ventas
+              </TooltipContent>
+            </Tooltip>
+
+            {/* HISTORIAL */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link 
+                  href="/history"
+                  className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all outline-none border hover:shadow-sm ${isHistoryRoute ? 'bg-slate-900 text-white border-slate-900' : 'text-slate-500 hover:bg-white hover:text-slate-900 border-transparent hover:border-slate-200/60'}`}
                 >
                   <Receipt className="w-5 h-5" />
-                </button>
+                </Link>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-semibold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
                 Historial y Arqueo
               </TooltipContent>
             </Tooltip>
 
+            {/* Componente de Caja con sus propios modales internos */}
             <CashSidebarButton />
           </nav>
 
@@ -336,9 +357,10 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         </aside>
       </TooltipProvider>
 
-      {/* 🚀 MISMO CONTENEDOR BLANCO DEL ADMIN */}
+      {/* 🚀 CONTENEDOR PRINCIPAL BLANCO */}
       <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
         
+        {/* Cabecera Móvil */}
         <header className="lg:hidden h-14 bg-white text-slate-900 flex items-center justify-between px-4 shrink-0 shadow-sm border-b border-slate-200 z-30">
           <div className="flex items-center gap-2">
             <div className="bg-slate-900 p-1.5 rounded shadow-sm"><Store className="h-4 w-4 text-white" /></div>
@@ -388,14 +410,17 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          <CashGuard>
-            {children}
-          </CashGuard>
+          {isHistoryRoute ? (
+            children
+          ) : (
+            <CashGuard>
+              {children}
+            </CashGuard>
+          )}
         </main>
       </div>
 
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
-      <SalesHistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
     </div>
   );
 }
