@@ -1,3 +1,4 @@
+// src/services/sale.service.ts
 import prisma from '@/lib/prisma';
 import { Prisma, PaymentMethod } from '@prisma/client';
 
@@ -9,7 +10,7 @@ interface SaleItemInput {
 
 interface SalePaymentInput {
   method: PaymentMethod;
-  amount: number; // Monto aplicado a la venta (Ej: Si cuesta 100, aquí va 100, aunque pague con 200)
+  amount: number;
   reference?: string | null;
 }
 
@@ -19,7 +20,7 @@ interface CreateSaleParams {
   externalId?: string | null;
   items: SaleItemInput[];
   payments: SalePaymentInput[];
-  tenderedAmount: number; // NUEVO: Cuánto dinero físico/digital entregó el cliente en total
+  tenderedAmount: number;
   customerId?: string | null;
 }
 
@@ -28,7 +29,6 @@ export const saleService = {
     const { userId, branchId, externalId, items, payments, tenderedAmount, customerId } = params;
 
     // 1. VALIDACIÓN: Caja Abierta y obtención de BusinessId
-    // Incluimos la sucursal para obtener rápidamente a qué negocio pertenece esta venta
     const cashSession = await prisma.cashSession.findFirst({
       where: { userId, branchId, status: 'OPEN' },
       include: { branch: true } 
@@ -42,30 +42,28 @@ export const saleService = {
     const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const totalAppliedPayments = payments.reduce((acc, pay) => acc + pay.amount, 0);
 
-    // Regla 1: La suma de los pagos repartidos debe ser EXACTAMENTE igual al total de la venta
     if (Math.abs(total - totalAppliedPayments) > 0.01) {
       throw new Error('PAGOS_NO_CUADRAN');
     }
 
-    // Regla 2: El cliente no puede entregar menos dinero que el total
     if (tenderedAmount < total - 0.01) {
       throw new Error('MONTO_ENTREGADO_MENOR');
     }
 
-    // Cálculo del vuelto
     const changeAmount = tenderedAmount - total;
 
     // 3. TRANSACCIÓN ATÓMICA
     return await prisma.$transaction(async (tx) => {
       
-      // A. Idempotencia: Si ya llegó este ID externo offline, lo devolvemos sin duplicar
+      // A. Idempotencia: Evitar duplicados por offline
       if (externalId) {
         const existing = await tx.sale.findUnique({ where: { externalId } });
         if (existing) return existing;
       }
 
-      // B. Verificar y Descontar Stock
+      // B. Verificar y Descontar Stock (FÍSICO Y GLOBAL)
       for (const item of items) {
+        // Consultar el stock físico de la sucursal
         const stockRecord = await tx.stock.findUnique({
           where: { branchId_productId: { branchId, productId: item.productId } }
         });
@@ -74,13 +72,20 @@ export const saleService = {
           throw new Error(`STOCK_CONFLICT:${item.productId}`);
         }
 
+        // B.1 Descontar Stock Físico (Sucursal)
         await tx.stock.update({
           where: { id: stockRecord.id },
           data: { quantity: { decrement: item.quantity } }
         });
+
+        // B.2 Descontar Stock Global (E-commerce)
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } }
+        });
       }
 
-      // C. Crear Venta (Cabecera, Items y Pagos anidados de forma eficiente)
+      // C. Crear Venta (Cabecera, Items y Pagos anidados)
       const sale = await tx.sale.create({
         data: {
           externalId,
@@ -91,10 +96,9 @@ export const saleService = {
           customerId,
           subtotal: total,
           total: total,
-          tenderedAmount: tenderedAmount, // Registramos lo que pagó
-          changeAmount: changeAmount,     // Registramos el vuelto
+          tenderedAmount: tenderedAmount,
+          changeAmount: changeAmount,
           status: 'COMPLETED',
-          // Creación anidada (Mucho más limpia que hacer createMany sueltos)
           items: {
             create: items.map(item => ({
               productId: item.productId,
@@ -118,7 +122,6 @@ export const saleService = {
         .filter(p => p.method === 'CASH')
         .reduce((acc, p) => acc + p.amount, 0);
 
-      // Solo sumamos a la caja el dinero que realmente ingresó para la venta (no el vuelto)
       if (cashIncome > 0) {
         await tx.cashSession.update({
           where: { id: cashSession.id },

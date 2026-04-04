@@ -1,6 +1,34 @@
+// src/app/api/branches/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client'; // 🚀 IMPORTANTE: Importamos los tipos oficiales de Prisma
+import { Prisma } from '@prisma/client';
+
+// 🚀 NUEVO: Manejador GET agregado para evitar el error 405
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const role = req.headers.get('x-user-role');
+  const businessId = req.headers.get('x-business-id');
+
+  try {
+    const { id } = await params;
+    
+    const branch = await prisma.branch.findUnique({ 
+      where: { id },
+      include: { business: { select: { name: true } } }
+    });
+    
+    if (!branch) return NextResponse.json({ error: 'Sucursal no encontrada' }, { status: 404 });
+
+    // Seguridad: Si es dueño, solo puede ver sus propias sucursales
+    if (role === 'OWNER' && branch.businessId !== businessId) {
+      return NextResponse.json({ error: 'No autorizado para ver esta sucursal' }, { status: 403 });
+    }
+
+    return NextResponse.json(branch);
+  } catch (error: unknown) {
+    console.error('[BRANCH_GET_ERROR]', error);
+    return NextResponse.json({ error: 'Error al obtener la sucursal' }, { status: 500 });
+  }
+}
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const role = req.headers.get('x-user-role');
@@ -17,7 +45,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    // 🚀 Usamos el tipo oficial de Prisma. Así nunca habrá discrepancias.
     const updateData: Prisma.BranchUpdateInput = {
       name: body.name,
       address: body.address || null,
@@ -26,11 +53,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       customLegalName: body.customLegalName || null,
       customAddress: body.customAddress || null,
       logoUrl: body.logoUrl || null,
-      // 🚀 MAGIA PRISMA: Para vaciar un campo JSON, usamos Prisma.DbNull
       brandColors: body.brandColors ? body.brandColors : Prisma.DbNull,
     };
 
-    // 🚀 REGLA DE NEGOCIO: Solo el TI puede modificar el código de vinculación E-commerce
     if (role === 'SUPER_ADMIN' && body.ecommerceCode !== undefined) {
       updateData.ecommerceCode = body.ecommerceCode 
         ? body.ecommerceCode.toUpperCase().trim().replace(/\s+/g, '_') 
@@ -44,7 +69,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     return NextResponse.json(updatedBranch);
   } catch (error: unknown) {
-    console.error(error); // 🚀 Usamos el error para registrar posibles fallos en el servidor
+    console.error(error); 
     return NextResponse.json({ error: 'Error al actualizar sucursal' }, { status: 500 });
   }
 }
@@ -72,7 +97,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error(error); // Ya estaba aquí, ¡perfecto!
+    console.error(error); 
     return NextResponse.json({ error: 'Error al eliminar sucursal. Posibles dependencias activas.' }, { status: 500 });
   }
 }

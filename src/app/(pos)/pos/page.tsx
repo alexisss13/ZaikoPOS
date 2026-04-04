@@ -1,3 +1,4 @@
+// src/app/(pos)/pos/page.tsx
 'use client';
 
 import useSWR from 'swr';
@@ -6,7 +7,7 @@ import {
   Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, 
   Package, SplitSquareHorizontal, Tag, ChevronRight, ChevronLeft, CheckCircle2, 
   User, Receipt, Unlock, RotateCcw, UserPlus, X, Store, Globe, 
-  ArrowRightLeft, Send, LayoutGrid
+  ArrowRightLeft, Send, LayoutGrid, Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,8 @@ interface CartItem extends Product { cartQuantity: number; }
 export default function PosPage() {
   const { user, userId } = useAuth();
   
-  const { data: products, isLoading: loadingProducts } = useSWR<Product[]>('/api/products', fetcher);
+  // 🚀 EXTRAEMOS EL MUTATE DE LOS PRODUCTOS PARA ACTUALIZAR STOCK EN VIVO
+  const { data: products, isLoading: loadingProducts, mutate: mutateProducts } = useSWR<Product[]>('/api/products', fetcher);
   const { data: categories, isLoading: loadingCats } = useSWR<Category[]>('/api/categories', fetcher);
   const { data: branches } = useSWR<BranchBasic[]>('/api/branches', fetcher);
   
@@ -54,13 +56,15 @@ export default function PosPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [payMethod, setPayMethod] = useState<'CASH' | 'CARD' | 'SPLIT'>('CASH');
   const [cashReceived, setCashReceived] = useState('');
+  
+  // 🚀 NUEVO ESTADO: BLOQUEAR BOTÓN MIENTRAS SE GUARDA EN BD
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [transferProduct, setTransferProduct] = useState<Product | null>(null);
   const [transferFromBranch, setTransferFromBranch] = useState<string>('');
   const [transferQty, setTransferQty] = useState('');
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
 
-  // 🚀 REF PARA EL SCROLL DE CATEGORÍAS
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -243,14 +247,67 @@ export default function PosPage() {
     setCashReceived(amount.toFixed(2));
   };
 
-  const handleAmortizar = () => {
-    toast.success('Venta Amortizada con éxito.');
-    setSaleState('PAID');
-    setShowPayment(false);
+  // 🚀 LÓGICA DE VENTA REAL CONECTADA AL BACKEND
+  const handleAmortizar = async () => {
+    if (cart.length === 0) return toast.error('El carrito está vacío');
+    
+    let tendered = finalGlobalTotal;
+    if (payMethod === 'CASH') {
+      if (!isValidCash) return toast.error('El efectivo recibido es menor al total a cobrar.');
+      tendered = numericCash;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        items: cart.map(item => {
+          const { finalUnitPrice } = calculateItemFinancials(item);
+          return {
+            productId: item.id,
+            quantity: item.cartQuantity,
+            price: finalUnitPrice
+          };
+        }),
+        payments: [
+          {
+            method: payMethod === 'CARD' ? 'CARD' : 'CASH', // Si eliges SPLIT se va como CASH temporalmente hasta armar su UI
+            amount: finalGlobalTotal 
+          }
+        ],
+        tenderedAmount: tendered,
+        // customerId: customerDoc // Opcional, si llegas a crear tabla Customer completa. Por ahora se puede omitir.
+      };
+
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error procesando la venta');
+      }
+
+      toast.success('¡Venta registrada con éxito!');
+      setSaleState('PAID');
+      setShowPayment(false);
+      mutateProducts(); // Descuenta stock visual inmediatamente en la grilla
+
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Error interno al registrar la venta');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBoletear = () => {
-    toast.success('Comprobante emitido (Simulación)');
+    toast.success('Comprobante emitido (Integración SUNAT pendiente)');
   };
 
   const handleLiberar = () => {
@@ -683,10 +740,10 @@ export default function PosPage() {
             <Button variant="outline" className="flex-1 h-10 text-xs font-medium text-slate-600 border-slate-200 bg-white rounded-xl" onClick={() => setShowPayment(false)}>Cancelar</Button>
             <Button 
               className="flex-1 h-10 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm rounded-xl" 
-              disabled={payMethod === 'CASH' && !isValidCash || payMethod === 'SPLIT'}
+              disabled={(payMethod === 'CASH' && !isValidCash) || payMethod === 'SPLIT' || isSubmitting}
               onClick={handleAmortizar}
             >
-              Confirmar Operación
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Operación'}
             </Button>
           </div>
         </DialogContent>

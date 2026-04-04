@@ -234,7 +234,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             </TooltipContent>
           </Tooltip>
           
-          <nav className="flex flex-col gap-4 w-full px-2 flex-1 items-center mt-6">
+          <nav className="flex flex-col gap-4 w-full px-2 flex-1 items-center">
             
             {/* TERMINAL POS */}
             <Tooltip>

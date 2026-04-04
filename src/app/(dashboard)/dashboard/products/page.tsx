@@ -1,3 +1,4 @@
+// src/app/(dashboard)/dashboard/products/page.tsx
 'use client';
 
 import useSWR from 'swr';
@@ -25,7 +26,6 @@ interface Product extends ProductData {
 }
 
 interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
-// 🚀 FIX: Añadimos ecommerceCode a la interfaz de Category
 interface Category { id: string; name: string; ecommerceCode?: string | null; }
 
 const ITEMS_PER_PAGE = 10;
@@ -169,13 +169,10 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
-      {/* 🚀 TOOLBAR SUPERIOR */}
+      {/* TOOLBAR SUPERIOR */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
-        
         <h1 className="text-[26px] font-black text-slate-900 tracking-tight shrink-0">Productos</h1>
-        
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
               <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
@@ -187,8 +184,6 @@ export default function ProductsPage() {
               className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" 
             />
           </div>
-
-          {/* 🚀 BOTÓN CON ACENTO ESMERALDA (Igual al de Categorías) */}
           {canCreate && (
             <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
               <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
@@ -199,9 +194,8 @@ export default function ProductsPage() {
 
       <div className="bg-white rounded-2xl shadow-sm flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         
-        {/* 🚀 SUBHEADER: TABS Y PAGINACIÓN INTEGRADA (A la derecha) */}
+        {/* SUBHEADER: TABS Y PAGINACIÓN INTEGRADA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-100 w-full bg-white shrink-0">
-          
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar w-full sm:w-auto flex-1">
             <button 
               onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
@@ -243,7 +237,6 @@ export default function ProductsPage() {
             </button>
           </div>
 
-          {/* 🚀 Paginación a la derecha del subheader */}
           {totalPages > 1 && (
             <div className="flex items-center gap-3 shrink-0 py-1 pl-2 sm:border-l sm:border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline-block">
@@ -259,7 +252,6 @@ export default function ProductsPage() {
               </div>
             </div>
           )}
-
         </div>
 
         {/* TABLA PRINCIPAL */}
@@ -274,7 +266,6 @@ export default function ProductsPage() {
               <tr>
                 <th className="px-5 py-3.5 font-semibold">Producto</th>
                 
-                {/* 🚀 CATEGORÍA (Hover oscuro, sin azules) */}
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[200px]">
                   <div 
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${categoryFilter !== 'ALL' || showCatFilter ? 'text-slate-900 bg-slate-100' : ''}`}
@@ -289,11 +280,9 @@ export default function ProductsPage() {
                         Todas las categorías {categoryFilter === 'ALL' && <Check className="w-3.5 h-3.5" />}
                       </button>
                       <div className="h-px bg-slate-100 my-1 mx-2" />
-                      
                       {availableCategories.length === 0 && (
                         <div className="px-3 py-2 text-xs text-slate-400 text-center italic">Sin categorías aquí</div>
                       )}
-
                       {availableCategories.map((cat) => (
                         <button key={cat.id} onClick={() => {setCategoryFilter(cat.id); setShowCatFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors flex items-center justify-between ${categoryFilter === cat.id ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
                           <span className="truncate pr-2">{cat.name}</span>
@@ -306,7 +295,6 @@ export default function ProductsPage() {
 
                 <th className="px-5 py-3.5 font-semibold w-[120px]">Precio (S/)</th>
                 
-                {/* 🚀 INVENTARIO (Hover oscuro) */}
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[150px]">
                   <div 
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${stockFilter !== 'ALL' || showStockFilter ? 'text-slate-900 bg-slate-100' : ''}`}
@@ -380,7 +368,6 @@ export default function ProductsPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              {/* HOVER TEXTO NEGRO */}
                               <p className="font-bold text-slate-700 truncate leading-tight group-hover:text-slate-900 transition-colors text-sm">{product.title}</p>
                               {!product.active && <Badge variant="destructive" className="text-[8px] px-1 py-0 h-3.5 leading-none bg-red-100 text-red-700 border-none shadow-none">INACTIVO</Badge>}
                             </div>
@@ -393,7 +380,6 @@ export default function ProductsPage() {
                       <td className="px-5 py-3">
                         <div className="flex flex-col items-start gap-1.5">
                           <span className="font-medium text-slate-500 truncate max-w-[140px] leading-none group-hover:text-slate-700 transition-colors">{product.category?.name || 'Sin Categoría'}</span>
-                          {/* ETIQUETAS GRISES ELEGANTES */}
                           {bCode ? (
                             <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
                               {productBranch?.logoUrl ? <img src={productBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover bg-white" alt=""/> : <Store className="w-3 h-3 text-slate-500" />} 
@@ -411,14 +397,14 @@ export default function ProductsPage() {
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <div className="flex flex-col gap-1">
-                          <span className={`text-[11px] font-bold leading-none ${Number(product.stock) <= 0 ? 'text-red-500' : Number(product.stock) <= Number(product.minStock) ? 'text-amber-500' : 'text-slate-600'}`}>
-                            Web: {product.stock}
-                          </span>
-                          <span className="text-[11px] text-slate-500 leading-none group-hover:text-slate-700 transition-colors">
-                            {!canViewOthers ? 'Local:' : 'Físico:'} <span className="font-bold text-slate-800">{totalPhysicalStock}</span>
-                          </span>
-                        </div>
+                        {/* 🚀 CELDA DE INVENTARIO UNIFICADA Y LIMPIA */}
+                        <span className={`text-[13px] font-black leading-none 
+                          ${totalPhysicalStock <= 0 ? 'text-red-500' 
+                          : totalPhysicalStock <= Number(product.minStock) ? 'text-amber-500' 
+                          : 'text-slate-700'}
+                        `}>
+                          {totalPhysicalStock} <span className="text-[10px] font-bold opacity-60">un.</span>
+                        </span>
                       </td>
                     </tr>
                   );
