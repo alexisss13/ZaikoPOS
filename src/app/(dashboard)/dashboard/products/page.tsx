@@ -4,7 +4,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check
+  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ interface Product extends ProductData {
 interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
 interface Category { id: string; name: string; ecommerceCode?: string | null; }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 7;
 
 export default function ProductsPage() {
   const { user, role } = useAuth();
@@ -171,7 +171,10 @@ export default function ProductsPage() {
       
       {/* TOOLBAR SUPERIOR */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
-        <h1 className="text-[26px] font-black text-slate-900 tracking-tight shrink-0">Productos</h1>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Productos</h1>
+          <Package className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+        </div>
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
@@ -192,10 +195,10 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
+      <div className="flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         
         {/* SUBHEADER: TABS Y PAGINACIÓN INTEGRADA */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-100 w-full bg-white shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5  w-full  shrink-0">
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar w-full sm:w-auto flex-1">
             <button 
               onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
@@ -219,9 +222,12 @@ export default function ProductsPage() {
                 <button 
                   key={code} 
                   onClick={() => {setCodeFilter(code); setCurrentPage(1); setCategoryFilter('ALL');}} 
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${isActive ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                  className={`group px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${isActive ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
                 >
-                  {b?.logoUrl ? <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover bg-white" alt=""/> : <Store className="w-3.5 h-3.5"/>}
+                  {b?.logoUrl 
+                    ? <img src={b.logoUrl} className={`w-4 h-4 rounded-[3px] object-cover transition-all ${isActive ? 'bg-white p-[1.5px]' : 'grayscale mix-blend-multiply group-hover:brightness-0'}`} alt=""/> 
+                    : <Store className="w-3.5 h-3.5 text-current"/>
+                  }
                   {b?.name || code}
                 </button>
               )
@@ -261,10 +267,10 @@ export default function ProductsPage() {
             <div className="fixed inset-0 z-20" onClick={() => {setShowCatFilter(false); setShowStockFilter(false);}} />
           )}
 
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead className="bg-white border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-30 shadow-sm">
+          <table className="w-full text-left border-separate border-spacing-0 min-w-[700px]">
+            <thead className="bg-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-30 overflow-hidden">
               <tr>
-                <th className="px-5 py-3.5 font-semibold">Producto</th>
+                <th className="px-5 py-3.5 font-semibold rounded-tl-xl">Producto</th>
                 
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[200px]">
                   <div 
@@ -295,7 +301,7 @@ export default function ProductsPage() {
 
                 <th className="px-5 py-3.5 font-semibold w-[120px]">Precio (S/)</th>
                 
-                <th className="px-5 py-3.5 font-semibold relative select-none w-[150px]">
+                <th className="px-5 py-3.5 font-semibold relative select-none w-[150px] rounded-tr-xl">
                   <div 
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${stockFilter !== 'ALL' || showStockFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => {setShowStockFilter(!showStockFilter); setShowCatFilter(false);}}
@@ -381,8 +387,11 @@ export default function ProductsPage() {
                         <div className="flex flex-col items-start gap-1.5">
                           <span className="font-medium text-slate-500 truncate max-w-[140px] leading-none group-hover:text-slate-700 transition-colors">{product.category?.name || 'Sin Categoría'}</span>
                           {bCode ? (
-                            <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
-                              {productBranch?.logoUrl ? <img src={productBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover bg-white" alt=""/> : <Store className="w-3 h-3 text-slate-500" />} 
+                            <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
+                              {productBranch?.logoUrl 
+                                ? <img src={productBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover transition-all grayscale mix-blend-multiply " alt=""/> 
+                                : <Store className="w-3 h-3 text-current" />
+                              } 
                               {productBranch?.name || bCode}
                             </span>
                           ) : (
@@ -391,19 +400,26 @@ export default function ProductsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3">
-                        <p className="font-black text-slate-800 leading-tight text-sm">S/ {Number(product.price).toFixed(2)}</p>
-                        {hasWholesale && (
-                          <p className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">Mayor: S/ {Number(product.wholesalePrice).toFixed(2)}</p>
-                        )}
+                        <div className="flex flex-col items-start gap-1">
+                          {/* Diseño de billete para el precio principal */}
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-emerald-400 bg-emerald-50 text-emerald-800 shadow-sm">
+                            <Banknote className="w-3 h-3 text-emerald-600" />
+                            <span className="font-mono text-[10px] text-emerald-600 font-bold">S/</span>
+                            <span className="font-bold text-sm tracking-tight">{Number(product.price).toFixed(2)}</span>
+                          </div>
+                          {hasWholesale && (
+                            <p className="text-[9px] text-emerald-600/80 font-medium pl-1 leading-none">Mayor: S/ {Number(product.wholesalePrice).toFixed(2)}</p>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-3">
-                        {/* 🚀 CELDA DE INVENTARIO UNIFICADA Y LIMPIA */}
-                        <span className={`text-[13px] font-black leading-none 
-                          ${totalPhysicalStock <= 0 ? 'text-red-500' 
-                          : totalPhysicalStock <= Number(product.minStock) ? 'text-amber-500' 
-                          : 'text-slate-700'}
+                        {/* Diseño de píldora para el stock */}
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border 
+                          ${totalPhysicalStock <= 0 ? 'bg-red-50 text-red-700 border-red-200' 
+                          : totalPhysicalStock <= Number(product.minStock) ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'}
                         `}>
-                          {totalPhysicalStock} <span className="text-[10px] font-bold opacity-60">un.</span>
+                          {totalPhysicalStock} <span className="text-[9px] opacity-70 ml-1 font-semibold uppercase">un.</span>
                         </span>
                       </td>
                     </tr>
