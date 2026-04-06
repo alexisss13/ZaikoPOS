@@ -282,7 +282,7 @@ model Category {
 model UnitOfMeasure {
   id           String @id @default(uuid())
   name         String // Ej: "Unidad", "Caja x 12"
-  abbreviation String // Ej: "UND", "CJ12"
+  abbreviation String @unique // Ej: "UND", "CJ12"
 
   variants   ProductVariant[]
   orderItems PurchaseOrderItem[]

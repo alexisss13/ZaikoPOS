@@ -70,6 +70,35 @@ async function main() {
   console.log(`👨‍💻 Software TI   : ti@pos.com / ti12345`);
   console.log(`🔑 Rol           : SUPER_ADMIN`);
   console.log('------------------------------------------------');
+
+  // ==========================================
+  // 4. CREACIÓN DE UNIDADES DE MEDIDA (UOM)
+  // ==========================================
+  console.log('📦 Creando unidades de medida...');
+  
+  const uoms = [
+    { name: 'Unidad', abbreviation: 'UND' },
+    { name: 'Caja', abbreviation: 'CJ' },
+    { name: 'Paquete', abbreviation: 'PQ' },
+    { name: 'Docena', abbreviation: 'DOC' },
+    { name: 'Kilogramo', abbreviation: 'KG' },
+    { name: 'Gramo', abbreviation: 'GR' },
+    { name: 'Litro', abbreviation: 'LT' },
+    { name: 'Mililitro', abbreviation: 'ML' },
+    { name: 'Metro', abbreviation: 'MT' },
+    { name: 'Centímetro', abbreviation: 'CM' },
+  ];
+
+  for (const uom of uoms) {
+    await prisma.unitOfMeasure.upsert({
+      where: { abbreviation: uom.abbreviation },
+      update: {},
+      create: uom,
+    });
+  }
+
+  console.log(`✅ ${uoms.length} unidades de medida creadas`);
+  console.log('------------------------------------------------');
 }
 
 main()

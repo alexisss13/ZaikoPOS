@@ -158,7 +158,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const shopMenuItems = [
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/products', label: 'Productos', icon: Package },
-    { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
     { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart },
     { href: '/dashboard/users', label: 'Personal', icon: Users },
     { href: '/dashboard/branches', label: 'Sucursales', icon: Store },

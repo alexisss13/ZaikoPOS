@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { useAuth } from '@/context/auth-context';
+import { PurchaseModal } from '@/components/dashboard/PurchaseModal';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -64,6 +64,7 @@ export default function PurchasesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'RECEIVED' | 'CANCELLED'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredPurchases = useMemo(() => {
     if (!purchases) return [];
@@ -118,7 +119,10 @@ export default function PurchasesPage() {
               >
                 <Users className="w-4 h-4 mr-1.5" /> <span className="font-bold">Proveedores</span>
               </Button>
-              <Button className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+              <Button 
+                onClick={() => setIsModalOpen(true)}
+                className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0"
+              >
                 <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nueva Orden</span>
               </Button>
             </>
@@ -261,6 +265,12 @@ export default function PurchasesPage() {
         </div>
 
       </div>
+
+      <PurchaseModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => mutate()}
+      />
 
     </div>
   );

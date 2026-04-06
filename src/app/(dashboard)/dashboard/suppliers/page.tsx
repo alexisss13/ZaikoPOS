@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/auth-context';
+import { SupplierModal, type SupplierData } from '@/components/dashboard/SupplierModal';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -32,11 +33,13 @@ export default function SuppliersPage() {
   const { role } = useAuth();
   const canManage = role === 'OWNER' || role === 'MANAGER';
 
-  const { data: suppliers, isLoading } = useSWR<Supplier[]>('/api/suppliers', fetcher);
+  const { data: suppliers, isLoading, mutate } = useSWR<Supplier[]>('/api/suppliers', fetcher);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [supplierToEdit, setSupplierToEdit] = useState<SupplierData | null>(null);
 
   const filteredSuppliers = useMemo(() => {
     if (!suppliers) return [];
@@ -85,7 +88,13 @@ export default function SuppliersPage() {
           </div>
 
           {canManage && (
-            <Button className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+            <Button 
+              onClick={() => {
+                setSupplierToEdit(null);
+                setIsModalOpen(true);
+              }}
+              className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0"
+            >
               <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Proveedor</span>
             </Button>
           )}
@@ -209,7 +218,15 @@ export default function SuppliersPage() {
 
                     {/* FOOTER */}
                     <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
-                      <Button variant="outline" size="sm" className="h-7 text-xs font-bold">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs font-bold"
+                        onClick={() => {
+                          setSupplierToEdit(supplier);
+                          setIsModalOpen(true);
+                        }}
+                      >
                         Ver Detalle
                       </Button>
                     </div>
@@ -222,6 +239,16 @@ export default function SuppliersPage() {
         </div>
 
       </div>
+
+      <SupplierModal 
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSupplierToEdit(null);
+        }}
+        onSuccess={() => mutate()}
+        supplierToEdit={supplierToEdit}
+      />
 
     </div>
   );

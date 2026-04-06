@@ -4,7 +4,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote
+  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,24 @@ import { useAuth } from '@/context/auth-context';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-interface Product extends ProductData {
+interface Product {
   id: string;
+  title: string;
+  categoryId: string;
+  supplierId?: string | null;
+  basePrice: number;
+  cost?: number;
+  wholesalePrice?: number | null;
+  wholesaleMinCount?: number | null;
+  minStock?: number;
+  barcode?: string | null;
+  sku?: string | null;
+  code?: string | null;
+  active: boolean;
+  images?: string[];
   category?: { name: string; ecommerceCode: string | null };
-  branchStock?: { branchId: string; quantity: number }[]; 
-  active: boolean; 
+  supplier?: { name: string };
+  variants?: any[];
 }
 
 interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
@@ -75,18 +88,18 @@ export default function ProductsPage() {
       const catEcommerceCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
       const isGlobalProduct = !catEcommerceCode;
       const isMyCatalogProduct = catEcommerceCode === myCode;
-      const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+      // const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
 
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
-         if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) return false;
+         if (!isGlobalProduct && !isMyCatalogProduct) return false;
       }
       if (codeFilter === 'INACTIVE') return !p.active; 
       if (!p.active) return false;
 
       let matchesCode = true;
       if (codeFilter === 'GENERAL') {
-        const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
-        matchesCode = isGlobalProduct || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
+        // const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
+        matchesCode = isGlobalProduct; // || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
       }
       else if (codeFilter !== 'ALL') matchesCode = catEcommerceCode === codeFilter;
 
@@ -103,34 +116,34 @@ export default function ProductsPage() {
     return products.filter(p => {
       const isGlobalProduct = !p.category?.ecommerceCode;
       const isMyCatalogProduct = p.category?.ecommerceCode === myCode;
-      const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+      // const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
 
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
-         if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) return false;
+         if (!isGlobalProduct && !isMyCatalogProduct) return false;
       }
 
       const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            (p.barcode && p.barcode.includes(searchTerm)) || 
-                            (p.code && p.code.toLowerCase().includes(searchTerm.toLowerCase()));
+                            (p.barcode && p.barcode.includes(searchTerm)) ||
+                            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
       
       if (codeFilter === 'INACTIVE') return matchesSearch && !p.active; 
       if (!p.active) return false;
       
       let matchesCode = true;
       if (codeFilter === 'GENERAL') {
-        const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
-        matchesCode = isGlobalProduct || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
+        // const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
+        matchesCode = isGlobalProduct; // || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
       }
       else if (codeFilter !== 'ALL') matchesCode = p.category?.ecommerceCode === codeFilter;
 
       const matchesCategory = categoryFilter === 'ALL' || p.categoryId === categoryFilter;
 
       let matchesStock = true;
-      const currentStock = Number(p.stock);
-      const minStock = Number(p.minStock);
+      // const currentStock = Number(p.stock);
+      // const minStock = Number(p.minStock);
       
-      if (stockFilter === 'LOW') matchesStock = currentStock <= minStock && currentStock > 0; 
-      else if (stockFilter === 'OUT') matchesStock = currentStock <= 0; 
+      // if (stockFilter === 'LOW') matchesStock = currentStock <= minStock && currentStock > 0; 
+      // else if (stockFilter === 'OUT') matchesStock = currentStock <= 0; 
 
       return matchesSearch && matchesCode && matchesCategory && matchesStock;
     });
@@ -188,9 +201,18 @@ export default function ProductsPage() {
             />
           </div>
           {canCreate && (
-            <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
-              <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
-            </Button>
+            <>
+              <Button 
+                onClick={() => window.location.href = '/dashboard/categories'}
+                variant="outline"
+                className="h-10 text-sm bg-white hover:bg-slate-50 text-slate-700 px-5 shadow-sm rounded-full transition-all shrink-0 border-slate-200"
+              >
+                <Tags className="w-4 h-4 mr-1.5" /> <span className="font-bold">Categorías</span>
+              </Button>
+              <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+                <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -339,13 +361,15 @@ export default function ProductsPage() {
               ) : (
                 paginatedProducts.map((product: Product) => {
                   
-                  const visibleStockList = product.branchStock?.filter(bs => canViewOthers || bs.branchId === user?.branchId) || [];
-                  const totalPhysicalStock = visibleStockList.reduce((acc, curr) => acc + curr.quantity, 0);
+                  // const visibleStockList = product.branchStock?.filter(bs => canViewOthers || bs.branchId === user?.branchId) || [];
+                  // const totalPhysicalStock = visibleStockList.reduce((acc, curr) => acc + curr.quantity, 0);
+                  const totalPhysicalStock = 0; // TODO: Implementar con modelo Stock
                   const hasWholesale = Number(product.wholesalePrice) > 0;
 
                   const isGlobalProduct = !product.category?.ecommerceCode;
                   const isMyCatalogProduct = product.category?.ecommerceCode === myCode;
-                  const hasStockInMyBranch = product.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+                  // const hasStockInMyBranch = product.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+                  const hasStockInMyBranch = false; // TODO: Implementar con modelo Stock
                   
                   let canEditThisSpecificProduct = false;
                   if (canManageGlobal) {
@@ -405,7 +429,7 @@ export default function ProductsPage() {
                           <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-emerald-400 bg-emerald-50 text-emerald-800 shadow-sm">
                             <Banknote className="w-3 h-3 text-emerald-600" />
                             <span className="font-mono text-[10px] text-emerald-600 font-bold">S/</span>
-                            <span className="font-bold text-sm tracking-tight">{Number(product.price).toFixed(2)}</span>
+                            <span className="font-bold text-sm tracking-tight">{Number(product.basePrice).toFixed(2)}</span>
                           </div>
                           {hasWholesale && (
                             <p className="text-[9px] text-emerald-600/80 font-medium pl-1 leading-none">Mayor: S/ {Number(product.wholesalePrice).toFixed(2)}</p>
@@ -461,6 +485,16 @@ export default function ProductsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ProductModal 
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        onSuccess={() => mutate()}
+        productToEdit={selectedProduct}
+      />
     </div>
   );
 }

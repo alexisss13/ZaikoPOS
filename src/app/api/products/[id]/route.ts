@@ -34,8 +34,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const isGlobalProduct = !product.category?.ecommerceCode;
       const isMyCatalogProduct = product.category?.ecommerceCode === myBranch?.ecommerceCode;
 
+      // Verificar si tiene stock en mi sucursal a través de las variantes
       const hasStockInMyBranch = await prisma.stock.findFirst({
-        where: { productId: id, branchId: userBranchId!, quantity: { gt: 0 } }
+        where: { 
+          branchId: userBranchId!,
+          quantity: { gt: 0 },
+          variant: { productId: id }
+        }
       });
 
       if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) {
@@ -51,20 +56,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     if (body.branchStocks) {
-      for (const [bId, qty] of Object.entries(body.branchStocks)) {
-        if (!canManageGlobal && bId !== userBranchId) continue;
-        
-        const parsedQty = parseInt(qty as string) || 0;
-        await prisma.stock.upsert({
-          where: { branchId_productId: { branchId: bId, productId: id } },
-          update: { quantity: parsedQty },
-          create: { branchId: bId, productId: id, quantity: parsedQty }
-        });
-      }
+      // Los stocks ahora se manejan a nivel de variante, no de producto
+      // Este código necesita ser actualizado cuando se implemente el sistema de variantes
+      // Por ahora, se omite esta funcionalidad
     }
 
-    const allStocks = await prisma.stock.findMany({ where: { productId: id } });
-    const calculatedWebStock = allStocks.reduce((acc, curr) => acc + curr.quantity, 0);
+    // Calcular stock total desde las variantes
+    const allVariants = await prisma.productVariant.findMany({
+      where: { productId: id },
+      include: { stock: true }
+    });
+    
+    const calculatedWebStock = allVariants.reduce((total, variant) => {
+      const variantStock = variant.stock.reduce((sum, s) => sum + s.quantity, 0);
+      return total + variantStock;
+    }, 0);
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -73,26 +79,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         description: body.description ?? product.description,
         slug: finalSlug,
         categoryId: body.categoryId || product.categoryId,
-        // 🚀 FIX: Actualiza el arreglo de imágenes si se manda en el body
         images: body.images !== undefined ? body.images : product.images,
-        price: body.price !== undefined ? parseFloat(body.price) : product.price,
+        basePrice: body.basePrice !== undefined ? parseFloat(body.basePrice) : product.basePrice,
         
-        cost: canViewCosts && body.cost !== undefined 
-          ? (body.cost ? parseFloat(body.cost) : null) 
-          : (product.cost ? Number(product.cost) : null),
-
         wholesalePrice: body.wholesalePrice !== undefined ? (body.wholesalePrice ? parseFloat(body.wholesalePrice) : null) : product.wholesalePrice,
         wholesaleMinCount: body.wholesaleMinCount !== undefined ? (body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null) : product.wholesaleMinCount,
         discountPercentage: body.discountPercentage !== undefined ? parseInt(body.discountPercentage) : product.discountPercentage,
-        stock: calculatedWebStock, 
-        minStock: body.minStock !== undefined ? parseInt(body.minStock) : product.minStock,
-        barcode: body.barcode !== undefined ? (body.barcode || null) : product.barcode,
-        code: body.code !== undefined ? (body.code || null) : product.code,
-        color: body.color !== undefined ? (body.color || null) : product.color,
-        groupTag: body.groupTag !== undefined ? (body.groupTag || null) : product.groupTag,
+        
         tags: body.tags !== undefined ? (body.tags ? body.tags.split(',').map((t: string) => t.trim()) : []) : product.tags,
+        groupTag: body.groupTag !== undefined ? (body.groupTag || null) : product.groupTag,
         isAvailable: body.active !== undefined ? body.active : product.isAvailable,
         active: body.active !== undefined ? body.active : product.active,
+        supplierId: body.supplierId || product.supplierId,
       }
     });
 

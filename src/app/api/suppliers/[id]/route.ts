@@ -10,7 +10,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   try {
     const body = await req.json();
-    const { id } = params;
+    const { id } = await params;
 
     if (!body.name || body.name.trim() === '') {
       return NextResponse.json({ error: 'El nombre del proveedor es requerido' }, { status: 400 });
@@ -44,7 +44,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     await prisma.supplier.delete({
       where: { id }
