@@ -455,10 +455,14 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* SOLO DEJAMOS ESTE MODAL */}
       {isModalOpen && (
         <ProductModal 
           isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedProduct(null);
+          }} 
           onSuccess={() => mutate()} 
           productToEdit={selectedProduct} 
           canEdit={canEditSelected}
@@ -485,16 +489,6 @@ export default function ProductsPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <ProductModal 
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedProduct(null);
-        }}
-        onSuccess={() => mutate()}
-        productToEdit={selectedProduct}
-      />
     </div>
   );
 }

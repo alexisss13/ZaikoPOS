@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -50,9 +50,6 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
   const [branchStocks, setBranchStocks] = useState<Record<string, string>>({});
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-  // Ref para evitar que el formulario se resetee si SWR actualiza productToEdit en segundo plano
-  const initializedForProductId = useRef<string | null | undefined>(undefined);
-
   const [formData, setFormData] = useState({
     title: '',
     categoryId: '',
@@ -71,83 +68,49 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
     return cat.ecommerceCode === selectedBranchCode;
   }) || [];
 
-  // ==========================================
-  // INICIALIZACIÓN BLINDADA DEL FORMULARIO
-  // ==========================================
   useEffect(() => {
-    if (isOpen) {
-      const currentProductId = productToEdit?.id || null;
+    if (productToEdit && isOpen) {
+      const category = categories?.find((c: any) => c.id === productToEdit.categoryId);
+      if (category) {
+        setSelectedBranchCode(category.ecommerceCode || 'ALL');
+      }
       
-      // Solo inicializa si es un producto nuevo para esta sesión del modal
-      if (initializedForProductId.current !== currentProductId) {
-        if (productToEdit) {
-          setFormData({
-            title: productToEdit.title,
-            categoryId: productToEdit.categoryId,
-            supplierId: productToEdit.supplierId || '',
-            basePrice: productToEdit.basePrice?.toString() || '',
-            cost: productToEdit.cost?.toString() || '',
-            wholesalePrice: productToEdit.wholesalePrice?.toString() || '',
-            wholesaleMinCount: productToEdit.wholesaleMinCount?.toString() || '',
-            minStock: productToEdit.minStock?.toString() || '',
-            sku: productToEdit.sku || '',
-            active: productToEdit.active ?? true,
-          });
-          setImageUrls(productToEdit.images || []);
-          setBranchStocks({});
-        } else {
-          setSelectedBranchCode('ALL');
-          setFormData({
-            title: '',
-            categoryId: '',
-            supplierId: '',
-            basePrice: '',
-            cost: '',
-            wholesalePrice: '',
-            wholesaleMinCount: '',
-            minStock: '',
-            sku: '',
-            active: true,
-          });
-          setImageUrls([]);
-          setBranchStocks({});
-        }
-        // Marcamos este producto como ya inicializado
-        initializedForProductId.current = currentProductId;
-      }
-    } else {
-      // Cuando se cierra el modal, reseteamos el rastreador
-      initializedForProductId.current = undefined;
-    }
-  }, [isOpen, productToEdit]);
-
-  // Inicializar stocks de sucursales (solo para creación)
-  useEffect(() => {
-    if (isOpen && !productToEdit && branches) {
-      setBranchStocks(prev => {
-        const newStocks = { ...prev };
-        let changed = false;
-        branches.forEach((b: any) => {
-          if (newStocks[b.id] === undefined) {
-            newStocks[b.id] = '0';
-            changed = true;
-          }
-        });
-        return changed ? newStocks : prev;
+      setFormData({
+        title: productToEdit.title,
+        categoryId: productToEdit.categoryId,
+        supplierId: productToEdit.supplierId || '',
+        basePrice: productToEdit.basePrice?.toString() || '',
+        cost: productToEdit.cost?.toString() || '',
+        wholesalePrice: productToEdit.wholesalePrice?.toString() || '',
+        wholesaleMinCount: productToEdit.wholesaleMinCount?.toString() || '',
+        minStock: productToEdit.minStock?.toString() || '',
+        sku: productToEdit.sku || '',
+        active: productToEdit.active ?? true,
       });
+      setImageUrls((productToEdit as any).images || []);
+      setBranchStocks({});
+    } else if (isOpen) {
+      setSelectedBranchCode('ALL');
+      setFormData({
+        title: '',
+        categoryId: '',
+        supplierId: '',
+        basePrice: '',
+        cost: '',
+        wholesalePrice: '',
+        wholesaleMinCount: '',
+        minStock: '',
+        sku: '',
+        active: true,
+      });
+      setImageUrls([]);
+      const initialStocks: Record<string, string> = {};
+      branches?.forEach((branch: any) => {
+        initialStocks[branch.id] = '0';
+      });
+      setBranchStocks(initialStocks);
     }
-  }, [branches, isOpen, productToEdit]);
-
-  // Asignar sucursal según la categoría al editar
-  useEffect(() => {
-    if (isOpen && productToEdit && categories && selectedBranchCode === 'ALL') {
-      const category = categories.find((c: any) => c.id === productToEdit.categoryId);
-      if (category?.ecommerceCode) {
-        setSelectedBranchCode(category.ecommerceCode);
-      }
-    }
-  }, [categories, isOpen, productToEdit, selectedBranchCode]);
-
+  }, [productToEdit, isOpen, categories, branches]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -200,19 +163,13 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // VALIDACIONES MANUALES PRO (reemplaza al 'required' del HTML)
     if (!formData.title.trim()) {
-      toast.error('Por favor, ingresa el nombre del producto');
+      toast.error('El nombre del producto es requerido');
       return;
     }
 
     if (!formData.categoryId) {
       toast.error('Debes seleccionar una categoría');
-      return;
-    }
-
-    if (!formData.basePrice || isNaN(Number(formData.basePrice)) || Number(formData.basePrice) < 0) {
-      toast.error('Por favor, ingresa un precio base válido');
       return;
     }
 
@@ -290,25 +247,19 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-5 overflow-x-hidden custom-scrollbar bg-slate-50/30">
-          {/* Quitamos el required de los inputs para usar nuestra validación manual */}
-          <form id="product-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
             
             {/* Nombre del Producto */}
             <div className="relative">
               <input 
-                id="product-title"
                 name="title" 
-                type="text"
                 value={formData.title} 
                 onChange={handleChange} 
                 placeholder=" " 
                 className="peer w-full h-11 px-3 pt-5 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300 focus:border-slate-300"
-                autoComplete="off"
+                required 
               />
-              <label 
-                htmlFor="product-title"
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-slate-700 peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-slate-700 peer-[:not(:placeholder-shown)]:font-bold"
-              >
+              <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-slate-700 peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-slate-700 peer-[:not(:placeholder-shown)]:font-bold">
                 Nombre del Producto <span className="text-red-500">*</span>
               </label>
             </div>
@@ -421,6 +372,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                     onChange={handleChange} 
                     placeholder=" " 
                     className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300 focus:border-slate-300"
+                    required 
                   />
                   <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-slate-700 peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-slate-700 peer-[:not(:placeholder-shown)]:font-bold">
                     P. Base <span className="text-red-500">*</span>
@@ -496,31 +448,22 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
               {/* Imágenes */}
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                  <ImageIcon className="w-3.5 h-3.5 text-slate-400" /> Imágenes del Producto ({imageUrls.length}/5)
+                  <ImageIcon className="w-3.5 h-3.5 text-slate-400" /> Imágenes del Producto
                 </Label>
 
-                <div className="flex flex-wrap gap-3 p-4 bg-white rounded-lg border-2 border-slate-300 min-h-[120px]">
-                  {imageUrls.length === 0 && (
-                    <div className="w-full flex items-center justify-center text-slate-400 text-sm py-4">
-                      <div className="text-center">
-                        <ImageIcon className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                        <p>No hay imágenes. Sube hasta 5 imágenes.</p>
-                      </div>
-                    </div>
-                  )}
-                  
+                <div className="flex flex-wrap gap-2 p-3 bg-white rounded-lg border border-slate-200 min-h-[100px]">
                   {imageUrls.map((url, index) => (
                     <div 
                       key={index} 
-                      className="relative w-24 h-24 group bg-slate-100 border-2 border-emerald-400 rounded-lg flex-shrink-0 overflow-hidden"
+                      className="relative w-20 h-20 group bg-slate-100 border-2 border-slate-300 rounded-lg flex-shrink-0"
                     >
                       <img 
                         src={url} 
                         alt={`Producto ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-md"
                         onError={(e) => {
                           console.error('Error cargando imagen:', url);
-                          e.currentTarget.src = 'https://placehold.co/100x100/f1f5f9/94a3b8?text=Error';
+                          e.currentTarget.src = 'https://placehold.co/100x100?text=Error';
                         }}
                       />
                       <button
@@ -529,18 +472,15 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                           e.stopPropagation();
                           removeImage(index);
                         }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center group-hover:opacity-100 opacity-80 transition-opacity shadow-lg z-10"
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3 h-3" />
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-[10px] text-center py-0.5">
-                        #{index + 1}
-                      </div>
                     </div>
                   ))}
                   
                   {imageUrls.length < 5 && (
-                    <div className="relative w-24 h-24 flex-shrink-0">
+                    <div className="relative w-20 h-20 flex-shrink-0">
                       <input 
                         type="file"
                         accept="image/*"
@@ -553,20 +493,16 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                         htmlFor="image-upload-new"
                         className={`w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed transition-all ${
                           isUploadingImage
-                            ? 'border-slate-300 bg-slate-100 cursor-not-allowed'
-                            : 'border-slate-400 bg-slate-50 hover:border-slate-900 hover:bg-slate-100 cursor-pointer hover:shadow-md'
+                            ? 'border-slate-200 bg-slate-50 cursor-not-allowed'
+                            : 'border-slate-300 bg-slate-50 hover:border-slate-900 hover:bg-slate-100 cursor-pointer'
                         }`}
                       >
                         {isUploadingImage ? (
-                          <>
-                            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-                            <span className="text-[9px] font-bold text-slate-400">Subiendo...</span>
-                          </>
+                          <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
                         ) : (
                           <>
-                            <Upload className="w-6 h-6 text-slate-400" />
-                            <span className="text-[10px] font-bold text-slate-600">Subir</span>
-                            <span className="text-[9px] text-slate-400">{imageUrls.length + 1}/5</span>
+                            <Upload className="w-5 h-5 text-slate-400" />
+                            <span className="text-[10px] font-bold text-slate-400">{imageUrls.length + 1}/5</span>
                           </>
                         )}
                       </label>
