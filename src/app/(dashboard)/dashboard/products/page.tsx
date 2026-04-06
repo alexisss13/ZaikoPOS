@@ -33,9 +33,11 @@ interface Product {
   code?: string | null;
   active: boolean;
   images?: string[];
+  branchOwnerId?: string | null;
   category?: { name: string; ecommerceCode: string | null };
   supplier?: { name: string };
   variants?: any[];
+  branchStocks?: { branchId: string; quantity: number }[];
 }
 
 interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
@@ -85,69 +87,102 @@ export default function ProductsPage() {
     if (!categories || !products) return [];
 
     const baseProducts = products.filter(p => {
-      const catEcommerceCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
-      const isGlobalProduct = !catEcommerceCode;
-      const isMyCatalogProduct = catEcommerceCode === myCode;
-      // const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+      // Determinar si es producto global o de una sucursal específica
+      const isGlobalProduct = !p.branchOwnerId;
+      const isMyBranchProduct = p.branchOwnerId === user?.branchId;
+      const hasStockInMyBranch = p.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
 
+      // Filtrar por permisos
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
-         if (!isGlobalProduct && !isMyCatalogProduct) return false;
+        if (!isGlobalProduct && !isMyBranchProduct && !hasStockInMyBranch) return false;
       }
-      if (codeFilter === 'INACTIVE') return !p.active; 
+
+      // Filtrar por estado activo/inactivo
+      if (codeFilter === 'INACTIVE') return !p.active;
       if (!p.active) return false;
 
+      // Filtrar por código de sucursal
       let matchesCode = true;
       if (codeFilter === 'GENERAL') {
-        // const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
-        matchesCode = isGlobalProduct; // || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
+        // Productos compartidos: sin dueño O con stock en múltiples sucursales
+        const branchesWithStock = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
+        matchesCode = isGlobalProduct || branchesWithStock.length > 1;
+      } else if (codeFilter !== 'ALL') {
+        // Filtrar por sucursal específica
+        const branch = branches?.find(b => b.ecommerceCode === codeFilter);
+        if (branch) {
+          matchesCode = p.branchOwnerId === branch.id;
+        }
       }
-      else if (codeFilter !== 'ALL') matchesCode = catEcommerceCode === codeFilter;
 
       return matchesCode;
     });
 
     const activeCategoryIds = new Set(baseProducts.map(p => p.categoryId));
     return categories.filter(c => activeCategoryIds.has(c.id));
-  }, [products, categories, codeFilter, myCode, user?.branchId, isSuperOrOwner, canViewOthers, canManageGlobal]);
+  }, [products, categories, codeFilter, user?.branchId, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
 
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     return products.filter(p => {
-      const isGlobalProduct = !p.category?.ecommerceCode;
-      const isMyCatalogProduct = p.category?.ecommerceCode === myCode;
-      // const hasStockInMyBranch = p.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+      // Determinar si es producto global o de una sucursal específica
+      const isGlobalProduct = !p.branchOwnerId;
+      const isMyBranchProduct = p.branchOwnerId === user?.branchId;
+      const hasStockInMyBranch = p.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
 
+      // Filtrar por permisos
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal) {
-         if (!isGlobalProduct && !isMyCatalogProduct) return false;
+        if (!isGlobalProduct && !isMyBranchProduct && !hasStockInMyBranch) return false;
       }
 
+      // Búsqueda por texto
       const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             (p.barcode && p.barcode.includes(searchTerm)) ||
                             (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      if (codeFilter === 'INACTIVE') return matchesSearch && !p.active; 
+      // Filtrar por estado activo/inactivo
+      if (codeFilter === 'INACTIVE') return matchesSearch && !p.active;
       if (!p.active) return false;
       
+      // Filtrar por código de sucursal
       let matchesCode = true;
       if (codeFilter === 'GENERAL') {
-        // const storesWithStock = p.branchStock?.filter(bs => bs.quantity > 0).length || 0;
-        matchesCode = isGlobalProduct; // || storesWithStock > 1 || (!isMyCatalogProduct && hasStockInMyBranch);
+        // Productos compartidos: sin dueño O con stock en múltiples sucursales
+        const branchesWithStock = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
+        matchesCode = isGlobalProduct || branchesWithStock.length > 1;
+      } else if (codeFilter !== 'ALL') {
+        // Filtrar por sucursal específica
+        const branch = branches?.find(b => b.ecommerceCode === codeFilter);
+        if (branch) {
+          matchesCode = p.branchOwnerId === branch.id;
+        }
       }
-      else if (codeFilter !== 'ALL') matchesCode = p.category?.ecommerceCode === codeFilter;
 
+      // Filtrar por categoría
       const matchesCategory = categoryFilter === 'ALL' || p.categoryId === categoryFilter;
 
+      // Filtrar por stock
       let matchesStock = true;
-      // const currentStock = Number(p.stock);
-      // const minStock = Number(p.minStock);
-      
-      // if (stockFilter === 'LOW') matchesStock = currentStock <= minStock && currentStock > 0; 
-      // else if (stockFilter === 'OUT') matchesStock = currentStock <= 0; 
+      if (stockFilter !== 'ALL') {
+        // Calcular stock total visible para el usuario
+        const visibleStocks = canViewOthers 
+          ? (p.branchStocks || [])
+          : (p.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
+        
+        const totalStock = visibleStocks.reduce((sum, bs) => sum + bs.quantity, 0);
+        const minStock = p.minStock || 5;
+        
+        if (stockFilter === 'LOW') {
+          matchesStock = totalStock > 0 && totalStock <= minStock;
+        } else if (stockFilter === 'OUT') {
+          matchesStock = totalStock <= 0;
+        }
+      }
 
       return matchesSearch && matchesCode && matchesCategory && matchesStock;
     });
-  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, myCode, user?.branchId]);
+  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, user?.branchId, branches]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -361,29 +396,27 @@ export default function ProductsPage() {
               ) : (
                 paginatedProducts.map((product: Product) => {
                   
-                  // const visibleStockList = product.branchStock?.filter(bs => canViewOthers || bs.branchId === user?.branchId) || [];
-                  // const totalPhysicalStock = visibleStockList.reduce((acc, curr) => acc + curr.quantity, 0);
-                  const totalPhysicalStock = 0; // TODO: Implementar con modelo Stock
+                  // Calcular stock total visible para el usuario
+                  const visibleStocks = canViewOthers 
+                    ? (product.branchStocks || [])
+                    : (product.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
+                  
+                  const totalPhysicalStock = visibleStocks.reduce((sum, bs) => sum + bs.quantity, 0);
                   const hasWholesale = Number(product.wholesalePrice) > 0;
 
-                  const isGlobalProduct = !product.category?.ecommerceCode;
-                  const isMyCatalogProduct = product.category?.ecommerceCode === myCode;
-                  // const hasStockInMyBranch = product.branchStock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
-                  const hasStockInMyBranch = false; // TODO: Implementar con modelo Stock
+                  // Determinar permisos de edición
+                  const isGlobalProduct = !product.branchOwnerId;
+                  const isMyBranchProduct = product.branchOwnerId === user?.branchId;
+                  const hasStockInMyBranch = product.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
                   
                   let canEditThisSpecificProduct = false;
                   if (canManageGlobal) {
                     canEditThisSpecificProduct = true; 
                   } else if (canEdit) {
-                    if (isGlobalProduct || isMyCatalogProduct) {
-                      canEditThisSpecificProduct = true; 
-                    } else if (hasStockInMyBranch) {
+                    if (isGlobalProduct || isMyBranchProduct || hasStockInMyBranch) {
                       canEditThisSpecificProduct = true; 
                     }
                   }
-
-                  const bCode = product.category?.ecommerceCode;
-                  const productBranch = bCode ? getBranchByCode(bCode) : null;
 
                   return (
                     <tr 
@@ -410,17 +443,49 @@ export default function ProductsPage() {
                       <td className="px-5 py-3">
                         <div className="flex flex-col items-start gap-1.5">
                           <span className="font-medium text-slate-500 truncate max-w-[140px] leading-none group-hover:text-slate-700 transition-colors">{product.category?.name || 'Sin Categoría'}</span>
-                          {bCode ? (
-                            <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
-                              {productBranch?.logoUrl 
-                                ? <img src={productBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover transition-all grayscale mix-blend-multiply " alt=""/> 
-                                : <Store className="w-3 h-3 text-current" />
-                              } 
-                              {productBranch?.name || bCode}
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-bold text-slate-600 flex items-center gap-1 leading-none border border-slate-200 px-1.5 py-0.5 rounded-md bg-slate-50 w-max"><Globe className="w-2.5 h-2.5 text-slate-400" /> Compartido</span>
-                          )}
+                          {(() => {
+                            // Determinar si el producto tiene stock en múltiples sucursales
+                            const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
+                            const hasMultipleBranches = branchesWithStock.length > 1;
+                            
+                            // Si tiene stock en múltiples sucursales, mostrar como "Compartido"
+                            if (hasMultipleBranches) {
+                              const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
+                              return (
+                                <span className="text-[9px] font-bold text-slate-600 flex items-center gap-1.5 leading-none border border-slate-200 px-1.5 py-0.5 rounded-md bg-slate-50 w-max">
+                                  {ownerBranch?.logoUrl ? (
+                                    <img src={ownerBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover transition-all grayscale mix-blend-multiply" alt=""/>
+                                  ) : (
+                                    <Store className="w-3 h-3 text-slate-400" />
+                                  )}
+                                  {ownerBranch?.name || 'Sucursal'}
+                                  <Globe className="w-2.5 h-2.5 text-slate-400 ml-0.5" />
+                                </span>
+                              );
+                            }
+                            
+                            // Si solo tiene una sucursal dueña, mostrar esa sucursal
+                            if (product.branchOwnerId) {
+                              const ownerBranch = branches?.find(b => b.id === product.branchOwnerId);
+                              return (
+                                <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
+                                  {ownerBranch?.logoUrl ? (
+                                    <img src={ownerBranch.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover transition-all grayscale mix-blend-multiply" alt=""/>
+                                  ) : (
+                                    <Store className="w-3 h-3 text-current" />
+                                  )}
+                                  {ownerBranch?.name || 'Sucursal'}
+                                </span>
+                              );
+                            }
+                            
+                            // Si no tiene branchOwnerId, es un producto compartido global
+                            return (
+                              <span className="text-[9px] font-bold text-slate-600 flex items-center gap-1 leading-none border border-slate-200 px-1.5 py-0.5 rounded-md bg-slate-50 w-max">
+                                <Globe className="w-2.5 h-2.5 text-slate-400" /> Compartido
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
                       <td className="px-5 py-3">
@@ -437,14 +502,26 @@ export default function ProductsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3">
-                        {/* Diseño de píldora para el stock */}
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border 
-                          ${totalPhysicalStock <= 0 ? 'bg-red-50 text-red-700 border-red-200' 
-                          : totalPhysicalStock <= Number(product.minStock) ? 'bg-amber-50 text-amber-700 border-amber-200' 
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'}
-                        `}>
-                          {totalPhysicalStock} <span className="text-[9px] opacity-70 ml-1 font-semibold uppercase">un.</span>
-                        </span>
+                        {(() => {
+                          // Obtener el minStock del producto (viene de la variante estándar)
+                          const minStock = product.minStock || 5;
+                          
+                          // Determinar el color según el stock
+                          let colorClasses = '';
+                          if (totalPhysicalStock <= 0) {
+                            colorClasses = 'bg-red-50 text-red-700 border-red-200';
+                          } else if (totalPhysicalStock <= minStock) {
+                            colorClasses = 'bg-amber-50 text-amber-700 border-amber-200';
+                          } else {
+                            colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                          }
+                          
+                          return (
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${colorClasses}`}>
+                              {totalPhysicalStock} <span className="text-[9px] opacity-70 ml-1 font-semibold uppercase">un.</span>
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );

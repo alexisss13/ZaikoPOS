@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     const products = await prisma.product.findMany({
       where: role === 'SUPER_ADMIN' ? {} : { businessId: businessId || '' },
       include: { 
-        category: { select: { name: true } },
+        category: { select: { name: true, ecommerceCode: true } },
         supplier: { select: { id: true, name: true } },
         variants: {
           select: {
@@ -29,6 +29,12 @@ export async function GET(req: Request) {
                 name: true,
                 abbreviation: true,
               }
+            },
+            stock: {
+              select: {
+                branchId: true,
+                quantity: true,
+              }
             }
           },
           where: { active: true }
@@ -37,7 +43,40 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' },
     });
     
-    return NextResponse.json(products);
+    // Transform the data to include branchStocks at product level
+    const productsWithStocks = products.map(product => {
+      // Aggregate stock from all variants
+      const branchStocksMap = new Map<string, number>();
+      
+      product.variants.forEach(variant => {
+        variant.stock.forEach(stock => {
+          const currentQty = branchStocksMap.get(stock.branchId) || 0;
+          branchStocksMap.set(stock.branchId, currentQty + stock.quantity);
+        });
+      });
+      
+      const branchStocks = Array.from(branchStocksMap.entries()).map(([branchId, quantity]) => ({
+        branchId,
+        quantity
+      }));
+      
+      // Get minStock from the standard variant (or first variant)
+      const standardVariant = product.variants.find(v => v.name === 'Estándar') || product.variants[0];
+      const minStock = standardVariant?.minStock || 5;
+      
+      return {
+        ...product,
+        branchStocks,
+        minStock,
+        // Keep variants but remove stock from them to avoid duplication
+        variants: product.variants.map(v => {
+          const { stock, ...variantWithoutStock } = v;
+          return variantWithoutStock;
+        })
+      };
+    });
+    
+    return NextResponse.json(productsWithStocks);
   } catch (error) {
     console.error('[PRODUCTS_GET_ERROR]', error);
     return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });
@@ -64,22 +103,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El título y la categoría son obligatorios' }, { status: 400 });
     }
 
+    // Obtener la categoría para determinar el branchOwnerId
+    const category = await prisma.category.findUnique({
+      where: { id: body.categoryId },
+      select: { ecommerceCode: true }
+    });
+
+    // Buscar la sucursal dueña según el ecommerceCode de la categoría
+    let branchOwnerId: string | null = null;
+    if (category?.ecommerceCode) {
+      const branch = await prisma.branch.findUnique({
+        where: { ecommerceCode: category.ecommerceCode },
+        select: { id: true }
+      });
+      branchOwnerId = branch?.id || null;
+    }
+
     let baseSlug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const existingSlug = await prisma.product.findUnique({ where: { slug: baseSlug } });
     if (existingSlug) {
       baseSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
     }
 
+    // Asegurar que las imágenes se guarden correctamente
+    const images = Array.isArray(body.images) ? body.images : [];
+
     // Crear producto con variante por defecto
     const newProduct = await prisma.product.create({
       data: {
         businessId,
+        branchOwnerId, // Asignar la sucursal dueña
         title: body.title,
         description: body.description || '',
         slug: baseSlug,
         categoryId: body.categoryId,
         supplierId: body.supplierId || null,
-        images: body.images || [],
+        images, // Guardar las imágenes
         basePrice: body.basePrice ? parseFloat(body.basePrice) : 0,
         wholesalePrice: body.wholesalePrice ? parseFloat(body.wholesalePrice) : null,
         wholesaleMinCount: body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null,
@@ -98,6 +157,7 @@ export async function POST(req: Request) {
             cost: body.cost ? parseFloat(body.cost) : 0,
             minStock: body.minStock ? parseInt(body.minStock) : 5,
             active: true,
+            images, // También guardar las imágenes en la variante
           }
         }
       },

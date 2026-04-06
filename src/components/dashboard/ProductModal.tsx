@@ -41,6 +41,7 @@ interface ProductModalSimpleProps {
 export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: ProductModalSimpleProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   
   const { data: categories } = useSWR(isOpen ? '/api/categories' : null, fetcher);
   const { data: suppliers } = useSWR(isOpen ? '/api/suppliers' : null, fetcher);
@@ -69,47 +70,67 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
   }) || [];
 
   useEffect(() => {
-    if (productToEdit && isOpen) {
-      const category = categories?.find((c: any) => c.id === productToEdit.categoryId);
-      if (category) {
-        setSelectedBranchCode(category.ecommerceCode || 'ALL');
+    const loadProductData = async () => {
+      if (productToEdit?.id && isOpen) {
+        setIsLoadingProduct(true);
+        try {
+          // Cargar los datos completos del producto desde el endpoint
+          const response = await fetch(`/api/products/${productToEdit.id}`);
+          if (!response.ok) throw new Error('Error al cargar producto');
+          
+          const fullProduct = await response.json();
+          
+          const category = categories?.find((c: any) => c.id === fullProduct.categoryId);
+          if (category) {
+            setSelectedBranchCode(category.ecommerceCode || 'ALL');
+          }
+          
+          setFormData({
+            title: fullProduct.title || '',
+            categoryId: fullProduct.categoryId || '',
+            supplierId: fullProduct.supplierId || '',
+            basePrice: fullProduct.basePrice?.toString() || '',
+            cost: fullProduct.cost?.toString() || '',
+            wholesalePrice: fullProduct.wholesalePrice?.toString() || '',
+            wholesaleMinCount: fullProduct.wholesaleMinCount?.toString() || '',
+            minStock: fullProduct.minStock?.toString() || '',
+            sku: fullProduct.sku || '',
+            active: fullProduct.active ?? true,
+          });
+          
+          setImageUrls(fullProduct.images || []);
+          setBranchStocks({});
+        } catch (error) {
+          console.error('Error cargando producto:', error);
+          toast.error('Error al cargar los datos del producto');
+        } finally {
+          setIsLoadingProduct(false);
+        }
+      } else if (isOpen && !productToEdit) {
+        // Modo crear nuevo producto
+        setSelectedBranchCode('ALL');
+        setFormData({
+          title: '',
+          categoryId: '',
+          supplierId: '',
+          basePrice: '',
+          cost: '',
+          wholesalePrice: '',
+          wholesaleMinCount: '',
+          minStock: '',
+          sku: '',
+          active: true,
+        });
+        setImageUrls([]);
+        const initialStocks: Record<string, string> = {};
+        branches?.forEach((branch: any) => {
+          initialStocks[branch.id] = '0';
+        });
+        setBranchStocks(initialStocks);
       }
-      
-      setFormData({
-        title: productToEdit.title,
-        categoryId: productToEdit.categoryId,
-        supplierId: productToEdit.supplierId || '',
-        basePrice: productToEdit.basePrice?.toString() || '',
-        cost: productToEdit.cost?.toString() || '',
-        wholesalePrice: productToEdit.wholesalePrice?.toString() || '',
-        wholesaleMinCount: productToEdit.wholesaleMinCount?.toString() || '',
-        minStock: productToEdit.minStock?.toString() || '',
-        sku: productToEdit.sku || '',
-        active: productToEdit.active ?? true,
-      });
-      setImageUrls((productToEdit as any).images || []);
-      setBranchStocks({});
-    } else if (isOpen) {
-      setSelectedBranchCode('ALL');
-      setFormData({
-        title: '',
-        categoryId: '',
-        supplierId: '',
-        basePrice: '',
-        cost: '',
-        wholesalePrice: '',
-        wholesaleMinCount: '',
-        minStock: '',
-        sku: '',
-        active: true,
-      });
-      setImageUrls([]);
-      const initialStocks: Record<string, string> = {};
-      branches?.forEach((branch: any) => {
-        initialStocks[branch.id] = '0';
-      });
-      setBranchStocks(initialStocks);
-    }
+    };
+
+    loadProductData();
   }, [productToEdit, isOpen, categories, branches]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,7 +268,15 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-5 overflow-x-hidden custom-scrollbar bg-slate-50/30">
-          <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
+          {isLoadingProduct ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+                <p className="text-sm text-slate-500 font-medium">Cargando datos del producto...</p>
+              </div>
+            </div>
+          ) : (
+            <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
             
             {/* Nombre del Producto */}
             <div className="relative">
@@ -540,6 +569,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
             </div>
 
           </form>
+          )}
         </div>
 
         <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0 z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">

@@ -1,6 +1,78 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const businessId = req.headers.get('x-business-id');
+  const role = req.headers.get('x-user-role');
+
+  try {
+    const { id } = await params;
+    
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: { select: { id: true, name: true, ecommerceCode: true } },
+        supplier: { select: { id: true, name: true } },
+        variants: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            barcode: true,
+            price: true,
+            cost: true,
+            minStock: true,
+            active: true,
+            images: true,
+            attributes: true,
+            uomId: true,
+            uom: {
+              select: {
+                id: true,
+                name: true,
+                abbreviation: true,
+              }
+            },
+            stock: {
+              select: {
+                branchId: true,
+                quantity: true,
+              }
+            }
+          },
+          where: { active: true }
+        }
+      }
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    }
+
+    if (role !== 'SUPER_ADMIN' && product.businessId !== businessId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    // Agregar datos de la variante estándar al nivel del producto para facilitar la edición
+    const standardVariant = product.variants.find(v => v.name === 'Estándar') || product.variants[0];
+    
+    const productWithVariantData = {
+      ...product,
+      sku: standardVariant?.sku,
+      barcode: standardVariant?.barcode,
+      cost: standardVariant?.cost,
+      minStock: standardVariant?.minStock,
+      // Las imágenes del producto tienen prioridad, si no hay, usar las de la variante
+      images: product.images.length > 0 ? product.images : (standardVariant?.images || []),
+    };
+
+    return NextResponse.json(productWithVariantData);
+  } catch (error) {
+    console.error('[PRODUCT_GET_ERROR]', error);
+    return NextResponse.json({ error: 'Error al obtener producto' }, { status: 500 });
+  }
+}
+
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const businessId = req.headers.get('x-business-id');
   const role = req.headers.get('x-user-role');
@@ -61,16 +133,29 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       // Por ahora, se omite esta funcionalidad
     }
 
-    // Calcular stock total desde las variantes
-    const allVariants = await prisma.productVariant.findMany({
-      where: { productId: id },
-      include: { stock: true }
-    });
-    
-    const calculatedWebStock = allVariants.reduce((total, variant) => {
-      const variantStock = variant.stock.reduce((sum, s) => sum + s.quantity, 0);
-      return total + variantStock;
-    }, 0);
+    // Determinar branchOwnerId si cambió la categoría
+    let branchOwnerId = product.branchOwnerId;
+    if (body.categoryId && body.categoryId !== product.categoryId) {
+      const newCategory = await prisma.category.findUnique({
+        where: { id: body.categoryId },
+        select: { ecommerceCode: true }
+      });
+      
+      if (newCategory?.ecommerceCode) {
+        const branch = await prisma.branch.findUnique({
+          where: { ecommerceCode: newCategory.ecommerceCode },
+          select: { id: true }
+        });
+        branchOwnerId = branch?.id || null;
+      } else {
+        branchOwnerId = null;
+      }
+    }
+
+    // Asegurar que las imágenes se guarden correctamente
+    const images = body.images !== undefined 
+      ? (Array.isArray(body.images) ? body.images : []) 
+      : product.images;
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -79,7 +164,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         description: body.description ?? product.description,
         slug: finalSlug,
         categoryId: body.categoryId || product.categoryId,
-        images: body.images !== undefined ? body.images : product.images,
+        branchOwnerId,
+        images,
         basePrice: body.basePrice !== undefined ? parseFloat(body.basePrice) : product.basePrice,
         
         wholesalePrice: body.wholesalePrice !== undefined ? (body.wholesalePrice ? parseFloat(body.wholesalePrice) : null) : product.wholesalePrice,
@@ -91,8 +177,31 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         isAvailable: body.active !== undefined ? body.active : product.isAvailable,
         active: body.active !== undefined ? body.active : product.active,
         supplierId: body.supplierId || product.supplierId,
+      },
+      include: {
+        category: true,
+        supplier: true,
+        variants: true,
       }
     });
+
+    // Actualizar la variante estándar con los nuevos datos
+    const standardVariant = await prisma.productVariant.findFirst({
+      where: { productId: id, name: 'Estándar' }
+    });
+
+    if (standardVariant) {
+      await prisma.productVariant.update({
+        where: { id: standardVariant.id },
+        data: {
+          sku: body.sku !== undefined ? (body.sku || null) : standardVariant.sku,
+          price: body.basePrice !== undefined ? parseFloat(body.basePrice) : standardVariant.price,
+          cost: body.cost !== undefined ? parseFloat(body.cost) : standardVariant.cost,
+          minStock: body.minStock !== undefined ? parseInt(body.minStock) : standardVariant.minStock,
+          images,
+        }
+      });
+    }
 
     return NextResponse.json(updatedProduct);
   } catch (error: unknown) {
