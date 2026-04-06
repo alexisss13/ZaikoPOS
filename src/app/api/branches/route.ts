@@ -75,10 +75,10 @@ export async function POST(req: Request) {
         customRuc: body.customRuc || null,
         customLegalName: body.customLegalName || null,
         customAddress: body.customAddress || null,
-        logoUrl: body.logoUrl || null,
+        logos: body.logos || null,
         brandColors: body.brandColors || null,
-        ecommerceCode: finalEcommerceCode, // 👈 Asignación inteligente
-      },
+        ecommerceCode: finalEcommerceCode,
+      } as any,
       include: { business: { select: { name: true } } }
     });
 

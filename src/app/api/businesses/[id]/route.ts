@@ -20,15 +20,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json(updated);
     }
 
-    // Si no, es una actualización de límites de licencia
+    // Si no, es una actualización completa del negocio
+    const updateData: any = {
+      name: body.workspaceName,
+      maxBranches: body.maxBranches,
+      maxManagers: body.maxManagers,
+      maxEmployees: body.maxEmployees,
+    };
+
+    // Permitir actualizar RUC y dirección
+    if (body.ruc !== undefined) {
+      updateData.ruc = body.ruc.trim() === '' ? null : body.ruc.trim();
+    }
+    if (body.address !== undefined) {
+      updateData.address = body.address.trim() === '' ? null : body.address.trim();
+    }
+
     const updated = await prisma.business.update({
       where: { id },
-      data: {
-        name: body.workspaceName,
-        maxBranches: body.maxBranches,
-        maxManagers: body.maxManagers,
-        maxEmployees: body.maxEmployees,
-      }
+      data: updateData
     });
 
     return NextResponse.json(updated);

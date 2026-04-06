@@ -1,3 +1,4 @@
+// src/app/(dashboard)/dashboard/branches/page.tsx
 'use client';
 
 import useSWR from 'swr';
@@ -23,7 +24,13 @@ interface Branch {
   customRuc: string | null;
   customLegalName: string | null;
   customAddress: string | null;
-  logoUrl: string | null;
+  logos: { 
+    isotipo?: string; 
+    isotipoWhite?: string; 
+    imagotipo?: string; 
+    imagotipoWhite?: string; 
+    alternate?: string; 
+  } | null;
   brandColors: { primary?: string; secondary?: string; optional?: string } | null;
   businessId: string;
   ecommerceCode: string | null;
@@ -31,7 +38,15 @@ interface Branch {
   _count?: { users: number };
 }
 
-const ITEMS_PER_PAGE = 9; // Aumentamos un poco ya que las cards serán más compactas
+const ITEMS_PER_PAGE = 9;
+
+// Helper para obtener el logo principal
+const getMainLogo = (branch: Branch): string | null => {
+  if (branch.logos) {
+    return branch.logos.isotipo || branch.logos.imagotipo || branch.logos.alternate || null;
+  }
+  return null;
+};
 
 export default function BranchesPage() {
   const { role: currentUserRole } = useAuth();
@@ -46,7 +61,9 @@ export default function BranchesPage() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const filteredBranches = useMemo(() => {
-    if (!branches) return [];
+    // 🔥 CORRECCIÓN AQUÍ: Validación estricta de array
+    if (!Array.isArray(branches)) return [];
+    
     return branches.filter(b => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = b.name.toLowerCase().includes(searchLower) || 
@@ -80,7 +97,7 @@ export default function BranchesPage() {
       customRuc: branch.customRuc,
       customLegalName: branch.customLegalName,
       customAddress: branch.customAddress,
-      logoUrl: branch.logoUrl,
+      logos: branch.logos || null,
       brandColors: branch.brandColors || null,
       businessId: branch.businessId,
       ecommerceCode: branch.ecommerceCode,
@@ -108,7 +125,7 @@ export default function BranchesPage() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
-      {/* 🚀 TOOLBAR SUPERIOR ULTRA-LIMPIA Y ELEGANTE */}
+      {/* TOOLBAR SUPERIOR ULTRA-LIMPIA Y ELEGANTE */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         
         <h1 className="text-[26px] font-black text-slate-900 tracking-tight shrink-0">Sucursales</h1>
@@ -134,10 +151,10 @@ export default function BranchesPage() {
         </div>
       </div>
 
-      {/* 🚀 CONTENEDOR PRINCIPAL */}
+      {/* CONTENEDOR PRINCIPAL */}
       <div className="bg-white rounded-2xl shadow-sm flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         
-        {/* 🚀 SUBHEADER: TABS Y PAGINACIÓN INTEGRADA */}
+        {/* SUBHEADER: TABS Y PAGINACIÓN INTEGRADA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-100 w-full bg-white shrink-0">
           
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar w-full sm:w-auto flex-1">
@@ -183,7 +200,7 @@ export default function BranchesPage() {
 
         </div>
 
-        {/* 🚀 GRID DE TARJETAS COMPACTAS (Fondo Gris Ligero) */}
+        {/* GRID DE TARJETAS COMPACTAS (Fondo Gris Ligero) */}
         <div className="flex-1 p-4 bg-slate-50/50 overflow-y-auto custom-scrollbar">
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -200,6 +217,7 @@ export default function BranchesPage() {
               {paginatedBranches.map((branch: Branch) => {
                 const isDropdownOpen = openDropdownId === branch.id;
                 const isIndependent = !!branch.customRuc;
+                const mainLogo = getMainLogo(branch);
 
                 return (
                   <div 
@@ -213,9 +231,9 @@ export default function BranchesPage() {
                       {/* HEADER CARD: Logo, Nombre y Menú */}
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex gap-3 min-w-0 flex-1">
-                          {branch.logoUrl ? (
+                          {mainLogo ? (
                             <div className="w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shrink-0 bg-white shadow-sm p-0.5">
-                              <img src={branch.logoUrl} alt="Logo" className="w-full h-full object-contain rounded-lg" />
+                              <img src={mainLogo} alt="Logo" className="w-full h-full object-contain rounded-lg" />
                             </div>
                           ) : (
                             <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200">
@@ -226,12 +244,30 @@ export default function BranchesPage() {
                           <div className="min-w-0 pr-6">
                             <h3 className="font-bold text-slate-900 leading-tight truncate group-hover:text-emerald-600 transition-colors">{branch.name}</h3>
                             
-                            {/* PALETA DE COLORES VISIBLE */}
-                            {branch.brandColors && (
-                              <div className="flex items-center gap-1 mt-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full border border-slate-200/50 shadow-sm" style={{ backgroundColor: branch.brandColors.primary || '#0f172a' }} title="Principal"/>
-                                <div className="w-2.5 h-2.5 rounded-full border border-slate-200/50 shadow-sm" style={{ backgroundColor: branch.brandColors.secondary || '#3b82f6' }} title="Secundario"/>
-                                <div className="w-2.5 h-2.5 rounded-full border border-slate-200/50 shadow-sm" style={{ backgroundColor: branch.brandColors.optional || '#ffffff' }} title="Opcional"/>
+                            {/* PALETA DE COLORES VISIBLE - Mejorada */}
+                            {branch.brandColors && (branch.brandColors.primary || branch.brandColors.secondary || branch.brandColors.optional) && (
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                {branch.brandColors.primary && (
+                                  <div 
+                                    className="w-4 h-4 rounded-md border-2 border-white shadow-md ring-1 ring-slate-200/50 transition-transform hover:scale-125" 
+                                    style={{ backgroundColor: branch.brandColors.primary }} 
+                                    title={`Principal: ${branch.brandColors.primary}`}
+                                  />
+                                )}
+                                {branch.brandColors.secondary && (
+                                  <div 
+                                    className="w-4 h-4 rounded-md border-2 border-white shadow-md ring-1 ring-slate-200/50 transition-transform hover:scale-125" 
+                                    style={{ backgroundColor: branch.brandColors.secondary }} 
+                                    title={`Secundario: ${branch.brandColors.secondary}`}
+                                  />
+                                )}
+                                {branch.brandColors.optional && (
+                                  <div 
+                                    className="w-4 h-4 rounded-md border-2 border-white shadow-md ring-1 ring-slate-200/50 transition-transform hover:scale-125" 
+                                    style={{ backgroundColor: branch.brandColors.optional }} 
+                                    title={`Opcional: ${branch.brandColors.optional}`}
+                                  />
+                                )}
                               </div>
                             )}
                             

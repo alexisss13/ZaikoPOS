@@ -52,7 +52,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       customRuc: body.customRuc || null,
       customLegalName: body.customLegalName || null,
       customAddress: body.customAddress || null,
-      logoUrl: body.logoUrl || null,
+      logos: body.logos ? body.logos : Prisma.DbNull,
       brandColors: body.brandColors ? body.brandColors : Prisma.DbNull,
     };
 

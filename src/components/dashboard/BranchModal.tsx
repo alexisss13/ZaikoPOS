@@ -1,3 +1,4 @@
+// src/app/(dashboard)/dashboard/branches/BranchModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,7 +21,13 @@ export interface BranchData {
   customRuc: string | null;
   customLegalName: string | null;
   customAddress: string | null;
-  logoUrl: string | null;
+  logos: {
+    isotipo?: string;
+    isotipoWhite?: string;
+    imagotipo?: string;
+    imagotipoWhite?: string;
+    alternate?: string;
+  } | null;
   brandColors: { primary?: string; secondary?: string; optional?: string } | null;
   businessId?: string;
   ecommerceCode?: string | null;
@@ -51,12 +58,18 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
   
   const [formData, setFormData] = useState({
     name: '', address: '', phone: '', customRuc: '', customLegalName: '', customAddress: '', 
-    logoUrl: '', colorPrimary: '#0f172a', colorSecondary: '#3b82f6', colorOptional: '#ffffff', 
+    logoIsotipo: '',
+    logoIsotipoWhite: '',
+    logoImagotipo: '',
+    logoImagotipoWhite: '',
+    logoAlternate: '',
+    colorPrimary: '#0f172a', colorSecondary: '#3b82f6', colorOptional: '#ffffff', 
     businessId: 'NONE', ecommerceCode: ''
   });
 
   useEffect(() => {
     if (branchToEdit && isOpen) {
+      const logos = branchToEdit.logos || {};
       setFormData({
         name: branchToEdit.name,
         address: branchToEdit.address || '',
@@ -64,7 +77,11 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
         customRuc: branchToEdit.customRuc || '',
         customLegalName: branchToEdit.customLegalName || '',
         customAddress: branchToEdit.customAddress || '',
-        logoUrl: branchToEdit.logoUrl || '',
+        logoIsotipo: logos.isotipo || '',
+        logoIsotipoWhite: logos.isotipoWhite || '',
+        logoImagotipo: logos.imagotipo || '',
+        logoImagotipoWhite: logos.imagotipoWhite || '',
+        logoAlternate: logos.alternate || '',
         colorPrimary: branchToEdit.brandColors?.primary || '#0f172a',
         colorSecondary: branchToEdit.brandColors?.secondary || '#3b82f6',
         colorOptional: branchToEdit.brandColors?.optional || '#ffffff',
@@ -72,11 +89,12 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
         ecommerceCode: branchToEdit.ecommerceCode || '',
       });
       if (branchToEdit.customRuc) setShowAdvanced(true);
-      if (branchToEdit.logoUrl || branchToEdit.brandColors) setShowBranding(true);
+      if (branchToEdit.logos || branchToEdit.brandColors) setShowBranding(true);
     } else if (isOpen) {
       setFormData({ 
         name: '', address: '', phone: '', customRuc: '', customLegalName: '', customAddress: '', 
-        logoUrl: '', colorPrimary: '#0f172a', colorSecondary: '#3b82f6', colorOptional: '#ffffff', 
+        logoIsotipo: '', logoIsotipoWhite: '', logoImagotipo: '', logoImagotipoWhite: '', logoAlternate: '',
+        colorPrimary: '#0f172a', colorSecondary: '#3b82f6', colorOptional: '#ffffff', 
         businessId: 'NONE', ecommerceCode: '',
       });
       setShowAdvanced(false);
@@ -88,7 +106,7 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, logoType: 'isotipo' | 'isotipoWhite' | 'imagotipo' | 'imagotipoWhite' | 'alternate') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -105,15 +123,29 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
       
       const data = await res.json();
       if (data.secure_url) {
-        setFormData(prev => ({ ...prev, logoUrl: data.secure_url }));
-        toast.success('Logo subido correctamente');
+        const fieldMap = {
+          isotipo: 'logoIsotipo',
+          isotipoWhite: 'logoIsotipoWhite',
+          imagotipo: 'logoImagotipo',
+          imagotipoWhite: 'logoImagotipoWhite',
+          alternate: 'logoAlternate'
+        };
+        setFormData(prev => ({ ...prev, [fieldMap[logoType]]: data.secure_url }));
+        toast.success(`${logoType} subido correctamente`);
       } else { throw new Error(data.error?.message || 'Error al subir'); }
     } catch (error) { toast.error('Error de conexión con Cloudinary'); } 
     finally { setIsUploadingImage(false); }
   };
 
-  const removeImage = () => {
-    setFormData(prev => ({ ...prev, logoUrl: '' }));
+  const removeImage = (logoType: 'isotipo' | 'isotipoWhite' | 'imagotipo' | 'imagotipoWhite' | 'alternate') => {
+    const fieldMap = {
+      isotipo: 'logoIsotipo',
+      isotipoWhite: 'logoIsotipoWhite',
+      imagotipo: 'logoImagotipo',
+      imagotipoWhite: 'logoImagotipoWhite',
+      alternate: 'logoAlternate'
+    };
+    setFormData(prev => ({ ...prev, [fieldMap[logoType]]: '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +165,13 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
         customRuc: formData.customRuc.trim() === '' ? null : formData.customRuc,
         customLegalName: formData.customLegalName.trim() === '' ? null : formData.customLegalName,
         customAddress: formData.customAddress.trim() === '' ? null : formData.customAddress,
-        logoUrl: formData.logoUrl.trim() === '' ? null : formData.logoUrl,
+        logos: {
+          isotipo: formData.logoIsotipo.trim() === '' ? null : formData.logoIsotipo,
+          isotipoWhite: formData.logoIsotipoWhite.trim() === '' ? null : formData.logoIsotipoWhite,
+          imagotipo: formData.logoImagotipo.trim() === '' ? null : formData.logoImagotipo,
+          imagotipoWhite: formData.logoImagotipoWhite.trim() === '' ? null : formData.logoImagotipoWhite,
+          alternate: formData.logoAlternate.trim() === '' ? null : formData.logoAlternate,
+        },
         brandColors: {
           primary: formData.colorPrimary,
           secondary: formData.colorSecondary,
@@ -163,7 +201,6 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
     }
   };
 
-  // 🚀 MEJORA UI: Inputs con diseño plano "Flat"
   const getInputClass = (val: string | undefined) => {
     const base = "transition-all focus-visible:ring-1 focus-visible:ring-slate-300 font-medium text-sm w-full rounded-xl border px-3 h-10 outline-none";
     const state = val && val.trim() !== ''
@@ -176,7 +213,6 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-white font-sans border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
         
-        {/* 🚀 HEADER PLANO */}
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
             <Store className="w-5 h-5 text-slate-700" />
@@ -266,56 +302,230 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
               
               <div className={`grid transition-all duration-300 ease-in-out ${showBranding ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                 <div className="overflow-hidden">
-                  <div className="p-5 space-y-5">
+                  <div className="p-5 space-y-6">
                     
-                    {/* Logo Upload */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-slate-700">Logo de la Sucursal</Label>
-                      <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-dashed border-slate-200">
-                        {formData.logoUrl ? (
-                          <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-white shrink-0 shadow-sm relative group p-1">
-                            <img src={formData.logoUrl} alt="Preview" className="w-full h-full object-contain" />
-                            <button type="button" onClick={removeImage} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
-                              <X className="w-4 h-4" />
-                            </button>
+                    {/* Logos Upload - Grid de 5 tipos */}
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold text-slate-700">Logos de la Sucursal</Label>
+                      <p className="text-[10px] text-slate-400 font-medium mb-3">Sube diferentes versiones del logo para usar en distintos contextos.</p>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {/* Isotipo */}
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold">Isotipo</Label>
+                          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-dashed border-slate-200 min-h-[80px]">
+                            {formData.logoIsotipo ? (
+                              <div className="w-full h-16 rounded-lg border border-slate-200 overflow-hidden bg-white relative group">
+                                <img src={formData.logoIsotipo} alt="Isotipo" className="w-full h-full object-contain p-1" />
+                                <button type="button" onClick={() => removeImage('isotipo')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative w-full h-16 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'isotipo')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="relative w-14 h-14 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer group">
-                            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                            {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                        </div>
+
+                        {/* Isotipo Blanco */}
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold">Isotipo Blanco</Label>
+                          <div className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-700 min-h-[80px]">
+                            {formData.logoIsotipoWhite ? (
+                              <div className="w-full h-16 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 relative group">
+                                <img src={formData.logoIsotipoWhite} alt="Isotipo Blanco" className="w-full h-full object-contain p-1" />
+                                <button type="button" onClick={() => removeImage('isotipoWhite')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative w-full h-16 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'isotipoWhite')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div className="flex-1 relative flex flex-col justify-center">
-                          <span className="text-xs text-slate-500 font-medium px-2">Haz clic o sube una imagen (JPG, PNG).</span>
+                        </div>
+
+                        {/* Imagotipo */}
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold">Imagotipo</Label>
+                          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-dashed border-slate-200 min-h-[80px]">
+                            {formData.logoImagotipo ? (
+                              <div className="w-full h-16 rounded-lg border border-slate-200 overflow-hidden bg-white relative group">
+                                <img src={formData.logoImagotipo} alt="Imagotipo" className="w-full h-full object-contain p-1" />
+                                <button type="button" onClick={() => removeImage('imagotipo')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative w-full h-16 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'imagotipo')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Imagotipo Blanco */}
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold">Imagotipo Blanco</Label>
+                          <div className="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-700 min-h-[80px]">
+                            {formData.logoImagotipoWhite ? (
+                              <div className="w-full h-16 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 relative group">
+                                <img src={formData.logoImagotipoWhite} alt="Imagotipo Blanco" className="w-full h-full object-contain p-1" />
+                                <button type="button" onClick={() => removeImage('imagotipoWhite')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative w-full h-16 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'imagotipoWhite')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Logo Alternativo */}
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold">Logo Alternativo</Label>
+                          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-dashed border-slate-200 min-h-[80px]">
+                            {formData.logoAlternate ? (
+                              <div className="w-full h-16 rounded-lg border border-slate-200 overflow-hidden bg-white relative group">
+                                <img src={formData.logoAlternate} alt="Alternativo" className="w-full h-full object-contain p-1" />
+                                <button type="button" onClick={() => removeImage('alternate')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative w-full h-16 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
+                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'alternate')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Colores */}
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <Label className="text-xs font-bold text-slate-700">Colores Representativos</Label>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-[10px] text-slate-500 uppercase font-bold text-center">Principal</Label>
-                          <div className="w-full h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative hover:scale-105 transition-transform cursor-pointer">
-                            <input type="color" name="colorPrimary" value={formData.colorPrimary} onChange={handleChange} className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer opacity-0 z-10" />
-                            <div className="w-full h-full" style={{ backgroundColor: formData.colorPrimary }} />
+                    {/* 🚀 MEJORA: Selectores de Color Consolidados y Planos */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs font-bold text-slate-700">Colores Representativos</Label>
+                        <p className="text-[10px] text-slate-400 font-medium">Estos colores definirán la identidad visual del E-commerce y facturas.</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        
+                        {/* Color Principal */}
+                        <div className="space-y-2">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Principal</Label>
+                          <div className="flex items-center gap-3 p-1.5 bg-slate-50 border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-slate-300 focus-within:border-slate-300 transition-all shadow-sm">
+                            <div 
+                              className="relative w-8 h-8 rounded-lg shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] shrink-0 border border-black/5"
+                              style={{ backgroundColor: formData.colorPrimary }}
+                            >
+                              <input 
+                                type="color" 
+                                name="colorPrimary" 
+                                value={formData.colorPrimary} 
+                                onChange={handleChange} 
+                                className="absolute [-webkit-appearance:none] [border:none] inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
+                            <input 
+                              type="text" 
+                              value={formData.colorPrimary.toUpperCase()} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^#[0-9A-Fa-f]{0,6}$/.test(val) || val === '') {
+                                  setFormData(prev => ({ ...prev, colorPrimary: val }));
+                                }
+                              }}
+                              onBlur={(e) => {
+                                 if(e.target.value.length !== 7) setFormData(prev => ({...prev, colorPrimary: '#0f172a'}))
+                              }}
+                              placeholder="#0F172A"
+                              className="flex-1 bg-transparent border-none focus:outline-none text-xs font-mono font-bold text-slate-700 w-full uppercase placeholder:text-slate-400"
+                              maxLength={7}
+                            />
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-[10px] text-slate-500 uppercase font-bold text-center">Secundario</Label>
-                          <div className="w-full h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative hover:scale-105 transition-transform cursor-pointer">
-                            <input type="color" name="colorSecondary" value={formData.colorSecondary} onChange={handleChange} className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer opacity-0 z-10" />
-                            <div className="w-full h-full" style={{ backgroundColor: formData.colorSecondary }} />
+
+                        {/* Color Secundario */}
+                        <div className="space-y-2">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Secundario</Label>
+                          <div className="flex items-center gap-3 p-1.5 bg-slate-50 border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-slate-300 focus-within:border-slate-300 transition-all shadow-sm">
+                            <div 
+                              className="relative w-8 h-8 rounded-lg shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] shrink-0 border border-black/5"
+                              style={{ backgroundColor: formData.colorSecondary }}
+                            >
+                              <input 
+                                type="color" 
+                                name="colorSecondary" 
+                                value={formData.colorSecondary} 
+                                onChange={handleChange} 
+                                className="absolute [-webkit-appearance:none] [border:none] inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
+                            <input 
+                              type="text" 
+                              value={formData.colorSecondary.toUpperCase()} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^#[0-9A-Fa-f]{0,6}$/.test(val) || val === '') {
+                                  setFormData(prev => ({ ...prev, colorSecondary: val }));
+                                }
+                              }}
+                              onBlur={(e) => {
+                                 if(e.target.value.length !== 7) setFormData(prev => ({...prev, colorSecondary: '#3b82f6'}))
+                              }}
+                              placeholder="#3B82F6"
+                              className="flex-1 bg-transparent border-none focus:outline-none text-xs font-mono font-bold text-slate-700 w-full uppercase placeholder:text-slate-400"
+                              maxLength={7}
+                            />
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-[10px] text-slate-500 uppercase font-bold text-center">Opcional</Label>
-                          <div className="w-full h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative hover:scale-105 transition-transform cursor-pointer">
-                            <input type="color" name="colorOptional" value={formData.colorOptional} onChange={handleChange} className="absolute -top-2 -left-2 w-14 h-14 cursor-pointer opacity-0 z-10" />
-                            <div className="w-full h-full bg-white" style={{ backgroundColor: formData.colorOptional }} />
+
+                        {/* Color Opcional */}
+                        <div className="space-y-2">
+                          <Label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Contraste (Opcional)</Label>
+                          <div className="flex items-center gap-3 p-1.5 bg-slate-50 border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-slate-300 focus-within:border-slate-300 transition-all shadow-sm">
+                            <div 
+                              className="relative w-8 h-8 rounded-lg shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] shrink-0 border border-black/10"
+                              style={{ backgroundColor: formData.colorOptional }}
+                            >
+                              <input 
+                                type="color" 
+                                name="colorOptional" 
+                                value={formData.colorOptional} 
+                                onChange={handleChange} 
+                                className="absolute [-webkit-appearance:none] [border:none] inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
+                            <input 
+                              type="text" 
+                              value={formData.colorOptional.toUpperCase()} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^#[0-9A-Fa-f]{0,6}$/.test(val) || val === '') {
+                                  setFormData(prev => ({ ...prev, colorOptional: val }));
+                                }
+                              }}
+                              onBlur={(e) => {
+                                 if(e.target.value.length !== 7) setFormData(prev => ({...prev, colorOptional: '#ffffff'}))
+                              }}
+                              placeholder="#FFFFFF"
+                              className="flex-1 bg-transparent border-none focus:outline-none text-xs font-mono font-bold text-slate-700 w-full uppercase placeholder:text-slate-400"
+                              maxLength={7}
+                            />
                           </div>
                         </div>
+
                       </div>
                     </div>
 

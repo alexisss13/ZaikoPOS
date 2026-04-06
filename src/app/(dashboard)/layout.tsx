@@ -7,7 +7,7 @@ import { useAuth } from '@/context/auth-context';
 import { 
   Menu, X, LayoutDashboard, ShoppingBag, 
   Package, Users, Store, LogOut, ShieldCheck, 
-  Tags, Building2, Camera, UserCircle, Loader2, Bell, Check, ArrowRightLeft, Globe
+  Tags, Building2, Camera, UserCircle, Loader2, Bell, Check, ArrowRightLeft, Globe, ShoppingCart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -159,6 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/products', label: 'Productos', icon: Package },
     { href: '/dashboard/categories', label: 'Categorías', icon: Tags },
+    { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart },
     { href: '/dashboard/users', label: 'Personal', icon: Users },
     { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
     { href: '/dashboard/transfers', label: 'Traslados', icon: ArrowRightLeft }, 

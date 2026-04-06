@@ -36,14 +36,20 @@ export async function POST(req: Request) {
 
     const hashedPassword = await hash(body.ownerPassword, 10);
 
+    // Generar RUC si no se proporcionó
+    const finalRuc = body.ruc && body.ruc.trim() !== '' 
+      ? body.ruc.trim() 
+      : `PENDING-${Date.now()}`;
+
     const result = await prisma.$transaction(async (tx) => {
       const newBusiness = await tx.business.create({
         data: {
           name: body.workspaceName,
-          ruc: `PENDING-${Date.now()}`, 
+          ruc: finalRuc,
+          address: body.address || null,
           maxBranches: body.maxBranches || 1,
-          maxManagers: body.maxManagers || 1,     // Nuevo: Límite Jefes por sucursal
-          maxEmployees: body.maxEmployees || 3,   // Límite Cajeros por sucursal
+          maxManagers: body.maxManagers || 1,
+          maxEmployees: body.maxEmployees || 3,
           brandColors: { primary: "#0f172a", secondary: "#3b82f6" }
         }
       });
