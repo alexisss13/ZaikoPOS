@@ -60,14 +60,18 @@ export async function GET(req: Request) {
         quantity
       }));
       
-      // Get minStock from the standard variant (or first variant)
+      // Get data from the standard variant (or first variant)
       const standardVariant = product.variants.find(v => v.name === 'Estándar') || product.variants[0];
       const minStock = standardVariant?.minStock || 5;
+      const barcode = standardVariant?.barcode || null;
+      const sku = standardVariant?.sku || null;
       
       return {
         ...product,
         branchStocks,
         minStock,
+        barcode,
+        sku,
         // Keep variants but remove stock from them to avoid duplication
         variants: product.variants.map(v => {
           const { stock, ...variantWithoutStock } = v;
@@ -128,6 +132,15 @@ export async function POST(req: Request) {
     // Asegurar que las imágenes se guarden correctamente
     const images = Array.isArray(body.images) ? body.images : [];
 
+    // Generar código de barras automáticamente si no se proporciona
+    let barcode = body.barcode || null;
+    if (!barcode) {
+      // Generar un código de barras único basado en timestamp y random
+      const timestamp = Date.now().toString().slice(-8);
+      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      barcode = `${timestamp}${random}`;
+    }
+
     // Crear producto con variante por defecto
     const newProduct = await prisma.product.create({
       data: {
@@ -152,7 +165,7 @@ export async function POST(req: Request) {
           create: {
             name: 'Estándar',
             sku: body.sku || null,
-            barcode: body.barcode || null,
+            barcode: barcode,
             price: body.basePrice ? parseFloat(body.basePrice) : 0,
             cost: body.cost ? parseFloat(body.cost) : 0,
             minStock: body.minStock ? parseInt(body.minStock) : 5,

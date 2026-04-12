@@ -13,6 +13,14 @@ export async function GET(req: Request) {
   try {
     const suppliers = await prisma.supplier.findMany({
       where: role === 'SUPER_ADMIN' ? {} : { businessId: businessId || '' },
+      include: {
+        _count: {
+          select: {
+            products: true,
+            purchaseOrders: true
+          }
+        }
+      },
       orderBy: {
         name: 'asc'
       }

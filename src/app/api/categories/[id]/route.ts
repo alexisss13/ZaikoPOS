@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const role = req.headers.get('x-user-role');
 
   if (role !== 'OWNER' && role !== 'MANAGER' && role !== 'SUPER_ADMIN') {
@@ -10,7 +10,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   try {
     const body = await req.json();
-    const { id } = params;
+    const { id } = await params;
 
     if (!body.name) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
@@ -47,7 +47,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const role = req.headers.get('x-user-role');
 
   if (role !== 'OWNER' && role !== 'MANAGER' && role !== 'SUPER_ADMIN') {
@@ -55,7 +55,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Verificar si tiene productos asociados
     const category = await prisma.category.findUnique({

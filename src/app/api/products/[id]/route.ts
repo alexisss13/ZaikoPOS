@@ -195,6 +195,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         where: { id: standardVariant.id },
         data: {
           sku: body.sku !== undefined ? (body.sku || null) : standardVariant.sku,
+          barcode: body.barcode !== undefined ? (body.barcode || null) : standardVariant.barcode,
           price: body.basePrice !== undefined ? parseFloat(body.basePrice) : standardVariant.price,
           cost: body.cost !== undefined ? parseFloat(body.cost) : standardVariant.cost,
           minStock: body.minStock !== undefined ? parseInt(body.minStock) : standardVariant.minStock,

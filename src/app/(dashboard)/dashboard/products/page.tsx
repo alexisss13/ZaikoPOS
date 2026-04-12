@@ -4,7 +4,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags
+  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ProductModal, ProductData } from '@/components/dashboard/ProductModal';
+import { CategoryModal } from '@/components/dashboard/CategoryModal';
+import { ImportProductsModal } from '@/components/dashboard/ImportProductsModal';
+import { BarcodeGeneratorModal } from '@/components/dashboard/BarcodeGeneratorModal';
 import Barcode from 'react-barcode';
 import { useAuth } from '@/context/auth-context';
 
@@ -57,7 +60,8 @@ export default function ProductsPage() {
 
   const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher);
   const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
-  const { data: categories } = useSWR<Category[]>('/api/categories', fetcher);
+  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher);
+  const { data: suppliers } = useSWR('/api/suppliers', fetcher);
   
   const myBranch = branches?.find(b => b.id === user?.branchId);
   const myCode = myBranch?.ecommerceCode; 
@@ -75,6 +79,9 @@ export default function ProductsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [canEditSelected, setCanEditSelected] = useState(false);
   
@@ -214,6 +221,170 @@ export default function ProductsPage() {
     } catch (error) { toast.error('Error al generar la imagen.', { id: 'barcode-toast' }); }
   };
 
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const exportToExcel = async () => {
+    if (!products || products.length === 0) {
+      toast.error('No hay productos para exportar');
+      return;
+    }
+
+    try {
+      toast.loading('Generando archivo Excel...', { id: 'export-excel' });
+      const XLSX = await import('xlsx-js-style');
+
+      const headers = ['ID', 'Nombre', 'SKU', 'Código de Barras', 'Categoría', 'Proveedor', 'Precio Base', 'Costo', 'Precio Mayorista', 'Cant. Mín. Mayorista', 'Stock Mínimo'];
+      
+      // Agregar headers de stock por sucursal
+      branches?.forEach(branch => {
+        headers.push(`Stock ${branch.name}`);
+      });
+      headers.push('Activo', 'Imágenes');
+
+      // Preparar los datos
+      const exportData = products.map(product => {
+        const row = [
+          product.id,
+          product.title,
+          product.sku || '',
+          product.barcode || '',
+          product.category?.name || '',
+          product.supplier?.name || '',
+          product.basePrice,
+          product.cost || 0,
+          product.wholesalePrice || '',
+          product.wholesaleMinCount || '',
+          product.minStock || 5,
+        ];
+
+        // Agregar stock por sucursal
+        branches?.forEach(branch => {
+          const stock = product.branchStocks?.find(bs => bs.branchId === branch.id);
+          row.push(stock?.quantity || 0);
+        });
+
+        row.push(product.active ? 'Sí' : 'No', product.images?.join(', ') || '');
+        return row;
+      });
+
+      const ws_data = [headers, ...exportData];
+      const worksheet = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // Aplicar estilos a los encabezados
+      const headerStyle = {
+        fill: { fgColor: { rgb: "1E293B" } },
+        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+
+      headers.forEach((_, colIndex) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+        if (worksheet[cellAddress]) {
+          worksheet[cellAddress].s = headerStyle;
+        }
+      });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos');
+
+      // Ajustar ancho de columnas
+      const columnWidths = [
+        { wch: 36 }, { wch: 40 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
+        { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, { wch: 12 }
+      ];
+      branches?.forEach(() => columnWidths.push({ wch: 15 }));
+      columnWidths.push({ wch: 10 }, { wch: 50 });
+      worksheet['!cols'] = columnWidths;
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `productos-${timestamp}.xlsx`);
+
+      toast.success('Archivo Excel generado correctamente', { id: 'export-excel' });
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al generar el archivo Excel', { id: 'export-excel' });
+    }
+  };
+
+  const exportToPDF = async () => {
+    if (!products || products.length === 0) {
+      toast.error('No hay productos para exportar');
+      return;
+    }
+
+    try {
+      toast.loading('Generando archivo PDF...', { id: 'export-pdf' });
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF('l', 'mm', 'a4');
+      
+      // Encabezado corporativo
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 297, 35, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CATÁLOGO DE PRODUCTOS', 148.5, 15, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-PE')}`, 148.5, 25, { align: 'center' });
+
+      // Preparar datos de la tabla
+      const tableData = products.map(product => {
+        const totalStock = product.branchStocks?.reduce((sum, bs) => sum + bs.quantity, 0) || 0;
+        return [
+          product.title,
+          product.sku || '-',
+          product.barcode || '-',
+          product.category?.name || '-',
+          `S/ ${Number(product.basePrice).toFixed(2)}`,
+          totalStock.toString(),
+          product.active ? 'Sí' : 'No'
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 40,
+        head: [['Producto', 'SKU', 'Código', 'Categoría', 'Precio', 'Stock', 'Activo']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center',
+          fontSize: 9
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2
+        },
+        columnStyles: {
+          0: { cellWidth: 70 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 40 },
+          4: { cellWidth: 25, halign: 'right' },
+          5: { cellWidth: 20, halign: 'center' },
+          6: { cellWidth: 20, halign: 'center' }
+        }
+      });
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      doc.save(`productos-${timestamp}.pdf`);
+      
+      toast.success('Archivo PDF generado correctamente', { id: 'export-pdf' });
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al generar el archivo PDF', { id: 'export-pdf' });
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
@@ -238,11 +409,56 @@ export default function ProductsPage() {
           {canCreate && (
             <>
               <Button 
-                onClick={() => window.location.href = '/dashboard/categories'}
-                variant="outline"
-                className="h-10 text-sm bg-white hover:bg-slate-50 text-slate-700 px-5 shadow-sm rounded-full transition-all shrink-0 border-slate-200"
+                onClick={() => setIsCategoryModalOpen(true)}
+                variant="ghost"
+                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
               >
-                <Tags className="w-4 h-4 mr-1.5" /> <span className="font-bold">Categorías</span>
+                <Tags className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Categorías</span>
+              </Button>
+              <Button 
+                onClick={() => setIsImportModalOpen(true)}
+                variant="ghost"
+                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+              >
+                <FileText className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Importar</span>
+              </Button>
+              <div className="relative">
+                <Button 
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  variant="ghost"
+                  className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Exportar</span>
+                </Button>
+                
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-12 w-40 bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                      <button
+                        onClick={exportToExcel}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Excel
+                      </button>
+                      <button
+                        onClick={exportToPDF}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        PDF
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <Button 
+                onClick={() => setIsBarcodeModalOpen(true)}
+                variant="ghost"
+                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+              >
+                <BarcodeIcon className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Códigos</span>
               </Button>
               <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
                 <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
@@ -547,6 +763,32 @@ export default function ProductsPage() {
           onPrintBarcode={(p) => setBarcodeProduct(p as unknown as Product)}
         />
       )}
+
+      {/* MODAL DE IMPORTACIÓN */}
+      <ImportProductsModal 
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => mutate()}
+        categories={categories || []}
+        suppliers={suppliers || []}
+        branches={branches || []}
+      />
+
+      {/* MODAL DE CÓDIGOS DE BARRAS */}
+      <BarcodeGeneratorModal 
+        isOpen={isBarcodeModalOpen}
+        onClose={() => setIsBarcodeModalOpen(false)}
+        products={products || []}
+      />
+
+      {/* MODAL DE CATEGORÍAS */}
+      <CategoryModal 
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onSuccess={() => { mutate(); mutateCategories(); }}
+        categories={categories || []}
+        branches={branches || []}
+      />
 
       {/* ETIQUETA MODAL */}
       <Dialog open={!!barcodeProduct} onOpenChange={() => setBarcodeProduct(null)}>

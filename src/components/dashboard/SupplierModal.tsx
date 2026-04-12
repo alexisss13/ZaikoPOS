@@ -5,10 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Users, Mail, Phone, Globe, User, MessageSquare } from 'lucide-react';
+import { Loader2, Users, Trash2, Edit, PowerOff } from 'lucide-react';
 
-export interface SupplierData {
-  id?: string;
+interface Supplier {
+  id: string;
   name: string;
   email: string | null;
   phone: string | null;
@@ -16,17 +16,23 @@ export interface SupplierData {
   website: string | null;
   comments: string | null;
   isActive: boolean;
+  _count?: {
+    products: number;
+    purchaseOrders: number;
+  };
 }
 
 interface SupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  supplierToEdit?: SupplierData | null;
+  suppliers: Supplier[];
 }
 
-export function SupplierModal({ isOpen, onClose, onSuccess, supplierToEdit }: SupplierModalProps) {
+export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: SupplierModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -35,21 +41,19 @@ export function SupplierModal({ isOpen, onClose, onSuccess, supplierToEdit }: Su
     representative: '',
     website: '',
     comments: '',
-    isActive: true,
   });
 
   useEffect(() => {
-    if (supplierToEdit && isOpen) {
+    if (editingSupplier) {
       setFormData({
-        name: supplierToEdit.name,
-        email: supplierToEdit.email || '',
-        phone: supplierToEdit.phone || '',
-        representative: supplierToEdit.representative || '',
-        website: supplierToEdit.website || '',
-        comments: supplierToEdit.comments || '',
-        isActive: supplierToEdit.isActive,
+        name: editingSupplier.name,
+        email: editingSupplier.email || '',
+        phone: editingSupplier.phone || '',
+        representative: editingSupplier.representative || '',
+        website: editingSupplier.website || '',
+        comments: editingSupplier.comments || '',
       });
-    } else if (isOpen) {
+    } else {
       setFormData({
         name: '',
         email: '',
@@ -57,14 +61,9 @@ export function SupplierModal({ isOpen, onClose, onSuccess, supplierToEdit }: Su
         representative: '',
         website: '',
         comments: '',
-        isActive: true,
       });
     }
-  }, [supplierToEdit, isOpen]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  }, [editingSupplier]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,16 +77,16 @@ export function SupplierModal({ isOpen, onClose, onSuccess, supplierToEdit }: Su
 
     try {
       const payload = {
-        ...formData,
-        email: formData.email.trim() === '' ? null : formData.email,
-        phone: formData.phone.trim() === '' ? null : formData.phone,
-        representative: formData.representative.trim() === '' ? null : formData.representative,
-        website: formData.website.trim() === '' ? null : formData.website,
-        comments: formData.comments.trim() === '' ? null : formData.comments,
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        representative: formData.representative || null,
+        website: formData.website || null,
+        comments: formData.comments || null,
       };
 
-      const url = supplierToEdit?.id ? `/api/suppliers/${supplierToEdit.id}` : '/api/suppliers';
-      const method = supplierToEdit?.id ? 'PUT' : 'POST';
+      const url = editingSupplier ? `/api/suppliers/${editingSupplier.id}` : '/api/suppliers';
+      const method = editingSupplier ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -98,9 +97,17 @@ export function SupplierModal({ isOpen, onClose, onSuccess, supplierToEdit }: Su
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      toast.success(supplierToEdit?.id ? 'Proveedor actualizado correctamente' : 'Proveedor creado exitosamente');
+      toast.success(editingSupplier ? 'Proveedor actualizado' : 'Proveedor creado');
+      setEditingSupplier(null);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        representative: '',
+        website: '',
+        comments: '',
+      });
       onSuccess();
-      onClose();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error inesperado';
       toast.error(errorMessage);
@@ -109,173 +116,339 @@ export function SupplierModal({ isOpen, onClose, onSuccess, supplierToEdit }: Su
     }
   };
 
-  const getInputClass = (val: string | undefined) => {
-    const base = "transition-all focus-visible:ring-1 focus-visible:ring-slate-300 font-medium text-sm w-full rounded-xl border px-3 h-10 outline-none";
-    const state = val && val.trim() !== ''
-      ? "bg-white border-slate-200 text-slate-900 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]" 
-      : "bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100";
-    return `${base} ${state}`;
+  const handleDeleteOrDeactivate = async (supplier: Supplier) => {
+    const hasRelations = (supplier._count?.products || 0) > 0 || (supplier._count?.purchaseOrders || 0) > 0;
+    
+    if (hasRelations) {
+      // Si tiene productos o compras relacionadas, solo desactivar
+      if (!confirm(`Este proveedor tiene productos o compras relacionadas. ¿Deseas desactivarlo? Podrás reactivarlo después.`)) {
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/suppliers/${supplier.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...supplier, isActive: false }),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error);
+        }
+        
+        toast.success('Proveedor desactivado');
+        onSuccess();
+      } catch (error: any) {
+        toast.error(error.message || 'Error al desactivar');
+      }
+    } else {
+      // Si no tiene relaciones, eliminar directamente
+      if (!confirm('¿Eliminar este proveedor? No tiene productos ni compras asociadas.')) return;
+      
+      try {
+        const res = await fetch(`/api/suppliers/${supplier.id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error);
+        }
+        toast.success('Proveedor eliminado');
+        onSuccess();
+      } catch (error: any) {
+        toast.error(error.message || 'Error al eliminar');
+      }
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-white font-sans border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setEditingSupplier(null); } }}>
+      <DialogContent className="sm:max-w-5xl p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
         
-        <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
+        <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
             <Users className="w-5 h-5 text-slate-700" />
           </div>
-          <div className="flex flex-col items-start text-left">
-            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
-              {supplierToEdit ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+          <div className="flex flex-col items-start text-left flex-1">
+            <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
+              Gestionar Proveedores
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-0.5 font-medium">
-              Configura los datos de contacto y representante del proveedor.
+              Crea, edita o desactiva proveedores
             </DialogDescription>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 overflow-x-hidden relative custom-scrollbar bg-slate-50/30">
-          <form id="supplier-form" onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* FORMULARIO */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 h-fit">
+            <h3 className="text-sm font-black text-slate-900 mb-4">
+              {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+            </h3>
             
-            {/* DATOS GENERALES */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Users className="w-4 h-4 text-slate-400" /> Información General
-              </h3>
+            <form onSubmit={handleSubmit} className="space-y-3">
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">Nombre del Proveedor <span className="text-red-500">*</span></Label>
-                  <input 
-                    name="name" 
-                    value={formData.name} 
-                    onChange={handleChange} 
-                    placeholder="Ej: Distribuidora ABC SAC" 
-                    className={getInputClass(formData.name)} 
-                    required 
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <User className="w-3 h-3" /> Representante
-                  </Label>
-                  <input 
-                    name="representative" 
-                    value={formData.representative} 
-                    onChange={handleChange} 
-                    placeholder="Ej: Juan Pérez" 
-                    className={getInputClass(formData.representative)} 
-                  />
-                </div>
+              {/* Nombre */}
+              <div className="relative">
+                <input 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder=" " 
+                  className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
+                  required 
+                />
+                <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
               </div>
-            </div>
 
-            {/* CONTACTO */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Phone className="w-4 h-4 text-slate-400" /> Datos de Contacto
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Mail className="w-3 h-3" /> Email
-                  </Label>
+              {/* Email y Teléfono */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
                   <input 
                     name="email" 
                     type="email"
                     value={formData.email} 
-                    onChange={handleChange} 
-                    placeholder="contacto@proveedor.com" 
-                    className={getInputClass(formData.email)} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder=" " 
+                    className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
                   />
+                  <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                    Email
+                  </label>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Phone className="w-3 h-3" /> Teléfono
-                  </Label>
+
+                <div className="relative">
                   <input 
                     name="phone" 
                     value={formData.phone} 
-                    onChange={handleChange} 
-                    placeholder="Ej: 01 234 5678" 
-                    className={getInputClass(formData.phone)} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder=" " 
+                    className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
                   />
+                  <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                    Teléfono
+                  </label>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Globe className="w-3 h-3" /> Sitio Web
-                </Label>
-                <input 
-                  name="website" 
-                  type="url"
-                  value={formData.website} 
-                  onChange={handleChange} 
-                  placeholder="https://www.proveedor.com" 
-                  className={getInputClass(formData.website)} 
-                />
+              {/* Representante y Website */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <input 
+                    name="representative" 
+                    value={formData.representative} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, representative: e.target.value }))}
+                    placeholder=" " 
+                    className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
+                  />
+                  <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                    Representante
+                  </label>
+                </div>
+
+                <div className="relative">
+                  <input 
+                    name="website" 
+                    value={formData.website} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder=" " 
+                    className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
+                  />
+                  <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                    Website
+                  </label>
+                </div>
               </div>
-            </div>
 
-            {/* NOTAS */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <MessageSquare className="w-4 h-4 text-slate-400" /> Notas Adicionales
-              </h3>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">Comentarios</Label>
+              {/* Comentarios */}
+              <div className="relative">
                 <textarea 
                   name="comments" 
                   value={formData.comments} 
-                  onChange={handleChange} 
-                  placeholder="Información adicional sobre el proveedor..." 
+                  onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
+                  placeholder=" " 
                   rows={3}
-                  className={`${getInputClass(formData.comments)} h-auto resize-none`}
+                  className="peer w-full px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300 resize-none"
                 />
+                <label className="absolute left-3 top-3 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                  Comentarios
+                </label>
               </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                <input 
-                  type="checkbox" 
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                  className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300"
-                />
-                <Label htmlFor="isActive" className="text-xs font-bold text-slate-700 cursor-pointer">
-                  Proveedor Activo
-                </Label>
+              {/* Botones */}
+              <div className="flex gap-2 pt-2">
+                {editingSupplier && (
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingSupplier(null);
+                      setFormData({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        representative: '',
+                        website: '',
+                        comments: '',
+                      });
+                    }}
+                    className="flex-1 h-10 text-xs font-bold"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingSupplier ? 'Actualizar' : 'Crear'}
+                </Button>
+              </div>
+
+            </form>
+          </div>
+
+          {/* LISTA DE PROVEEDORES */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-slate-900">
+                Proveedores Existentes ({suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).length})
+              </h3>
+              
+              {/* Filtro por estado */}
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setStatusFilter('ACTIVE')}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                    statusFilter === 'ACTIVE'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Activos
+                </button>
+                <button
+                  onClick={() => setStatusFilter('INACTIVE')}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                    statusFilter === 'INACTIVE'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Inactivos
+                </button>
               </div>
             </div>
+            
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-sm">
+                  {statusFilter === 'ACTIVE' ? 'No hay proveedores activos' : 'No hay proveedores inactivos'}
+                </div>
+              ) : (
+                suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).map((supplier) => {
+                  const hasRelations = (supplier._count?.products || 0) > 0 || (supplier._count?.purchaseOrders || 0) > 0;
+                  
+                  return (
+                    <div 
+                      key={supplier.id}
+                      className={`flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-all group ${
+                        !supplier.isActive ? 'opacity-60' : ''
+                      }`}
+                    >
+                      <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center shrink-0">
+                        <Users className="w-5 h-5 text-slate-400" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm text-slate-900 truncate">
+                          {supplier.name}
+                          {!supplier.isActive && (
+                            <span className="ml-2 text-[9px] font-black px-1.5 py-0.5 bg-red-100 text-red-700 rounded">
+                              INACTIVO
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500 space-y-0.5 mt-1">
+                          {supplier.email && <div className="truncate">{supplier.email}</div>}
+                          {supplier.phone && <div>{supplier.phone}</div>}
+                          {supplier.representative && <div className="truncate">Rep: {supplier.representative}</div>}
+                        </div>
+                      </div>
 
-          </form>
+                      <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {supplier.isActive ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingSupplier(supplier)}
+                              className="h-8 w-8 p-0 hover:bg-slate-200"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteOrDeactivate(supplier)}
+                              className={`h-8 w-8 p-0 ${hasRelations ? 'hover:bg-amber-100 text-amber-600' : 'hover:bg-red-100 text-red-600'}`}
+                              title={hasRelations ? 'Desactivar proveedor' : 'Eliminar proveedor'}
+                            >
+                              {hasRelations ? <PowerOff className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (!confirm('¿Reactivar este proveedor?')) return;
+                              try {
+                                const res = await fetch(`/api/suppliers/${supplier.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ ...supplier, isActive: true }),
+                                });
+                                if (!res.ok) {
+                                  const data = await res.json();
+                                  throw new Error(data.error);
+                                }
+                                toast.success('Proveedor reactivado');
+                                onSuccess();
+                              } catch (error: any) {
+                                toast.error(error.message || 'Error al reactivar');
+                              }
+                            }}
+                            className="h-8 px-3 hover:bg-green-100 text-green-600 text-xs font-bold"
+                            title="Reactivar proveedor"
+                          >
+                            Reactivar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
         </div>
 
-        {/* FOOTER */}
-        <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0 z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-end shrink-0">
           <Button 
-            type="button" 
             variant="outline" 
-            onClick={onClose} 
-            disabled={isLoading} 
-            className="h-10 text-xs font-bold hover:bg-slate-50 text-slate-600 rounded-xl border-slate-200"
+            onClick={() => { onClose(); setEditingSupplier(null); }}
+            className="h-10 text-xs font-bold"
           >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            form="supplier-form" 
-            disabled={isLoading} 
-            className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all"
-          >
-            {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-            {supplierToEdit ? 'Guardar Cambios' : 'Crear Proveedor'}
+            Cerrar
           </Button>
         </div>
+
       </DialogContent>
     </Dialog>
   );

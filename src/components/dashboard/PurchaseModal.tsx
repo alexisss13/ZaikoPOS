@@ -108,7 +108,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
       }
     }
 
-    const finalUomId = selectedUomId || null;
+    const finalUomId = (selectedUomId && selectedUomId !== 'NONE') ? selectedUomId : null;
 
     if (finalUomId) {
       const uom = uoms?.find((u: any) => u.id === finalUomId);
@@ -367,12 +367,12 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
 
                     <div className="col-span-6 sm:col-span-2 space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700">UOM</Label>
-                      <Select value={selectedUomId} onValueChange={setSelectedUomId}>
+                      <Select value={selectedUomId || 'NONE'} onValueChange={(v) => setSelectedUomId(v === 'NONE' ? '' : v)}>
                         <SelectTrigger className="h-10 text-sm rounded-xl">
                           <SelectValue placeholder="UND" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Unidad</SelectItem>
+                          <SelectItem value="NONE">Unidad</SelectItem>
                           {uoms?.map((uom: any) => (
                             <SelectItem key={uom.id} value={uom.id}>{uom.abbreviation}</SelectItem>
                           ))}
@@ -401,10 +401,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
                   <span className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-slate-400" /> Productos en la Orden ({items.length})
                   </span>
-                  <span className="flex items-center gap-1 text-emerald-600">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="text-base font-black">S/ {totalAmount.toFixed(2)}</span>
-                  </span>
+                  
                 </h3>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto">

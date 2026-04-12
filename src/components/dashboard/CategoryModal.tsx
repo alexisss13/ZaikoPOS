@@ -1,241 +1,429 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Tags, Image as ImageIcon, Store, X } from 'lucide-react';
+import { Loader2, Tags, Upload, X, Trash2, PowerOff } from 'lucide-react';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-
-export interface CategoryData {
-  id?: string;
+interface CategoryData {
+  id: string;
   name: string;
-  slug: string;
+  slug?: string;
+  image?: string | null;
   ecommerceCode?: string | null;
-  image: string | null;
-}
-
-interface CategoryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  categoryToEdit?: CategoryData | null;
+  _count?: { products: number };
 }
 
 interface Branch {
   id: string;
   name: string;
   ecommerceCode: string | null;
-  logoUrl?: string | null;
 }
 
-export function CategoryModal({ isOpen, onClose, onSuccess, categoryToEdit }: CategoryModalProps) {
+interface CategoryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  categories: CategoryData[];
+  branches: Branch[];
+}
+
+export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches }: CategoryModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<CategoryData | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [branchFilter, setBranchFilter] = useState('ALL');
   
-  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
-  
-  // 🚀 Filtramos para tener solo las que tienen e-commerce
-  const validBranches = branches?.filter(b => b.ecommerceCode) || [];
-
   const [formData, setFormData] = useState({
-    name: '', slug: '', ecommerceCode: '', image: '',
+    name: '',
+    ecommerceCode: '',
   });
 
   useEffect(() => {
-    if (categoryToEdit && isOpen) {
+    if (editingCategory) {
       setFormData({
-        name: categoryToEdit.name,
-        slug: categoryToEdit.slug,
-        ecommerceCode: categoryToEdit.ecommerceCode || (validBranches[0]?.ecommerceCode || ''),
-        image: categoryToEdit.image || '',
+        name: editingCategory.name,
+        ecommerceCode: editingCategory.ecommerceCode || '',
       });
-    } else if (isOpen) {
-      // 🚀 Auto-selecciona la primera sucursal válida por defecto
-      const defaultBranch = validBranches.length > 0 ? validBranches[0].ecommerceCode! : '';
-      setFormData({ name: '', slug: '', ecommerceCode: defaultBranch, image: '' });
+      setImageUrl(editingCategory.image || '');
+    } else {
+      // Al crear nueva categoría, seleccionar la primera sucursal por defecto
+      const firstBranchCode = branches?.find(b => b.ecommerceCode)?.ecommerceCode || '';
+      setFormData({ name: '', ecommerceCode: firstBranchCode });
+      setImageUrl('');
     }
-  }, [categoryToEdit, isOpen, branches]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  }, [editingCategory, branches]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploadingImage(true);
     const uploadData = new FormData();
     uploadData.append('file', file);
-    uploadData.append('upload_preset', 'zaiko_pos'); 
+    uploadData.append('upload_preset', 'zaiko_pos');
     uploadData.append('cloud_name', 'dwunkgitl');
 
     try {
-      const res = await fetch('https://api.cloudinary.com/v1_1/dwunkgitl/image/upload', { method: 'POST', body: uploadData });
+      const res = await fetch('https://api.cloudinary.com/v1_1/dwunkgitl/image/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
       const data = await res.json();
-      if (data.secure_url) { 
-        setFormData(prev => ({ ...prev, image: data.secure_url })); 
-        toast.success('Imagen subida correctamente'); 
-      } 
-      else { throw new Error(data.error?.message || 'Error al subir la imagen'); }
-    } catch (error) { 
-      toast.error('Error de conexión con Cloudinary'); 
-    } 
-    finally { setIsUploadingImage(false); e.target.value = ''; }
+      
+      if (res.ok && data.secure_url) {
+        setImageUrl(data.secure_url);
+        toast.success('Imagen subida correctamente');
+      } else {
+        throw new Error(data.error?.message || 'Error al subir imagen');
+      }
+    } catch (error: any) {
+      console.error("Error subiendo imagen:", error);
+      toast.error(`Error: ${error.message || 'Fallo de conexión'}`);
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validBranches.length > 0 && !formData.ecommerceCode) {
-      return toast.error('Debes elegir a qué sucursal pertenece esta categoría.');
+    if (!formData.name.trim()) {
+      toast.error('El nombre de la categoría es requerido');
+      return;
     }
 
     setIsLoading(true);
 
     try {
       const payload = {
-        ...formData,
+        name: formData.name,
         ecommerceCode: formData.ecommerceCode || null,
-        image: formData.image.trim() === '' ? null : formData.image
+        image: imageUrl || null,
       };
 
-      const url = categoryToEdit?.id ? `/api/categories/${categoryToEdit.id}` : '/api/categories';
-      const method = categoryToEdit?.id ? 'PUT' : 'POST';
+      const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
+      const method = editingCategory ? 'PUT' : 'POST';
 
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       
-      toast.success(categoryToEdit?.id ? 'Categoría actualizada exitosamente' : 'Categoría creada con éxito');
-      onSuccess(); onClose();
-    } catch (error: unknown) { 
-      const err = error instanceof Error ? error.message : 'Error inesperado';
-      toast.error(err); 
-    } 
-    finally { setIsLoading(false); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      toast.success(editingCategory ? 'Categoría actualizada' : 'Categoría creada');
+      setEditingCategory(null);
+      // Resetear con la primera sucursal por defecto
+      const firstBranchCode = branches?.find(b => b.ecommerceCode)?.ecommerceCode || '';
+      setFormData({ name: '', ecommerceCode: firstBranchCode });
+      setImageUrl('');
+      onSuccess();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error inesperado';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // 🚀 MEJORA UI: Inputs con diseño plano "Flat"
-  const getInputClass = (val: string | undefined) => {
-    const base = "transition-all focus-visible:ring-1 focus-visible:ring-slate-300 font-medium text-sm w-full rounded-xl border px-3 h-10 outline-none";
-    const state = val && val.trim() !== ''
-      ? "bg-white border-slate-200 text-slate-900 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]" 
-      : "bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100";
-    return `${base} ${state}`;
+  const handleDeleteOrDeactivate = async (category: CategoryData) => {
+    const productCount = category._count?.products || 0;
+    
+    if (productCount > 0) {
+      // Si tiene productos, ofrecer desactivarlos
+      if (!confirm(`Esta categoría tiene ${productCount} producto(s). ¿Deseas desactivar todos los productos de esta categoría? Esto también "desactivará" la categoría.`)) {
+        return;
+      }
+      
+      try {
+        // Llamar a un endpoint que desactive todos los productos de la categoría
+        const res = await fetch(`/api/categories/${category.id}/deactivate-products`, { 
+          method: 'POST' 
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error);
+        }
+        
+        toast.success(`${productCount} producto(s) desactivado(s)`);
+        onSuccess();
+      } catch (error: any) {
+        toast.error(error.message || 'Error al desactivar productos');
+      }
+    } else {
+      // Si no tiene productos, eliminar directamente
+      if (!confirm('¿Eliminar esta categoría vacía?')) return;
+      
+      try {
+        const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error);
+        }
+        toast.success('Categoría eliminada');
+        onSuccess();
+      } catch (error: any) {
+        toast.error(error.message || 'Error al eliminar');
+      }
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-white font-sans border-none shadow-2xl rounded-2xl">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setEditingCategory(null); } }}>
+      <DialogContent className="sm:max-w-4xl p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
         
-        {/* 🚀 HEADER PLANO */}
-        <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4">
+        <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
             <Tags className="w-5 h-5 text-slate-700" />
           </div>
-          <div className="flex flex-col items-start text-left">
-            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
-              {categoryToEdit ? 'Editar Categoría' : 'Nueva Categoría'}
+          <div className="flex flex-col items-start text-left flex-1">
+            <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
+              Gestionar Categorías
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-0.5 font-medium">
-              Define los pasillos virtuales de tu tienda.
+              Crea, edita o elimina categorías de productos
             </DialogDescription>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          {/* Subida de Imagen Flat Design */}
-          <div className="space-y-2 pb-2">
-            <Label className="text-xs font-bold text-slate-700">Imagen Representativa (Opcional)</Label>
-            <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-dashed border-slate-200">
-              {formData.image ? (
-                <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-white shrink-0 shadow-sm relative group">
-                  <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => setFormData(p => ({...p, image: ''}))} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X className="w-4 h-4" />
-                  </button>
+          {/* FORMULARIO */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 h-fit">
+            <h3 className="text-sm font-black text-slate-900 mb-4">
+              {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
+            </h3>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* Nombre */}
+              <div className="relative">
+                <input 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder=" " 
+                  className="peer w-full h-11 px-3 pt-5 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
+                  required 
+                />
+                <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-2 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+              </div>
+
+              {/* Sucursal */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-700">Sucursal</Label>
+                <select
+                  value={formData.ecommerceCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ecommerceCode: e.target.value }))}
+                  className="w-full h-11 px-3 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
+                >
+                  {branches?.filter(b => b.ecommerceCode).map((branch) => (
+                    <option key={branch.id} value={branch.ecommerceCode!}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500">
+                  Asigna esta categoría a una sucursal específica o déjala como general
+                </p>
+              </div>
+
+              {/* Imagen */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-700">Imagen</Label>
+                {imageUrl ? (
+                  <div className="relative w-full h-32 bg-slate-100 rounded-lg overflow-hidden group">
+                    <img src={imageUrl} alt="Categoría" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl('')}
+                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImage}
+                      className="hidden"
+                      id="category-image-upload"
+                    />
+                    <label 
+                      htmlFor="category-image-upload"
+                      className={`w-full h-32 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                        isUploadingImage
+                          ? 'border-slate-200 bg-slate-50'
+                          : 'border-slate-300 bg-slate-50 hover:border-slate-900 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isUploadingImage ? (
+                        <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-slate-400" />
+                          <span className="text-xs font-bold text-slate-400">Subir imagen</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-2 pt-2">
+                {editingCategory && (
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingCategory(null);
+                      const firstBranchCode = branches?.find(b => b.ecommerceCode)?.ecommerceCode || '';
+                      setFormData({ name: '', ecommerceCode: firstBranchCode });
+                      setImageUrl('');
+                    }}
+                    className="flex-1 h-10 text-xs font-bold"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingCategory ? 'Actualizar' : 'Crear'}
+                </Button>
+              </div>
+
+            </form>
+          </div>
+
+          {/* LISTA DE CATEGORÍAS */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-slate-900">
+                Categorías Existentes ({categories.filter(c => branchFilter === 'ALL' || c.ecommerceCode === branchFilter || (!c.ecommerceCode && branchFilter === 'GENERAL')).length})
+              </h3>
+              
+              {/* Filtro por sucursal */}
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300"
+              >
+                <option value="ALL">Todas</option>
+                {branches?.filter(b => b.ecommerceCode).map((branch) => (
+                  <option key={branch.id} value={branch.ecommerceCode!}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {categories.filter(c => 
+                branchFilter === 'ALL' || 
+                c.ecommerceCode === branchFilter || 
+                (!c.ecommerceCode && branchFilter === 'GENERAL')
+              ).length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-sm">
+                  No hay categorías en este filtro
                 </div>
               ) : (
-                <div className="relative w-14 h-14 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer group">
-                  <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <ImageIcon className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
-                </div>
-              )}
-              <div className="flex-1 relative flex flex-col justify-center">
-                <span className="text-xs text-slate-500 font-medium px-2">Haz clic en el cuadro o sube un archivo (JPG, PNG).</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-700">Nombre de la Categoría <span className="text-red-500">*</span></Label>
-            <input 
-              name="name" 
-              value={formData.name} 
-              onChange={handleChange} 
-              placeholder="Ej: Juguetes de Madera" 
-              className={getInputClass(formData.name)}
-              required 
-            />
-          </div>
-          
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label className="text-xs font-bold text-slate-700">Ruta E-commerce (Slug)</Label>
-              <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">Opcional</span>
-            </div>
-            <input 
-              name="slug" 
-              value={formData.slug} 
-              onChange={handleChange} 
-              placeholder="ej-juguetes-de-madera" 
-              className={`${getInputClass(formData.slug)} font-mono tracking-wide text-sm`} 
-            />
-          </div>
-
-          {/* SELECTOR DE SUCURSAL */}
-          {validBranches.length > 0 && (
-            <div className="space-y-1.5 pt-2">
-              <Label className="text-xs font-bold text-slate-700">Catálogo / Sucursal <span className="text-red-500">*</span></Label>
-              <Select value={formData.ecommerceCode} onValueChange={(v) => setFormData(p => ({...p, ecommerceCode: v}))}>
-                <SelectTrigger className={`h-10 text-sm rounded-xl focus-visible:ring-1 focus-visible:ring-slate-300 transition-all ${formData.ecommerceCode ? 'bg-white border-slate-200 shadow-sm font-bold text-slate-900' : 'bg-slate-50 border-transparent text-slate-500'}`}>
-                  <SelectValue placeholder="Elige una sucursal..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-xl">
-                  {validBranches.map(b => (
-                    <SelectItem key={b.ecommerceCode} value={b.ecommerceCode!} className="font-medium text-slate-700 py-2.5 px-3">
-                      <div className="flex items-center gap-2.5">
-                        {b.logoUrl ? (
-                          <img src={b.logoUrl} alt={b.name} className="w-4 h-4 rounded-sm object-cover border border-slate-200 bg-white" />
-                        ) : (
-                          <Store className="w-4 h-4 text-slate-400" />
-                        )}
-                        <span>{b.name}</span>
+                categories.filter(c => 
+                  branchFilter === 'ALL' || 
+                  c.ecommerceCode === branchFilter || 
+                  (!c.ecommerceCode && branchFilter === 'GENERAL')
+                ).map((category) => {
+                  const branch = branches?.find(b => b.ecommerceCode === category.ecommerceCode);
+                  const hasProducts = (category._count?.products || 0) > 0;
+                  
+                  return (
+                    <div 
+                      key={category.id}
+                      className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-all group"
+                    >
+                      {category.image ? (
+                        <img 
+                          src={category.image} 
+                          alt={category.name}
+                          className="w-12 h-12 object-cover rounded-lg shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center shrink-0">
+                          <Tags className="w-5 h-5 text-slate-400" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm text-slate-900 truncate">
+                          {category.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {category._count?.products || 0} producto(s)
+                          {branch ? ` • ${branch.name}` : ' • General'}
+                        </div>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
-          {/* 🚀 FOOTER DEL MODAL */}
-          <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 rounded-xl shadow-sm">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all">
-              {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />} 
-              Guardar Categoría
-            </Button>
+                      <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingCategory(category)}
+                          className="h-8 w-8 p-0 hover:bg-slate-200"
+                        >
+                          <Tags className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteOrDeactivate(category)}
+                          className={`h-8 w-8 p-0 ${hasProducts ? 'hover:bg-amber-100 text-amber-600' : 'hover:bg-red-100 text-red-600'}`}
+                          title={hasProducts ? 'Desactivar productos' : 'Eliminar categoría'}
+                        >
+                          {hasProducts ? <PowerOff className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </form>
+
+        </div>
+
+        <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-end shrink-0">
+          <Button 
+            variant="outline" 
+            onClick={() => { onClose(); setEditingCategory(null); }}
+            className="h-10 text-xs font-bold"
+          >
+            Cerrar
+          </Button>
+        </div>
+
       </DialogContent>
     </Dialog>
   );

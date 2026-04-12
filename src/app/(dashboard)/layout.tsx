@@ -7,7 +7,7 @@ import { useAuth } from '@/context/auth-context';
 import { 
   Menu, X, LayoutDashboard, ShoppingBag, 
   Package, Users, Store, LogOut, ShieldCheck, 
-  Tags, Building2, Camera, UserCircle, Loader2, Bell, Check, ArrowRightLeft, Globe, ShoppingCart
+  Tags, Building2, Camera, UserCircle, Loader2, Bell, Check, ArrowRightLeft, Globe, ShoppingCart, Warehouse
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -25,11 +25,15 @@ interface Notification {
 interface Branch { id: string; name: string; logoUrl?: string | null; }
 
 function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { userId } = useAuth();
+  const { userId, role } = useAuth();
+  const router = useRouter();
   const { data: userData, mutate: mutateMe } = useSWR(isOpen && userId ? '/api/auth/me' : null, fetcher);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', image: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Determinar si el usuario puede gestionar personal
+  const canManageUsers = role === 'SUPER_ADMIN' || role === 'OWNER' || role === 'MANAGER';
 
   useEffect(() => {
     if (userData) {
@@ -60,7 +64,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setIsLoading(true);
     try {
-      const payload = { name: formData.name, email: formData.email, image: formData.image.trim() === '' ? null : formData.image, ...(formData.password ? { password: formData.password } : {}) };
+      const payload = { name: formData.name, image: formData.image.trim() === '' ? null : formData.image, ...(formData.password ? { password: formData.password } : {}) };
       const res = await fetch(`/api/users/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error();
       toast.success('Perfil actualizado correctamente');
@@ -69,7 +73,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     finally { setIsLoading(false); }
   };
 
-  const getInputClass = (val: string) => `transition-all focus-visible:ring-slate-400 font-medium text-sm w-full rounded-md border px-3 h-10 outline-none ${val.trim() !== '' ? "bg-slate-100 border-slate-300 text-slate-900" : "bg-white border-slate-200 text-slate-700"}`;
+  const getInputClass = (val: string, disabled = false) => `transition-all focus-visible:ring-slate-400 font-medium text-sm w-full rounded-md border px-3 h-10 outline-none ${disabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : val.trim() !== '' ? "bg-slate-100 border-slate-300 text-slate-900" : "bg-white border-slate-200 text-slate-700"}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -97,8 +101,30 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <div className="flex flex-col"><Label className="text-sm font-bold text-slate-700 mb-1">Foto de Perfil</Label><span className="text-xs text-slate-500 leading-tight">Haz clic en el icono para subir tu fotografía. Formato 1:1 recomendado.</span></div>
           </div>
           <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Nombre Completo <span className="text-red-500">*</span></Label><input name="name" value={formData.name} onChange={handleChange} className={getInputClass(formData.name)} required /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Correo Electrónico <span className="text-red-500">*</span></Label><input type="email" name="email" value={formData.email} onChange={handleChange} className={getInputClass(formData.email)} required /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-700">Correo Electrónico</Label>
+            <input type="email" name="email" value={formData.email} onChange={handleChange} className={getInputClass(formData.email, true)} disabled title="El correo no se puede modificar" />
+            <p className="text-[10px] text-slate-400 mt-1">El correo electrónico no se puede modificar por seguridad</p>
+          </div>
           <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Nueva Contraseña <span className="text-slate-400 font-normal">(Opcional)</span></Label><input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••" minLength={6} className={getInputClass(formData.password)} /></div>
+          
+          {canManageUsers && (
+            <div className="pt-3 border-t border-slate-200">
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                  router.push('/dashboard/users');
+                }}
+                className="w-full h-10 text-xs font-bold text-slate-700 hover:bg-slate-50 border-slate-300"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Gestionar Personal
+              </Button>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-5 border-t border-slate-200 mt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10 text-xs font-bold text-slate-600">Cancelar</Button>
             <Button type="submit" disabled={isLoading || isUploading} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-8 shadow-sm">{isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Guardar Cambios</Button>
@@ -158,8 +184,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const shopMenuItems = [
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/products', label: 'Productos', icon: Package },
+    { href: '/dashboard/inventory', label: 'Inventario', icon: Warehouse },
     { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart },
-    { href: '/dashboard/users', label: 'Personal', icon: Users },
     { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
     { href: '/dashboard/transfers', label: 'Traslados', icon: ArrowRightLeft }, 
     { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck },

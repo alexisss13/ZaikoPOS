@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Package, ExternalLink, DollarSign, Users, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Package, ExternalLink, Users, Upload, X, Image as ImageIcon } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -61,6 +61,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
     wholesaleMinCount: '',
     minStock: '',
     sku: '',
+    barcode: '',
     active: true,
   });
 
@@ -95,6 +96,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
             wholesaleMinCount: fullProduct.wholesaleMinCount?.toString() || '',
             minStock: fullProduct.minStock?.toString() || '',
             sku: fullProduct.sku || '',
+            barcode: fullProduct.barcode || '',
             active: fullProduct.active ?? true,
           });
           
@@ -119,6 +121,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
           wholesaleMinCount: '',
           minStock: '',
           sku: '',
+          barcode: '',
           active: true,
         });
         setImageUrls([]);
@@ -207,6 +210,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
         wholesaleMinCount: formData.wholesaleMinCount ? parseInt(formData.wholesaleMinCount) : null,
         minStock: parseInt(formData.minStock) || 5,
         sku: formData.sku.trim() === '' ? null : formData.sku,
+        barcode: formData.barcode.trim() === '' ? null : formData.barcode,
         active: formData.active,
         images: imageUrls.filter(url => url.trim() !== ''),
         branchStocks: productToEdit ? undefined : branchStocks,
@@ -355,8 +359,8 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
               </div>
             </div>
 
-            {/* SKU y Estado */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* SKU, Código de Barras y Estado */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="relative">
                 <input 
                   name="sku" 
@@ -367,6 +371,19 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                 />
                 <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-slate-700 peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-slate-700 peer-[:not(:placeholder-shown)]:font-bold">
                   SKU (Código Interno)
+                </label>
+              </div>
+
+              <div className="relative">
+                <input 
+                  name="barcode" 
+                  value={formData.barcode} 
+                  onChange={handleChange} 
+                  placeholder=" " 
+                  className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-mono bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300 focus:border-slate-300"
+                />
+                <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-slate-700 peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-slate-700 peer-[:not(:placeholder-shown)]:font-bold">
+                  Código de Barras
                 </label>
               </div>
 
@@ -386,9 +403,6 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
 
             {/* Precios y Costos */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5 text-slate-400" /> Precios y Costos
-              </Label>
 
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="relative">
