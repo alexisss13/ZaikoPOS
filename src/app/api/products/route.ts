@@ -22,6 +22,7 @@ export async function GET(req: Request) {
             minStock: true,
             active: true,
             attributes: true,
+            images: true,
             uomId: true,
             uom: {
               select: {

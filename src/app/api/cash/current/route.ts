@@ -19,6 +19,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ 
       session: {
           id: session.id,
+          branchId: session.branchId,
           status: 'OPEN',
           initialCash: Number(session.initialCash),
           openedAt: session.openedAt

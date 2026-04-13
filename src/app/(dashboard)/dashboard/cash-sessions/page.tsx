@@ -501,15 +501,15 @@ export default function CashSessionsPage() {
       <div className="flex h-full w-full gap-5">
         {/* LISTA DE TURNOS */}
         <div className="w-80 flex flex-col gap-4">
-          <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar">
             {isLoading ? (
               Array(5).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
               ))
             ) : paginatedSessions?.length === 0 ? (
               <div className="text-center py-12">
-                <ContactRound className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm text-slate-500">No hay turnos registrados</p>
+                <ContactRound className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs text-slate-500">No hay turnos registrados</p>
               </div>
             ) : (
               paginatedSessions?.map((session, index) => {
@@ -518,42 +518,40 @@ export default function CashSessionsPage() {
                 <button
                   key={session.id}
                   onClick={() => setSelectedSession(session)}
-                  className={`w-full p-3 rounded-xl border text-left transition-all ${
+                  className={`w-full p-3 rounded-lg border text-left transition-all ${
                     selectedSession?.id === session.id
                       ? 'border-slate-900 bg-slate-900 text-white shadow-md'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-bold ${selectedSession?.id === session.id ? 'text-white' : 'text-slate-900'}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`text-xs font-semibold ${selectedSession?.id === session.id ? 'text-white' : 'text-slate-900'}`}>
                       Corte N°{getSessionNumber(sessionIndex)}
                     </span>
-                    <Badge className={`text-[9px] font-black px-2 py-0.5 h-5 shadow-none border ${
+                    <Badge className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
                       session.status === 'OPEN'
                         ? selectedSession?.id === session.id 
-                          ? 'bg-emerald-500 text-white border-emerald-400'
-                          : 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-emerald-100 text-emerald-700'
                         : selectedSession?.id === session.id
-                          ? 'bg-slate-700 text-slate-200 border-slate-600'
-                          : 'bg-slate-100 text-slate-700 border-slate-300'
+                          ? 'bg-slate-700 text-slate-200'
+                          : 'bg-slate-100 text-slate-700'
                     }`}>
                       {session.status === 'OPEN' ? 'ABIERTO' : 'CERRADO'}
                     </Badge>
                   </div>
                   
-                  <div className="space-y-1">
-                    <p className={`text-[11px] ${selectedSession?.id === session.id ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {session.user.name}
-                    </p>
-                    <p className={`text-[10px] ${selectedSession?.id === session.id ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <div className={`flex items-center gap-2 text-[10px] ${selectedSession?.id === session.id ? 'text-slate-300' : 'text-slate-500'}`}>
+                    <span>
                       {new Date(session.openedAt).toLocaleString('es-PE', { 
                         day: '2-digit', 
                         month: '2-digit',
-                        year: 'numeric',
                         hour: '2-digit', 
                         minute: '2-digit' 
                       })}
-                    </p>
+                    </span>
+                    <span>•</span>
+                    <span>{session.user.name}</span>
                   </div>
                 </button>
               );
@@ -563,12 +561,12 @@ export default function CashSessionsPage() {
           </div>
 
         {/* DETALLES DEL TURNO */}
-        <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-4">
+        <div className="flex-1 flex flex-col gap-3 overflow-y-auto custom-scrollbar pb-4">
         {!selectedSession ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <ContactRound className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">Selecciona un turno para ver los detalles</p>
+              <ContactRound className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm text-slate-500">Selecciona un turno para ver los detalles</p>
             </div>
           </div>
         ) : (
@@ -579,34 +577,32 @@ export default function CashSessionsPage() {
               const sessionNumber = getSessionNumber(sessionIndex);
 
               return (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* HEADER */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      <span className="font-black text-slate-900">Corte N°{sessionNumber}</span> abierto por{' '}
-                      <span className="font-bold text-slate-900">{selectedSession.user.name}</span> desde{' '}
-                      <span className="font-bold text-slate-900">
-                        ({new Date(selectedSession.openedAt).toLocaleString('es-PE', { 
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      <span className="font-bold text-slate-900">Corte N°{sessionNumber}</span> abierto por{' '}
+                      <span className="font-semibold text-slate-900">{selectedSession.user.name}</span> desde{' '}
+                      <span className="font-medium text-slate-700">
+                        {new Date(selectedSession.openedAt).toLocaleString('es-PE', { 
                           day: '2-digit', 
                           month: '2-digit',
                           year: 'numeric',
                           hour: '2-digit', 
-                          minute: '2-digit',
-                          second: '2-digit'
-                        })})
+                          minute: '2-digit'
+                        })}
                       </span>
                       {selectedSession.closedAt && (
                         <>
                           {' '}hasta{' '}
-                          <span className="font-bold text-slate-900">
-                            ({new Date(selectedSession.closedAt).toLocaleString('es-PE', { 
+                          <span className="font-medium text-slate-700">
+                            {new Date(selectedSession.closedAt).toLocaleString('es-PE', { 
                               day: '2-digit', 
                               month: '2-digit',
                               year: 'numeric',
                               hour: '2-digit', 
-                              minute: '2-digit',
-                              second: '2-digit'
-                            })})
+                              minute: '2-digit'
+                            })}
                           </span>
                         </>
                       )}
@@ -614,35 +610,35 @@ export default function CashSessionsPage() {
                   </div>
 
                   {/* VENTAS */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-900 mb-3">Ventas</h3>
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                    <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Ventas</h3>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-700">Ventas Totales</span>
-                      <span className="text-base text-slate-700">{stats.totalSales.toFixed(2)}</span>
+                      <span className="text-xs text-slate-600">Ventas Totales</span>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">S/ {stats.totalSales.toFixed(2)}</span>
                     </div>
                   </div>
 
                   {/* DINERO EN CAJA */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-900 mb-3">Dinero en caja</h3>
-                    <div className="space-y-2">
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                    <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Dinero en caja</h3>
+                    <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-700">[+] Dinero Inicial en caja</span>
-                        <span className="text-sm text-slate-700">{Number(selectedSession.initialCash).toFixed(2)}</span>
+                        <span className="text-xs text-slate-600">[+] Dinero Inicial</span>
+                        <span className="text-xs font-medium text-slate-900 tabular-nums">S/ {Number(selectedSession.initialCash).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-700">[+] Ventas en efectivo</span>
-                        <span className="text-sm text-slate-700">{stats.cashInSales.toFixed(2)}</span>
+                        <span className="text-xs text-slate-600">[+] Ventas en efectivo</span>
+                        <span className="text-xs font-medium text-slate-900 tabular-nums">S/ {stats.cashInSales.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-700">[=] Total en Caja</span>
-                        <span className="text-sm text-slate-700">{stats.totalInCash.toFixed(2)}</span>
+                      <div className="flex justify-between items-center pt-1.5 border-t border-slate-200">
+                        <span className="text-xs font-semibold text-slate-700">[=] Total en Caja</span>
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">S/ {stats.totalInCash.toFixed(2)}</span>
                       </div>
                       
                       {selectedSession.status === 'OPEN' ? (
                         <>
-                          <div className="pt-3 border-t border-slate-200 mt-3">
-                            <label className="text-sm font-bold text-slate-900 mb-2 block">
+                          <div className="pt-2 border-t border-slate-200 mt-2">
+                            <label className="text-xs font-semibold text-slate-700 mb-1.5 block">
                               Efectivo declarado (para cerrar turno)
                             </label>
                             <input
@@ -652,59 +648,59 @@ export default function CashSessionsPage() {
                               value={declaredCash}
                               onChange={(e) => setDeclaredCash(e.target.value)}
                               placeholder="Ingresa el efectivo en caja"
-                              className="w-full h-10 px-3 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
+                              className="w-full h-9 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
                             />
                           </div>
                           {declaredCash && !isNaN(parseFloat(declaredCash)) && (
-                            <div className="flex justify-between items-center pt-2">
-                              <span className="text-sm font-bold text-slate-900">Diferencia</span>
-                              <span className={`text-base font-bold ${
+                            <div className="flex justify-between items-center pt-1.5">
+                              <span className="text-xs font-semibold text-slate-700">Diferencia</span>
+                              <span className={`text-sm font-bold tabular-nums ${
                                 parseFloat(declaredCash) - stats.totalInCash === 0 
                                   ? 'text-slate-900' 
                                   : parseFloat(declaredCash) - stats.totalInCash > 0 
                                   ? 'text-emerald-600' 
                                   : 'text-red-600'
                               }`}>
-                                {(parseFloat(declaredCash) - stats.totalInCash).toFixed(2)}
+                                S/ {(parseFloat(declaredCash) - stats.totalInCash).toFixed(2)}
                               </span>
                             </div>
                           )}
                           <Button
                             onClick={handleCloseSession}
                             disabled={!declaredCash || isNaN(parseFloat(declaredCash)) || isClosing}
-                            className="w-full h-10 mt-3 bg-slate-900 hover:bg-slate-800 text-white"
+                            className="w-full h-9 mt-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
                           >
-                            {isClosing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {isClosing && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                             Cerrar Turno
                           </Button>
                         </>
                       ) : (
                         <>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-700">Efectivo declarado</span>
-                            <span className="text-sm text-slate-700">{stats.declaredCash.toFixed(2)}</span>
+                            <span className="text-xs text-slate-600">Efectivo declarado</span>
+                            <span className="text-xs font-medium text-slate-900 tabular-nums">S/ {stats.declaredCash.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-700">Diferencia</span>
-                            <span className={`text-sm ${
+                          <div className="flex justify-between items-center pt-1.5 border-t border-slate-200">
+                            <span className="text-xs font-semibold text-slate-700">Diferencia</span>
+                            <span className={`text-sm font-bold tabular-nums ${
                               stats.cashDifference === 0 
-                                ? 'text-slate-700' 
+                                ? 'text-slate-900' 
                                 : stats.cashDifference > 0 
                                 ? 'text-emerald-600' 
                                 : 'text-red-600'
                             }`}>
-                              {stats.cashDifference.toFixed(2)}
+                              S/ {stats.cashDifference.toFixed(2)}
                             </span>
                           </div>
                           <Button
                             onClick={generatePDF}
                             disabled={isGeneratingPDF}
-                            className="w-full h-10 mt-3 bg-slate-900 hover:bg-slate-800 text-white"
+                            className="w-full h-9 mt-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
                           >
                             {isGeneratingPDF ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                             ) : (
-                              <Download className="w-4 h-4 mr-2" />
+                              <Download className="w-3.5 h-3.5 mr-1.5" />
                             )}
                             Generar PDF del Corte
                           </Button>
@@ -714,25 +710,25 @@ export default function CashSessionsPage() {
                   </div>
 
                   {/* CATEGORÍA */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-900 mb-3">Categoría | Ganancias | Venta Total</h3>
-                    <div className="space-y-2">
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                    <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Categoría | Ganancias | Venta Total</h3>
+                    <div className="space-y-1.5">
                       {stats.categories.map((cat) => (
-                        <div key={cat.name} className="flex justify-between items-center">
-                          <span className="text-sm text-slate-700 flex-1">{cat.name}</span>
-                          <span className="text-sm text-slate-700 w-24 text-right">{cat.profit.toFixed(2)}</span>
-                          <span className="text-sm text-slate-700 w-24 text-right">{cat.total.toFixed(2)}</span>
+                        <div key={cat.name} className="flex justify-between items-center gap-2">
+                          <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">{cat.name}</span>
+                          <span className="text-xs font-medium text-slate-900 w-20 text-right tabular-nums">S/ {cat.profit.toFixed(2)}</span>
+                          <span className="text-xs font-medium text-slate-900 w-20 text-right tabular-nums">S/ {cat.total.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* IMPUESTOS */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-900 mb-3">Impuestos cobrados</h3>
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                    <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Impuestos cobrados</h3>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-700">Impuestos cobrados</span>
-                      <span className="text-sm text-slate-700">{stats.igv.toFixed(2)}</span>
+                      <span className="text-xs text-slate-600">Impuestos cobrados (IGV)</span>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">S/ {stats.igv.toFixed(2)}</span>
                     </div>
                   </div>
 

@@ -1,332 +1,314 @@
-// src/components/pos/SalesHistoryModal.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import useSWR from 'swr';
-import { useAuth } from '@/context/auth-context';
-import { format, startOfDay, endOfDay } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import { 
-  Receipt, X, Calendar as CalendarIcon, Clock, User, Banknote, CreditCard, Smartphone, Store
-} from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useState, useMemo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+import { 
+  Receipt, User, Loader2, Banknote, Wallet, CreditCard, 
+  ArrowRightLeft, Printer, XCircle, ChevronLeft, ChevronRight 
+} from 'lucide-react';
 
 interface SalesHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  salesData: any;
 }
 
-const TIMEZONE = 'America/Lima';
+const ITEMS_PER_PAGE = 6;
 
-export function SalesHistoryModal({ isOpen, onClose }: SalesHistoryModalProps) {
-  const { user } = useAuth();
-  
-  // Filtros
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
-  const [selectedUser, setSelectedUser] = useState<string>('ALL');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [activeSale, setActiveSale] = useState<any>(null);
+export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryModalProps) {
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Inicializar fecha local (America/Lima) al abrir
-  useEffect(() => {
-    if (isOpen && !selectedDate) {
-      const nowLima = toZonedTime(new Date(), TIMEZONE);
-      setSelectedDate(format(nowLima, 'yyyy-MM-dd'));
-    }
-  }, [isOpen, selectedDate]);
+  const sales = salesData?.sales || [];
+  const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
+  const paginatedSales = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sales.slice(start, start + ITEMS_PER_PAGE);
+  }, [sales, currentPage]);
 
-  // Construir parámetros de consulta garantizando los límites del día en UTC
-  const queryParams = useMemo(() => {
-    if (!selectedDate) return null;
-    
-    // Parseamos la fecha string como si fuera medianoche en Lima, luego sacamos inicio y fin
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    const limaDate = new Date(year, month - 1, day);
-    
-    const start = startOfDay(limaDate).toISOString();
-    const end = endOfDay(limaDate).toISOString();
+  const handleClose = () => {
+    setSelectedSale(null);
+    setCurrentPage(1);
+    onClose();
+  };
 
-    return `?startDate=${start}&endDate=${end}&branchId=${selectedBranch}&userId=${selectedUser}`;
-  }, [selectedDate, selectedBranch, selectedUser]);
-
-  // Obtener datos
-  const { data, isLoading } = useSWR(
-    isOpen && queryParams ? `/api/sales/history${queryParams}` : null, 
-    fetcher
-  );
-
-  // Obtener catálogos para filtros si es admin/owner
-  const { data: branches } = useSWR(isOpen && (user?.role === 'SUPER_ADMIN' || user?.role === 'OWNER') ? '/api/branches' : null, fetcher);
-  const { data: users } = useSWR(isOpen && user?.role !== 'CASHIER' ? '/api/users' : null, fetcher);
-
-  const sales = data?.sales || [];
-  const summary = data?.summary || { CASH: 0, YAPE: 0, PLIN: 0, CARD: 0, TRANSFER: 0, TOTAL: 0 };
-
-  const isGlobal = user?.role === 'SUPER_ADMIN' || user?.role === 'OWNER';
-  const isManager = user?.role === 'MANAGER';
-
-  // Autoseleccionar la primera venta al cargar
-  useEffect(() => {
-    if (sales.length > 0 && !activeSale) {
-      setActiveSale(sales[0]);
-    } else if (sales.length === 0) {
-      setActiveSale(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sales]);
-
-  const formatTime = (isoString: string) => {
-    return format(toZonedTime(new Date(isoString), TIMEZONE), 'hh:mm a');
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedSale(null);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[1100px] w-[95vw] h-[85vh] p-0 font-sans border-none shadow-2xl rounded-2xl overflow-hidden flex flex-col bg-slate-50">
-        
-        {/* HEADER */}
-        <div className="h-16 px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
-              <Receipt className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <DialogTitle className="text-lg font-black text-slate-900 tracking-tight">Historial de Turno y Arqueo</DialogTitle>
-              <p className="text-xs font-medium text-slate-500">Monitor en vivo de ventas</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="sm:max-w-6xl h-[85vh] p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-xl flex flex-col">
+        <DialogHeader className="px-6 py-3 border-b border-slate-200 bg-white shrink-0">
+          <DialogTitle className="text-sm font-bold text-slate-900">Historial de Ventas</DialogTitle>
+          <DialogDescription className="text-[11px] text-slate-500 mt-0.5">
+            {sales.length} {sales.length === 1 ? 'venta registrada' : 'ventas registradas'} en este turno
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* CONTENIDO SPLIT (Master-Detail) */}
-        <div className="flex flex-1 overflow-hidden">
-          
-          {/* PANEL IZQUIERDO: LISTA Y FILTROS */}
-          <div className="w-[40%] bg-slate-50 border-r border-slate-200 flex flex-col z-10">
-            
-            {/* FILTROS */}
-            <div className="p-4 bg-white border-b border-slate-200 flex flex-col gap-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Input 
-                    type="date" 
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="h-10 pl-10 text-sm font-semibold rounded-xl bg-slate-50 border-slate-200"
-                  />
-                  <CalendarIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+        <div className="flex-1 flex min-h-0">
+          {/* Lista de ventas - Izquierda */}
+          <div className="w-80 border-r border-slate-200 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1">
+              {!salesData ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
                 </div>
-                
-                {isGlobal && (
-                  <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                    <SelectTrigger className="h-10 flex-1 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
-                      <SelectValue placeholder="Sucursal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Todas las Tiendas</SelectItem>
-                      {branches?.map((b: { id: string, name: string }) => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {(isGlobal || isManager) && (
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger className="h-10 w-full rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
-                    <SelectValue placeholder="Usuario / Cajero" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todos los Usuarios</SelectItem>
-                    {users?.map((u: { id: string, name: string }) => (
-                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {/* MINI RESUMEN DEL DÍA */}
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl text-white mt-1 shadow-md">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Vendido</span>
-                  <span className="text-xl font-black tabular-nums leading-none mt-1">S/ {summary.TOTAL.toFixed(2)}</span>
+              ) : sales.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                  <Receipt className="w-10 h-10 mb-2 opacity-50" />
+                  <p className="text-xs font-medium">Sin ventas</p>
                 </div>
-                <div className="flex gap-3 text-right">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] text-slate-400 font-semibold">Efectivo</span>
-                    <span className="text-xs font-bold text-emerald-400 tabular-nums">S/ {summary.CASH.toFixed(2)}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] text-slate-400 font-semibold">Digital</span>
-                    <span className="text-xs font-bold text-blue-400 tabular-nums">S/ {(summary.YAPE + summary.PLIN + summary.CARD + summary.TRANSFER).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* LISTA DE VENTAS (TARJETAS) */}
-            <ScrollArea className="flex-1 p-3">
-              <div className="flex flex-col gap-2">
-                {isLoading ? (
-                  <p className="text-xs text-center text-slate-400 py-10 font-medium">Cargando ventas...</p>
-                ) : sales.length === 0 ? (
-                  <p className="text-xs text-center text-slate-400 py-10 font-medium">No se registraron ventas en esta fecha.</p>
-                ) : (
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  sales.map((sale: any) => {
-                    const isActive = activeSale?.id === sale.id;
-                    const isVoided = sale.status !== 'COMPLETED';
-                    
-                    return (
-                      <button
-                        key={sale.id}
-                        onClick={() => setActiveSale(sale)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all flex flex-col gap-2 relative overflow-hidden group
-                          ${isActive 
-                            ? 'bg-white border-slate-300 shadow-md ring-1 ring-slate-300' 
-                            : 'bg-white border-slate-100 shadow-sm hover:border-slate-300 hover:shadow-md'
-                          }
-                          ${isVoided ? 'opacity-60' : ''}
-                        `}
-                      >
-                        <div className="flex justify-between items-start w-full">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Orden: <span className="text-slate-900">{sale.code.slice(-6)}</span>
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {formatTime(sale.createdAt)}
-                          </span>
-                        </div>
-                        
-                        <div className="flex justify-between items-end w-full">
-                          <div className="flex flex-col gap-1 text-[11px] font-medium text-slate-500">
-                            <span className="flex items-center gap-1"><Store className="w-3 h-3" /> {sale.items.length} productos</span>
-                            {(isGlobal || isManager) && <span className="flex items-center gap-1"><User className="w-3 h-3" /> {sale.user?.name}</span>}
-                          </div>
-                          
-                          <div className="flex flex-col items-end">
-                            {isVoided && <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded uppercase mb-1">Anulada</span>}
-                            <span className={`text-lg font-black tabular-nums tracking-tight ${isVoided ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                              S/ {Number(sale.total).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-900" />}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* PANEL DERECHO: DETALLE DE BOLETA PREVIEW */}
-          <div className="flex-1 bg-slate-100/50 p-6 flex items-start justify-center overflow-y-auto">
-            {!activeSale ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-3">
-                <Receipt className="w-16 h-16 opacity-50" strokeWidth={1} />
-                <p className="text-sm font-medium">Selecciona una venta para ver el detalle</p>
-              </div>
-            ) : (
-              <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                
-                {/* TICKET HEADER */}
-                <div className="p-6 border-b border-dashed border-slate-300 text-center bg-slate-50/50">
-                  <h3 className="font-black text-xl text-slate-900 tracking-tight">Detalle de Venta</h3>
-                  <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">
-                    #{activeSale.code}
-                  </p>
-                  <div className="flex items-center justify-center gap-4 mt-4 text-[11px] font-semibold text-slate-500">
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {formatTime(activeSale.createdAt)}</span>
-                    <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {activeSale.user?.name}</span>
-                  </div>
-                </div>
-
-                {/* TICKET ITEMS */}
-                <div className="p-6">
-                  <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">
-                    <span>Cant / Producto</span>
-                    <span>Total</span>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {activeSale.items.map((item: any) => (
-                      <div key={item.id} className="flex justify-between items-start gap-3">
-                        <div className="flex gap-2">
-                          <span className="text-xs font-bold text-slate-900 bg-slate-100 rounded px-1.5 py-0.5 h-max">{item.quantity}x</span>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-800 leading-tight">{item.product.title}</span>
-                            <span className="text-[10px] font-medium text-slate-400 mt-0.5">S/ {Number(item.price).toFixed(2)} c/u</span>
-                          </div>
-                        </div>
-                        <span className="text-sm font-bold text-slate-900 tabular-nums shrink-0">
-                          S/ {Number(item.subtotal).toFixed(2)}
+              ) : (
+                paginatedSales.map((sale: any) => (
+                  <button
+                    key={sale.id}
+                    onClick={() => setSelectedSale(sale)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all ${
+                      selectedSale?.id === sale.id
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-semibold ${selectedSale?.id === sale.id ? 'text-white' : 'text-slate-900'}`}>
+                          {sale.code}
+                        </span>
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                          sale.status === 'COMPLETED'
+                            ? selectedSale?.id === sale.id ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-700'
+                            : selectedSale?.id === sale.id ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {sale.status === 'COMPLETED' ? 'OK' : 'ANULADA'}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator className="border-dashed bg-transparent border-t border-slate-300 mx-6 w-auto" />
-
-                {/* TICKET TOTALS */}
-                <div className="p-6 space-y-2">
-                  <div className="flex justify-between text-xs font-medium text-slate-500">
-                    <span>Subtotal</span>
-                    <span className="tabular-nums">S/ {Number(activeSale.subtotal).toFixed(2)}</span>
-                  </div>
-                  {Number(activeSale.discount) > 0 && (
-                    <div className="flex justify-between text-xs font-bold text-emerald-600">
-                      <span>Descuento</span>
-                      <span className="tabular-nums">- S/ {Number(activeSale.discount).toFixed(2)}</span>
+                      <span className={`text-sm font-bold tabular-nums ${selectedSale?.id === sale.id ? 'text-white' : 'text-slate-900'}`}>
+                        S/ {Number(sale.total).toFixed(2)}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex justify-between items-end pt-3 mt-1 border-t border-slate-100">
-                    <span className="text-sm font-bold uppercase tracking-wider text-slate-900">Total Pagado</span>
-                    <span className="text-3xl font-black text-slate-900 tracking-tight tabular-nums leading-none">
-                      S/ {Number(activeSale.total).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* TICKET PAYMENTS */}
-                <div className="px-6 pb-6">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 block">Métodos Utilizados</span>
-                    <div className="space-y-2">
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      {activeSale.payments.map((pay: any) => (
-                        <div key={pay.id} className="flex justify-between items-center text-xs font-semibold text-slate-700">
-                          <div className="flex items-center gap-1.5">
-                            {pay.method === 'CASH' ? <Banknote className="w-3.5 h-3.5 text-emerald-600" /> : 
-                             pay.method === 'CARD' ? <CreditCard className="w-3.5 h-3.5 text-blue-600" /> : 
-                             <Smartphone className="w-3.5 h-3.5 text-purple-600" />}
-                            <span>{pay.method}</span>
-                          </div>
-                          <span className="tabular-nums">S/ {Number(pay.amount).toFixed(2)}</span>
-                        </div>
-                      ))}
+                    <div className={`flex items-center gap-2 text-[10px] ${selectedSale?.id === sale.id ? 'text-slate-300' : 'text-slate-500'}`}>
+                      <span>
+                        {new Date(sale.createdAt).toLocaleString('es-PE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                      <span>•</span>
+                      <span>{sale.cashier?.name || 'Sin cajero'}</span>
                     </div>
-                  </div>
-                </div>
+                  </button>
+                ))
+              )}
+            </div>
 
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-slate-200 bg-slate-50">
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-8 px-2"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-xs font-medium text-slate-600">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-8 px-2"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>
 
+          {/* Detalle de venta - Derecha */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {!selectedSale ? (
+              <div className="flex-1 flex items-center justify-center text-slate-400">
+                <div className="text-center">
+                  <Receipt className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">Selecciona una venta para ver el detalle</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Header del detalle */}
+                <div className="px-6 py-3 border-b border-slate-200 bg-slate-50">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h3 className="text-base font-bold text-slate-900">{selectedSale.code}</h3>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          selectedSale.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {selectedSale.status === 'COMPLETED' ? 'COMPLETADA' : 'ANULADA'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-[11px] text-slate-600">
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {selectedSale.cashier?.name || 'Sin cajero'}
+                        </span>
+                        <span>
+                          {new Date(selectedSale.createdAt).toLocaleString('es-PE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Acciones */}
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="h-8 px-3 text-xs font-semibold text-slate-600 border-slate-200 hover:bg-slate-50">
+                        <Printer className="w-3.5 h-3.5 mr-1.5" /> Imprimir
+                      </Button>
+                      <Button variant="outline" className="h-8 px-3 text-xs font-semibold text-rose-600 border-rose-200 hover:bg-rose-50">
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" /> Anular
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contenido del detalle */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Columna Izquierda - Productos */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Productos</h4>
+                      <div className="space-y-1">
+                        {selectedSale.items.map((item: any) => (
+                          <div key={item.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs text-slate-700 line-clamp-1">
+                                {item.productName}
+                                {item.variantName && item.variantName !== 'Estándar' && (
+                                  <span className="text-slate-500 font-normal"> ({item.variantName})</span>
+                                )}
+                              </p>
+                              {(item.sku || item.barcode) && (
+                                <p className="text-slate-400 font-mono text-[9px]">
+                                  {item.sku || item.barcode}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-[10px] text-slate-500">
+                                {item.quantity} x S/ {Number(item.price).toFixed(2)}
+                              </p>
+                              <p className="font-semibold text-xs text-slate-900 tabular-nums">
+                                S/ {Number(item.subtotal).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Columna Derecha - Información de Pago */}
+                    <div className="space-y-4">
+                      {/* Cliente */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Cliente</h4>
+                        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                          <p className="text-xs font-medium text-slate-700">
+                            {selectedSale.customer?.name || 'Cliente General'}
+                          </p>
+                          {selectedSale.customer?.docNumber && (
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {selectedSale.customer.docNumber}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Métodos de Pago */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Métodos de Pago</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {selectedSale.payments.map((payment: any) => (
+                            <div key={payment.id} className="p-2 bg-white rounded-lg border border-slate-200">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                {payment.method === 'CASH' && <Banknote className="w-3 h-3 text-slate-600" />}
+                                {payment.method === 'YAPE' && <Wallet className="w-3 h-3 text-purple-600" />}
+                                {payment.method === 'PLIN' && <Wallet className="w-3 h-3 text-cyan-600" />}
+                                {payment.method === 'CARD' && <CreditCard className="w-3 h-3 text-blue-600" />}
+                                {payment.method === 'TRANSFER' && <ArrowRightLeft className="w-3 h-3 text-emerald-600" />}
+                                <p className="text-[10px] font-semibold text-slate-700">{payment.method}</p>
+                              </div>
+                              {payment.reference && (
+                                <p className="text-[9px] text-slate-500 font-mono mb-1">Ref: {payment.reference}</p>
+                              )}
+                              <p className="text-xs font-bold text-slate-900 tabular-nums">
+                                S/ {Number(payment.amount).toFixed(2)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Resumen Financiero */}
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Resumen</h4>
+                        <div className="space-y-1.5 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Subtotal:</span>
+                            <span className="font-medium text-slate-900 tabular-nums">
+                              S/ {Number(selectedSale.subtotal || selectedSale.total).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Descuento:</span>
+                            <span className="font-medium text-slate-900 tabular-nums">
+                              S/ {Number(selectedSale.discount || 0).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200">
+                            <span className="font-semibold text-slate-700">Total:</span>
+                            <span className="font-bold text-sm text-slate-900 tabular-nums">
+                              S/ {Number(selectedSale.total).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200">
+                            <span className="text-slate-600">Entregado:</span>
+                            <span className="font-medium text-slate-900 tabular-nums">
+                              S/ {Number(selectedSale.tenderedAmount).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-emerald-700 font-medium">Vuelto:</span>
+                            <span className="font-semibold text-emerald-700 tabular-nums">
+                              S/ {Number(selectedSale.changeAmount).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );

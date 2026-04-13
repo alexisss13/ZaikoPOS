@@ -265,7 +265,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {role !== 'SUPER_ADMIN' && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link href="/pos" className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors shadow-sm">
+                  <Link href="/dashboard/pos" className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors shadow-sm ${pathname === '/dashboard/pos' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white'}`}>
                     <ShoppingBag className="w-4 h-4" />
                   </Link>
                 </TooltipTrigger>
@@ -392,7 +392,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )
             })}
             {role !== 'SUPER_ADMIN' && (
-              <Link href="/pos" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl text-sm bg-emerald-50 text-emerald-600 font-bold border border-emerald-200 hover:bg-emerald-100 transition-colors">
+              <Link href="/dashboard/pos" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 mt-2 rounded-xl text-sm font-bold border transition-colors ${pathname === '/dashboard/pos' ? 'bg-emerald-600 text-white border-emerald-700 shadow-md' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}>
                 <ShoppingBag className="w-[18px] h-[18px]" /> IR AL POS
               </Link>
             )}

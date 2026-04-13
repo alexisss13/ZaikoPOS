@@ -3,7 +3,9 @@ import prisma from '@/lib/prisma';
 import { Prisma, PaymentMethod } from '@prisma/client';
 
 interface SaleItemInput {
-  productId: string;
+  variantId: string;
+  productName: string;
+  variantName?: string;
   quantity: number;
   price: number; 
 }
@@ -61,33 +63,61 @@ export const saleService = {
         if (existing) return existing;
       }
 
-      // B. Verificar y Descontar Stock (FÍSICO Y GLOBAL)
+      // B. Generar código de ticket personalizado (T001-0001)
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      // Contar ventas del día en esta sucursal
+      const todaySalesCount = await tx.sale.count({
+        where: {
+          branchId,
+          createdAt: {
+            gte: todayStart,
+            lt: todayEnd
+          }
+        }
+      });
+      
+      const ticketNumber = (todaySalesCount + 1).toString().padStart(4, '0');
+      const ticketCode = `T001-${ticketNumber}`;
+
+      // C. Verificar y Descontar Stock (FÍSICO)
       for (const item of items) {
-        // Consultar el stock físico de la sucursal
+        // Consultar el stock físico de la sucursal usando variantId
         const stockRecord = await tx.stock.findUnique({
-          where: { branchId_productId: { branchId, productId: item.productId } }
+          where: { branchId_variantId: { branchId, variantId: item.variantId } }
         });
 
         if (!stockRecord || stockRecord.quantity < item.quantity) {
-          throw new Error(`STOCK_CONFLICT:${item.productId}`);
+          throw new Error(`STOCK_CONFLICT:${item.variantId}`);
         }
 
-        // B.1 Descontar Stock Físico (Sucursal)
+        // Descontar Stock Físico (Sucursal)
         await tx.stock.update({
           where: { id: stockRecord.id },
           data: { quantity: { decrement: item.quantity } }
         });
 
-        // B.2 Descontar Stock Global (E-commerce)
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } }
+        // Registrar movimiento de stock
+        await tx.stockMovement.create({
+          data: {
+            variantId: item.variantId,
+            branchId,
+            userId,
+            type: 'SALE_POS',
+            quantity: -item.quantity,
+            previousStock: stockRecord.quantity,
+            currentStock: stockRecord.quantity - item.quantity,
+            reason: `Venta POS - ${item.productName}${item.variantName ? ` (${item.variantName})` : ''}`
+          }
         });
       }
 
-      // C. Crear Venta (Cabecera, Items y Pagos anidados)
+      // D. Crear Venta (Cabecera, Items y Pagos anidados)
       const sale = await tx.sale.create({
         data: {
+          code: ticketCode,
           externalId,
           businessId,
           branchId,
@@ -101,7 +131,9 @@ export const saleService = {
           status: 'COMPLETED',
           items: {
             create: items.map(item => ({
-              productId: item.productId,
+              variantId: item.variantId,
+              productName: item.productName,
+              variantName: item.variantName || null,
               quantity: item.quantity,
               price: item.price,
               subtotal: item.price * item.quantity
@@ -117,7 +149,7 @@ export const saleService = {
         }
       });
 
-      // D. Actualizar Caja Físicamente (Solo Efectivo)
+      // E. Actualizar Caja Físicamente (Solo Efectivo)
       const cashIncome = payments
         .filter(p => p.method === 'CASH')
         .reduce((acc, p) => acc + p.amount, 0);

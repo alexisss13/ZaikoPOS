@@ -11,27 +11,40 @@ const paymentSchema = z.object({
 
 const saleSchema = z.object({
   externalId: z.string().optional(),
+  branchId: z.string().optional(), // Permitir branchId en el body para OWNER
   items: z.array(z.object({
-    productId: z.string(),
+    variantId: z.string(),
+    productName: z.string(),
+    variantName: z.string().optional(),
     quantity: z.number().int().positive(),
     price: z.number().min(0), 
   })).min(1),
   payments: z.array(paymentSchema).min(1),
-  tenderedAmount: z.number().min(0), // NUEVO: Validamos que envíen el monto entregado
+  tenderedAmount: z.number().min(0),
   customerId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
   try {
     const userId = req.headers.get('x-user-id');
-    const branchId = req.headers.get('x-branch-id');
+    const headerBranchId = req.headers.get('x-branch-id');
     
-    if (!userId || !branchId) return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: 'Usuario no autenticado' }, { status: 401 });
+    }
 
     const body = await req.json();
     
     // Parseo y validación estricta con Zod
     const validatedData = saleSchema.parse(body);
+    
+    // Usar branchId del body si está disponible (para OWNER), sino del header
+    // Filtrar strings vacíos también
+    const branchId = validatedData.branchId || (headerBranchId && headerBranchId.trim() !== '' ? headerBranchId : null);
+    
+    if (!branchId) {
+      return NextResponse.json({ error: 'No se pudo determinar la sucursal' }, { status: 401 });
+    }
 
     // Delegamos toda la lógica al servicio
     const sale = await saleService.createSale({
@@ -50,8 +63,8 @@ export async function POST(req: Request) {
     if (error instanceof Error) {
       // Manejo de errores específicos del negocio lanzados por el servicio
       if (error.message.startsWith('STOCK_CONFLICT')) {
-        const productId = error.message.split(':')[1];
-        return NextResponse.json({ error: 'Stock insuficiente', code: 'CONFLICT', productId }, { status: 409 });
+        const variantId = error.message.split(':')[1];
+        return NextResponse.json({ error: 'Stock insuficiente', code: 'CONFLICT', variantId }, { status: 409 });
       }
       if (error.message === 'CAJA_CERRADA') {
         return NextResponse.json({ error: 'No puedes realizar una venta sin una caja abierta.' }, { status: 409 });
