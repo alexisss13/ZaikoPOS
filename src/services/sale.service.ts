@@ -24,11 +24,12 @@ interface CreateSaleParams {
   payments: SalePaymentInput[];
   tenderedAmount: number;
   customerId?: string | null;
+  discount?: number; // Descuento global aplicado
 }
 
 export const saleService = {
   createSale: async (params: CreateSaleParams) => {
-    const { userId, branchId, externalId, items, payments, tenderedAmount, customerId } = params;
+    const { userId, branchId, externalId, items, payments, tenderedAmount, customerId, discount = 0 } = params;
 
     // 1. VALIDACIÓN: Caja Abierta y obtención de BusinessId
     const cashSession = await prisma.cashSession.findFirst({
@@ -41,9 +42,11 @@ export const saleService = {
     const businessId = cashSession.branch.businessId;
 
     // 2. CÁLCULOS FINANCIEROS
-    const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const total = subtotal - discount; // Restar el descuento del subtotal
     const totalAppliedPayments = payments.reduce((acc, pay) => acc + pay.amount, 0);
 
+    // Validar que los pagos coincidan con el total (después del descuento)
     if (Math.abs(total - totalAppliedPayments) > 0.01) {
       throw new Error('PAGOS_NO_CUADRAN');
     }
@@ -124,8 +127,9 @@ export const saleService = {
           userId,
           cashSessionId: cashSession.id,
           customerId,
-          subtotal: total,
-          total: total,
+          subtotal: subtotal, // Subtotal antes del descuento
+          discount: discount, // Monto del descuento aplicado
+          total: total, // Total final (subtotal - discount)
           tenderedAmount: tenderedAmount,
           changeAmount: changeAmount,
           status: 'COMPLETED',
@@ -149,7 +153,51 @@ export const saleService = {
         }
       });
 
-      // E. Actualizar Caja Físicamente (Solo Efectivo)
+      console.log('Venta creada:', {
+        code: sale.code,
+        subtotal: sale.subtotal,
+        discount: sale.discount,
+        total: sale.total
+      });
+
+      // E. Calcular y asignar puntos si hay cliente vinculado
+      if (customerId) {
+        // 🔥 LÓGICA FIJA: Por cada S/ 2 gastados = 1 punto
+        const pointsEarned = Math.floor(total / 2);
+
+        if (pointsEarned > 0) {
+          // Actualizar balance de puntos del cliente
+          await tx.customer.update({
+            where: { id: customerId },
+            data: {
+              pointsBalance: { increment: pointsEarned },
+              totalSpent: { increment: total },
+              visits: { increment: 1 },
+              lastPurchase: new Date()
+            }
+          });
+
+          // Registrar transacción de puntos
+          await tx.pointTransaction.create({
+            data: {
+              businessId,
+              customerId,
+              saleId: sale.id,
+              points: pointsEarned,
+              type: 'EARN',
+              description: `Compra en POS - ${ticketCode} (S/ ${total.toFixed(2)})`
+            }
+          });
+
+          // Actualizar la venta con los puntos ganados
+          await tx.sale.update({
+            where: { id: sale.id },
+            data: { pointsEarned }
+          });
+        }
+      }
+
+      // F. Actualizar Caja Físicamente (Solo Efectivo)
       const cashIncome = payments
         .filter(p => p.method === 'CASH')
         .reduce((acc, p) => acc + p.amount, 0);

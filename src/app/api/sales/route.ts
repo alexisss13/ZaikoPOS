@@ -21,7 +21,8 @@ const saleSchema = z.object({
   })).min(1),
   payments: z.array(paymentSchema).min(1),
   tenderedAmount: z.number().min(0),
-  customerId: z.string().optional(),
+  customerId: z.string().nullable().optional(),
+  discount: z.number().min(0).optional(),
 });
 
 export async function POST(req: Request) {
@@ -56,11 +57,20 @@ export async function POST(req: Request) {
     return NextResponse.json(sale, { status: 201 });
 
   } catch (error: unknown) {
+    console.error('Error en API /api/sales:', error);
+    
     if (error instanceof z.ZodError) {
-       return NextResponse.json({ error: 'Datos inválidos', details: error.issues }, { status: 400 });
+      console.error('Zod validation error:', JSON.stringify(error.issues, null, 2));
+      return NextResponse.json({ 
+        error: 'Datos inválidos', 
+        details: error.issues,
+        message: error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
+      }, { status: 400 });
     }
     
     if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      
       // Manejo de errores específicos del negocio lanzados por el servicio
       if (error.message.startsWith('STOCK_CONFLICT')) {
         const variantId = error.message.split(':')[1];
@@ -75,9 +85,11 @@ export async function POST(req: Request) {
       if (error.message === 'MONTO_ENTREGADO_MENOR') {
         return NextResponse.json({ error: 'El monto entregado por el cliente no puede ser menor al total de la venta.' }, { status: 400 });
       }
+      
+      // Error genérico con mensaje
+      return NextResponse.json({ error: error.message || 'Error procesando la venta' }, { status: 500 });
     }
     
-    console.error('Error procesando venta:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

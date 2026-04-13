@@ -60,6 +60,11 @@ export async function GET(req: Request) {
               }
             }
           }
+        },
+        transactions: {
+          orderBy: {
+            createdAt: 'desc'
+          }
         }
       },
       orderBy: {

@@ -64,6 +64,8 @@ export async function GET(req: Request) {
       id: sale.id,
       code: sale.code,
       status: sale.status,
+      subtotal: Number(sale.subtotal),
+      discount: Number(sale.discount),
       total: Number(sale.total),
       tenderedAmount: Number(sale.tenderedAmount),
       changeAmount: Number(sale.changeAmount),

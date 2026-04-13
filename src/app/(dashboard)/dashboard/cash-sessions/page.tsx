@@ -145,9 +145,18 @@ export default function CashSessionsPage() {
       });
     });
 
+    // Calcular transacciones de caja (ingresos y egresos)
+    const transactions = (session as any).transactions || [];
+    const totalIncome = transactions
+      .filter((t: any) => t.type === 'INCOME')
+      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    const totalExpense = transactions
+      .filter((t: any) => t.type === 'EXPENSE')
+      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
     // Calcular efectivo en ventas
     const cashInSales = paymentMap.get('CASH') || 0;
-    const totalInCash = Number(session.initialCash) + cashInSales;
+    const totalInCash = Number(session.initialCash) + cashInSales + totalIncome - totalExpense;
     const declaredCash = session.finalCash !== null ? Number(session.finalCash) : totalInCash;
     const cashDifference = declaredCash - totalInCash;
 
@@ -157,9 +166,12 @@ export default function CashSessionsPage() {
       profitWithTax,
       profitWithoutTax,
       cashInSales,
+      totalIncome,
+      totalExpense,
       totalInCash,
       declaredCash,
       cashDifference,
+      transactions,
       categories: Array.from(categoryMap.entries()).map(([name, data]) => ({
         name,
         profit: data.profit,
@@ -630,6 +642,18 @@ export default function CashSessionsPage() {
                         <span className="text-xs text-slate-600">[+] Ventas en efectivo</span>
                         <span className="text-xs font-medium text-slate-900 tabular-nums">S/ {stats.cashInSales.toFixed(2)}</span>
                       </div>
+                      {stats.totalIncome > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-emerald-600">[+] Ingresos adicionales</span>
+                          <span className="text-xs font-medium text-emerald-700 tabular-nums">S/ {stats.totalIncome.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {stats.totalExpense > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-red-600">[-] Egresos</span>
+                          <span className="text-xs font-medium text-red-700 tabular-nums">S/ {stats.totalExpense.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center pt-1.5 border-t border-slate-200">
                         <span className="text-xs font-semibold text-slate-700">[=] Total en Caja</span>
                         <span className="text-sm font-semibold text-slate-900 tabular-nums">S/ {stats.totalInCash.toFixed(2)}</span>

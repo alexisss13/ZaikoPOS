@@ -2,7 +2,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { 
   Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, 
   Package, Tag, ChevronRight, ChevronLeft, CheckCircle2, 
@@ -18,6 +18,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 import { SalesHistoryModal } from '@/components/pos/SalesHistoryModal';
+import { CashTransactionModal } from '@/components/pos/CashTransactionModal';
+import { CustomerModal } from '@/components/pos/CustomerModal';
+import { CustomerSearchModal } from '@/components/pos/CustomerSearchModal';
+import { DiscountModal } from '@/components/pos/DiscountModal';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -73,6 +77,10 @@ export default function PosPage() {
   const [showOpenCash, setShowOpenCash] = useState(false);
   const [showCloseCash, setShowCloseCash] = useState(false);
   const [showSalesHistory, setShowSalesHistory] = useState(false);
+  const [showCashTransaction, setShowCashTransaction] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [initialCash, setInitialCash] = useState('');
   const [finalCash, setFinalCash] = useState('');
   const [selectedBranch, setSelectedBranch] = useState<string>('');
@@ -89,8 +97,7 @@ export default function PosPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const [saleState, setSaleState] = useState<'DRAFT' | 'PAID'>('DRAFT');
-  const [customerDoc, setCustomerDoc] = useState('');
-  const [showCustomerInput, setShowCustomerInput] = useState(false);
+  const [foundCustomer, setFoundCustomer] = useState<any>(null);
   const [globalDiscountType, setGlobalDiscountType] = useState<'FIXED' | 'PERCENT'>('FIXED');
   const [globalDiscountValue, setGlobalDiscountValue] = useState('');
 
@@ -387,25 +394,38 @@ export default function PosPage() {
 
     setIsSubmitting(true);
     try {
+      // Enviar items con precios SIN descuento global (solo con descuentos por item)
+      const itemsWithoutGlobalDiscount = cart.map(item => {
+        const { finalUnitPrice } = calculateItemFinancials(item);
+        
+        return {
+          variantId: item.variantId,
+          productName: item.productName,
+          variantName: item.variantName,
+          quantity: item.cartQuantity,
+          price: finalUnitPrice // Precio con descuentos por item, pero SIN descuento global
+        };
+      });
+
       const payload = {
         branchId: cashSession.branchId,
-        items: cart.map(item => {
-          const { finalUnitPrice } = calculateItemFinancials(item);
-          return {
-            variantId: item.variantId,
-            productName: item.productName,
-            variantName: item.variantName,
-            quantity: item.cartQuantity,
-            price: finalUnitPrice
-          };
-        }),
+        customerId: foundCustomer?.id || null,
+        items: itemsWithoutGlobalDiscount,
         payments: splitPayments.map(p => ({
           method: p.method,
           amount: parseFloat(p.amount) || 0,
           reference: ['YAPE', 'PLIN', 'TRANSFER'].includes(p.method) ? p.reference : null
         })),
         tenderedAmount: tendered,
+        discount: Number(globalDiscountAmount.toFixed(2)) || 0, // Siempre enviar, incluso si es 0
       };
+
+      console.log('Enviando venta:', {
+        itemsSubtotal,
+        globalDiscountAmount,
+        finalGlobalTotal,
+        discount: payload.discount
+      });
 
       const res = await fetch('/api/sales', {
         method: 'POST',
@@ -418,10 +438,20 @@ export default function PosPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        console.error('Error en venta:', data);
         throw new Error(data.error || 'Error procesando la venta');
       }
 
-      toast.success('¡Venta registrada con éxito!');
+      // 🎉 Mostrar mensaje de éxito con puntos ganados si hay cliente vinculado
+      if (foundCustomer && data.pointsEarned > 0) {
+        toast.success(
+          `¡Venta registrada! ${foundCustomer.name} ganó ${data.pointsEarned} punto${data.pointsEarned > 1 ? 's' : ''}`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success('¡Venta registrada con éxito!');
+      }
+      
       setSaleState('PAID');
       setShowPayment(false);
       mutateProducts();
@@ -443,8 +473,7 @@ export default function PosPage() {
 
   const handleLiberar = () => {
     setCart([]);
-    setCustomerDoc('');
-    setShowCustomerInput(false);
+    setFoundCustomer(null);
     setGlobalDiscountValue('');
     setSaleState('DRAFT');
     toast.success('Caja liberada para nueva venta');
@@ -612,11 +641,25 @@ export default function PosPage() {
           {hasCashOpen && (
             <>
               <Button 
+                onClick={() => setShowCustomerModal(true)}
+                variant="ghost"
+                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+              >
+                <UserPlus className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Nuevo Cliente</span>
+              </Button>
+              <Button 
                 onClick={() => setShowSalesHistory(true)}
                 variant="ghost"
                 className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
               >
                 <HistoryIcon className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Historial</span>
+              </Button>
+              <Button 
+                onClick={() => setShowCashTransaction(true)}
+                variant="ghost"
+                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Ingresos/Egresos</span>
               </Button>
               <Button 
                 onClick={() => setShowCloseCash(true)} 
@@ -793,11 +836,68 @@ export default function PosPage() {
       {/* 🚀 ÁREA DERECHA: CARRITO DE COMPRAS */}
       <aside className={`w-[320px] xl:w-[360px] flex flex-col border-l shrink-0 overflow-hidden transition-colors duration-300 bg-white ${saleState === 'PAID' ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100'}`}>
         <div className={`h-14 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${saleState === 'PAID' ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-white border-slate-100'}`}>
-          <span className="font-semibold text-sm flex items-center gap-2">
-            {saleState === 'PAID' ? <CheckCircle2 className="w-5 h-5" /> : <ShoppingBag className="w-5 h-5" />} 
-            {saleState === 'PAID' ? 'VENTA PAGADA' : 'Resumen de Venta'}
-          </span>
-          {saleState === 'DRAFT' && <button onClick={() => setCart([])} disabled={cart.length === 0} className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-30 p-1"><Trash2 className="w-4 h-4" /></button>}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {saleState === 'PAID' ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <span className="font-semibold text-sm">VENTA PAGADA</span>
+              </>
+            ) : (
+              <>
+                {foundCustomer ? (
+                  <>
+                    <div className="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-xs text-slate-900 truncate">{foundCustomer.name}</p>
+                      <p className="text-[10px] text-slate-500">
+                        {foundCustomer.pointsBalance} pts
+                        {finalGlobalTotal > 0 && (
+                          <span className="text-amber-600 font-bold ml-1">(+{Math.floor(finalGlobalTotal / 2)})</span>
+                        )}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-5 h-5 shrink-0" />
+                    <span className="font-semibold text-sm">Resumen de Venta</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {saleState === 'DRAFT' && (
+              <>
+                <button 
+                  onClick={() => foundCustomer ? setFoundCustomer(null) : setShowCustomerSearch(true)} 
+                  disabled={cart.length === 0}
+                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 ${foundCustomer ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                  title={foundCustomer ? 'Desvincular cliente' : 'Vincular cliente'}
+                >
+                  {foundCustomer ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                </button>
+                <button 
+                  onClick={() => setShowDiscountModal(true)} 
+                  disabled={cart.length === 0}
+                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 ${globalDiscountValue && parseFloat(globalDiscountValue) > 0 ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}
+                  title="Aplicar descuento"
+                >
+                  <Tag className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setCart([])} 
+                  disabled={cart.length === 0} 
+                  className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-30 p-1.5 rounded-lg hover:bg-red-50"
+                  title="Vaciar carrito"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -856,49 +956,6 @@ export default function PosPage() {
         </div>
 
         <div className={`border-t shrink-0 flex flex-col p-4 gap-4 transition-colors ${saleState === 'PAID' ? 'border-emerald-200 bg-white/50' : 'border-slate-100 bg-white'}`}>
-          {saleState === 'DRAFT' && cart.length > 0 && (
-            <div className="flex flex-col gap-2 mb-2 animate-in fade-in duration-300">
-              {!showCustomerInput ? (
-                <div className="flex items-center">
-                  <button onClick={() => setShowCustomerInput(true)} className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg w-max">
-                    <UserPlus className="w-4 h-4" /> Vincular Cliente (Opcional)
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 animate-in slide-in-from-left-2 duration-200">
-                  <div className="relative flex-1">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
-                    <Input 
-                      placeholder="DNI / RUC Cliente..." 
-                      value={customerDoc} onChange={(e) => setCustomerDoc(e.target.value)} 
-                      className="pl-9 h-9 text-xs placeholder:text-slate-400 bg-blue-50/50 border-blue-200 focus-visible:ring-blue-500 shadow-none rounded-lg" 
-                    />
-                  </div>
-                  <button 
-                    onClick={() => { setShowCustomerInput(false); setCustomerDoc(''); }} 
-                    className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                    title="Remover cliente"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Select value={globalDiscountType} onValueChange={(val: 'FIXED' | 'PERCENT') => setGlobalDiscountType(val)}>
-                  <SelectTrigger className="w-[70px] h-9 text-xs font-semibold bg-slate-50 border-slate-200 px-2 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FIXED">S/</SelectItem>
-                    <SelectItem value="PERCENT">%</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input type="number" placeholder="Descuento extra..." value={globalDiscountValue} onChange={(e) => setGlobalDiscountValue(e.target.value)} className="flex-1 h-9 text-xs placeholder:text-slate-400 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 rounded-lg shadow-none tabular-nums" />
-              </div>
-            </div>
-          )}
-
           <div className="space-y-1.5">
             <div className="flex justify-between text-slate-500 text-xs font-medium">
               <span>Subtotal Base</span><span className="tabular-nums">S/ {globalSubtotalBase.toFixed(2)}</span>
@@ -1437,6 +1494,58 @@ export default function PosPage() {
         isOpen={showSalesHistory}
         onClose={() => setShowSalesHistory(false)}
         salesData={salesData}
+      />
+
+      {/* MODAL DE TRANSACCIONES DE CAJA */}
+      {cashSession && (
+        <CashTransactionModal
+          isOpen={showCashTransaction}
+          onClose={() => setShowCashTransaction(false)}
+          onSuccess={() => {
+            mutateCash();
+            toast.success('Transacción registrada');
+          }}
+          cashSessionId={cashSession.id}
+        />
+      )}
+
+      {/* MODAL DE REGISTRO DE CLIENTES */}
+      <CustomerModal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        onSuccess={(customer) => {
+          setFoundCustomer(customer);
+          toast.success(`Cliente ${customer.name} registrado y vinculado`);
+        }}
+      />
+
+      {/* MODAL DE BÚSQUEDA DE CLIENTES */}
+      <CustomerSearchModal
+        isOpen={showCustomerSearch}
+        onClose={() => setShowCustomerSearch(false)}
+        onSelectCustomer={(customer) => {
+          setFoundCustomer(customer);
+          toast.success(`Cliente ${customer.name} vinculado a la venta`);
+        }}
+        onCreateNew={() => {
+          setShowCustomerModal(true);
+        }}
+      />
+
+      {/* MODAL DE DESCUENTO */}
+      <DiscountModal
+        isOpen={showDiscountModal}
+        onClose={() => setShowDiscountModal(false)}
+        currentType={globalDiscountType}
+        currentValue={globalDiscountValue}
+        onApply={(type, value) => {
+          setGlobalDiscountType(type);
+          setGlobalDiscountValue(value);
+          if (value && parseFloat(value) > 0) {
+            toast.success('Descuento aplicado');
+          }
+        }}
+        subtotal={itemsSubtotal}
       />
       </div>
     </div>

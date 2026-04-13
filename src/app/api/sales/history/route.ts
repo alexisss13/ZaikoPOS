@@ -69,12 +69,31 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Transformar Decimals a números para serialización JSON
+    const salesWithNumbers = sales.map(sale => ({
+      ...sale,
+      subtotal: Number(sale.subtotal),
+      discount: Number(sale.discount),
+      total: Number(sale.total),
+      tenderedAmount: Number(sale.tenderedAmount),
+      changeAmount: Number(sale.changeAmount),
+      items: sale.items.map(item => ({
+        ...item,
+        price: Number(item.price),
+        subtotal: Number(item.subtotal)
+      })),
+      payments: sale.payments.map(payment => ({
+        ...payment,
+        amount: Number(payment.amount)
+      }))
+    }));
+
     // 4. Calcular el resumen por método de pago para el arqueo
     const summary = {
       CASH: 0, YAPE: 0, PLIN: 0, CARD: 0, TRANSFER: 0, TOTAL: 0
     };
 
-    sales.forEach(sale => {
+    salesWithNumbers.forEach(sale => {
       if (sale.status !== 'COMPLETED') return;
       sale.payments.forEach(payment => {
         const method = payment.method as keyof typeof summary;
@@ -85,7 +104,7 @@ export async function GET(req: Request) {
       });
     });
 
-    return NextResponse.json({ sales, summary });
+    return NextResponse.json({ sales: salesWithNumbers, summary });
 
   } catch (error) {
     console.error('[SALES_HISTORY_ERROR]', error);
