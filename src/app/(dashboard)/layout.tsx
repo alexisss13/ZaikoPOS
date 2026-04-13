@@ -7,7 +7,7 @@ import { useAuth } from '@/context/auth-context';
 import { 
   Menu, X, LayoutDashboard, ShoppingBag, 
   Package, Users, Store, LogOut, ShieldCheck, 
-  Tags, Building2, Camera, UserCircle, Loader2, Bell, Check, ArrowRightLeft, Globe, ShoppingCart, Warehouse
+  Building2, Camera, UserCircle, Loader2, Bell, Globe, ShoppingCart, Warehouse, ContactRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -109,7 +109,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Nueva Contraseña <span className="text-slate-400 font-normal">(Opcional)</span></Label><input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••" minLength={6} className={getInputClass(formData.password)} /></div>
           
           {canManageUsers && (
-            <div className="pt-3 border-t border-slate-200">
+            <div className="pt-3 border-t border-slate-200 space-y-2">
               <Button 
                 type="button"
                 variant="outline"
@@ -121,6 +121,18 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
               >
                 <Users className="w-4 h-4 mr-2" />
                 Gestionar Personal
+              </Button>
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                  router.push('/dashboard/branches');
+                }}
+                className="w-full h-10 text-xs font-bold text-slate-700 hover:bg-slate-50 border-slate-300"
+              >
+                <Store className="w-4 h-4 mr-2" />
+                Gestionar Sucursales
               </Button>
             </div>
           )}
@@ -168,8 +180,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         mutateNotifs();
       } catch (e) { console.error(e); }
     }
+    // Redirigir a inventario para notificaciones de traslados
     if (notif.type === 'TRANSFER_REQUEST' || notif.type === 'TRANSFER_UPDATE') {
-      router.push('/dashboard/transfers');
+      router.push('/dashboard/inventory?tab=transfers');
     }
   };
 
@@ -185,10 +198,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
     { href: '/dashboard/products', label: 'Productos', icon: Package },
     { href: '/dashboard/inventory', label: 'Inventario', icon: Warehouse },
+    { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: ContactRound },
     { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart },
-    { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
-    { href: '/dashboard/transfers', label: 'Traslados', icon: ArrowRightLeft }, 
-    { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck },
   ];
 
   const menuItems = role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;

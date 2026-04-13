@@ -46,7 +46,7 @@ interface Product {
 interface Branch { id: string; ecommerceCode: string | null; name: string; logoUrl?: string | null; }
 interface Category { id: string; name: string; ecommerceCode?: string | null; }
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 8;
 
 export default function ProductsPage() {
   const { user, role } = useAuth();
@@ -222,6 +222,209 @@ export default function ProductsPage() {
   };
 
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isKardexModalOpen, setIsKardexModalOpen] = useState(false);
+  const [kardexProduct, setKardexProduct] = useState<Product | null>(null);
+  const [kardexMovements, setKardexMovements] = useState<any[]>([]);
+
+  const openKardexModal = async (product: Product) => {
+    setKardexProduct(product);
+    setIsKardexModalOpen(true);
+    
+    // Obtener movimientos del producto
+    try {
+      const variantId = product.variants?.[0]?.id;
+      if (!variantId) {
+        setKardexMovements([]);
+        return;
+      }
+      
+      const res = await fetch(`/api/inventory/movements?variantId=${variantId}`);
+      const data = await res.json();
+      setKardexMovements(data || []);
+    } catch (error) {
+      console.error('Error al cargar kardex:', error);
+      setKardexMovements([]);
+    }
+  };
+
+  const exportKardexToExcel = async () => {
+    if (!kardexProduct || !kardexMovements || kardexMovements.length === 0) {
+      alert('No hay movimientos para exportar');
+      return;
+    }
+
+    try {
+      const XLSX = await import('xlsx-js-style');
+
+      const headers = ['Fecha', 'Tipo', 'Motivo', 'Cantidad', 'Stock Anterior', 'Stock Nuevo', 'Sucursal', 'Usuario'];
+      
+      const movementTypeConfig: any = {
+        INPUT: { label: 'Entrada' },
+        OUTPUT: { label: 'Salida' },
+        ADJUSTMENT: { label: 'Ajuste' },
+        SALE_POS: { label: 'Venta POS' },
+        SALE_ECOMMERCE: { label: 'Venta Online' },
+        PURCHASE: { label: 'Compra' },
+        TRANSFER: { label: 'Traslado' },
+      };
+
+      const exportData = kardexMovements.map(movement => [
+        new Date(movement.createdAt).toLocaleString('es-PE'),
+        movementTypeConfig[movement.type]?.label || movement.type,
+        movement.reason || '',
+        movement.type === 'ADJUSTMENT' 
+          ? (movement.currentStock - movement.previousStock)
+          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' || movement.type === 'TRANSFER' ? movement.quantity : -movement.quantity),
+        movement.previousStock,
+        movement.currentStock,
+        movement.branch?.name || '',
+        movement.user?.name || '',
+      ]);
+
+      const ws_data = [
+        [`KARDEX - ${kardexProduct.title}`],
+        [],
+        headers,
+        ...exportData
+      ];
+      
+      const worksheet = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // Aplicar estilos al título
+      const titleStyle = {
+        fill: { fgColor: { rgb: "1E293B" } },
+        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+      
+      if (worksheet['A1']) {
+        worksheet['A1'].s = titleStyle;
+      }
+
+      // Merge del título
+      worksheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+
+      // Aplicar estilos a los encabezados
+      const headerStyle = {
+        fill: { fgColor: { rgb: "1E293B" } },
+        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+
+      headers.forEach((_, colIndex) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: 2, c: colIndex });
+        if (worksheet[cellAddress]) {
+          worksheet[cellAddress].s = headerStyle;
+        }
+      });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Kardex');
+
+      worksheet['!cols'] = [
+        { wch: 20 }, { wch: 18 }, { wch: 30 }, { wch: 12 },
+        { wch: 15 }, { wch: 12 }, { wch: 20 }, { wch: 20 }
+      ];
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `kardex-${kardexProduct.title.replace(/[^a-z0-9]/gi, '-')}-${timestamp}.xlsx`);
+
+      toast.success('Kardex exportado correctamente', { id: 'kardex-excel' });
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al generar el archivo Excel', { id: 'kardex-excel' });
+    }
+  };
+
+  const exportKardexToPDF = async () => {
+    if (!kardexProduct || !kardexMovements || kardexMovements.length === 0) {
+      alert('No hay movimientos para exportar');
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF('l', 'mm', 'a4');
+      
+      // Encabezado corporativo
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 297, 35, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('KARDEX DE PRODUCTO', 148.5, 12, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(kardexProduct.title, 148.5, 22, { align: 'center' });
+      
+      doc.setFontSize(9);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-PE')}`, 148.5, 29, { align: 'center' });
+
+      const movementTypeConfig: any = {
+        INPUT: { label: 'Entrada' },
+        OUTPUT: { label: 'Salida' },
+        ADJUSTMENT: { label: 'Ajuste' },
+        SALE_POS: { label: 'Venta POS' },
+        SALE_ECOMMERCE: { label: 'Venta Online' },
+        PURCHASE: { label: 'Compra' },
+        TRANSFER: { label: 'Traslado' },
+      };
+
+      // Preparar datos de la tabla
+      const tableData = kardexMovements.map(movement => [
+        new Date(movement.createdAt).toLocaleDateString('es-PE'),
+        movementTypeConfig[movement.type]?.label || movement.type,
+        movement.reason || '-',
+        movement.type === 'ADJUSTMENT' 
+          ? (movement.currentStock - movement.previousStock).toString()
+          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' || movement.type === 'TRANSFER' ? `+${movement.quantity}` : `-${movement.quantity}`),
+        movement.previousStock.toString(),
+        movement.currentStock.toString(),
+        movement.branch?.name || '-',
+        movement.user?.name || '-'
+      ]);
+
+      autoTable(doc, {
+        startY: 40,
+        head: [['Fecha', 'Tipo', 'Motivo', 'Cant.', 'Había', 'Hay', 'Sucursal', 'Usuario']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center',
+          fontSize: 9
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 15, halign: 'center' },
+          4: { cellWidth: 15, halign: 'center' },
+          5: { cellWidth: 15, halign: 'center' },
+          6: { cellWidth: 30 },
+          7: { cellWidth: 30 }
+        }
+      });
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      doc.save(`kardex-${kardexProduct.title.replace(/[^a-z0-9]/gi, '-')}-${timestamp}.pdf`);
+      
+      toast.success('Kardex exportado correctamente', { id: 'kardex-pdf' });
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast.error('Error al generar el archivo PDF', { id: 'kardex-pdf' });
+    }
+  };
 
   const exportToExcel = async () => {
     if (!products || products.length === 0) {
@@ -574,7 +777,7 @@ export default function ProductsPage() {
 
                 <th className="px-5 py-3.5 font-semibold w-[120px]">Precio (S/)</th>
                 
-                <th className="px-5 py-3.5 font-semibold relative select-none w-[150px] rounded-tr-xl">
+                <th className="px-5 py-3.5 font-semibold relative select-none w-[150px]">
                   <div 
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${stockFilter !== 'ALL' || showStockFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => {setShowStockFilter(!showStockFilter); setShowCatFilter(false);}}
@@ -596,12 +799,14 @@ export default function ProductsPage() {
                     </div>
                   )}
                 </th>
+                
+                <th className="px-5 py-3.5 font-semibold w-[80px] rounded-tr-xl text-center">Kardex</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50/80">
-              {isLoading ? ( Array(5).fill(0).map((_, i) => (<tr key={i}><td colSpan={4} className="p-4"><Skeleton className="h-10 w-full rounded-xl" /></td></tr>)) ) : paginatedProducts.length === 0 ? (
+              {isLoading ? ( Array(5).fill(0).map((_, i) => (<tr key={i}><td colSpan={5} className="p-4"><Skeleton className="h-10 w-full rounded-xl" /></td></tr>)) ) : paginatedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-20 text-center">
+                  <td colSpan={5} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
                       <Package className="w-10 h-10 text-slate-200" strokeWidth={1} />
                       <p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p>
@@ -739,6 +944,16 @@ export default function ProductsPage() {
                           );
                         })()}
                       </td>
+                      <td className="px-5 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          onClick={() => openKardexModal(product)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-slate-200 text-slate-600 hover:text-slate-900"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </td>
                     </tr>
                   );
                 })
@@ -805,6 +1020,111 @@ export default function ProductsPage() {
           <div className="flex gap-3 w-full mt-6">
             <Button onClick={() => setBarcodeProduct(null)} className="flex-1 h-10 text-xs rounded-xl border-slate-200 text-slate-600" variant="outline">Cerrar</Button>
             <Button onClick={downloadBarcodePNG} className="flex-1 h-10 text-xs gap-2 bg-slate-900 hover:bg-slate-800 rounded-xl text-white shadow-md"><Download className="w-4 h-4"/> Descargar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE KARDEX INDIVIDUAL */}
+      <Dialog open={isKardexModalOpen} onOpenChange={setIsKardexModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Kardex - {kardexProduct?.title}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex gap-2 mb-4">
+            <Button onClick={exportKardexToExcel} variant="outline" size="sm" className="flex-1">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar Excel
+            </Button>
+            <Button onClick={exportKardexToPDF} variant="outline" size="sm" className="flex-1">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar PDF
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            {kardexMovements.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <FileText className="w-12 h-12 mb-3 text-slate-300" />
+                <p className="text-sm font-medium">No hay movimientos registrados</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100 sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Fecha</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Tipo</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Motivo</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Cantidad</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Había</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Hay</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Sucursal</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Usuario</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {kardexMovements.map((movement: any) => {
+                    const movementTypeConfig: any = {
+                      INPUT: { label: 'Entrada', color: 'text-emerald-600' },
+                      OUTPUT: { label: 'Salida', color: 'text-red-600' },
+                      ADJUSTMENT: { label: 'Ajuste', color: 'text-amber-600' },
+                      SALE_POS: { label: 'Venta POS', color: 'text-blue-600' },
+                      SALE_ECOMMERCE: { label: 'Venta Online', color: 'text-indigo-600' },
+                      PURCHASE: { label: 'Compra', color: 'text-purple-600' },
+                      TRANSFER: { label: 'Traslado', color: 'text-cyan-600' },
+                    };
+                    
+                    const typeInfo = movementTypeConfig[movement.type] || { label: movement.type, color: 'text-slate-600' };
+                    
+                    return (
+                      <tr key={movement.id} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {new Date(movement.createdAt).toLocaleDateString('es-PE')}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs font-semibold ${typeInfo.color}`}>
+                            {typeInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {movement.reason || '-'}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-xs font-bold ${
+                            movement.type === 'INPUT' || movement.type === 'PURCHASE' || movement.type === 'TRANSFER' 
+                              ? 'text-emerald-600' 
+                              : movement.type === 'ADJUSTMENT'
+                              ? (movement.currentStock > movement.previousStock ? 'text-emerald-600' : 'text-red-600')
+                              : 'text-red-600'
+                          }`}>
+                            {movement.type === 'ADJUSTMENT' 
+                              ? (movement.currentStock > movement.previousStock 
+                                  ? `+${movement.currentStock - movement.previousStock}` 
+                                  : `${movement.currentStock - movement.previousStock}`)
+                              : (movement.type === 'INPUT' || movement.type === 'PURCHASE' || movement.type === 'TRANSFER' 
+                                  ? `+${movement.quantity}` 
+                                  : `-${movement.quantity}`)
+                            }
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs text-slate-600">
+                          {movement.previousStock}
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs font-bold text-slate-900">
+                          {movement.currentStock}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {movement.branch?.name || '-'}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {movement.user?.name || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </DialogContent>
       </Dialog>

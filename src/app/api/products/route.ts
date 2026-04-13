@@ -72,11 +72,11 @@ export async function GET(req: Request) {
         minStock,
         barcode,
         sku,
-        // Keep variants but remove stock from them to avoid duplication
-        variants: product.variants.map(v => {
-          const { stock, ...variantWithoutStock } = v;
-          return variantWithoutStock;
-        })
+        // Keep variants with stock for transfer modal
+        variants: product.variants.map(v => ({
+          ...v,
+          stock: v.stock
+        }))
       };
     });
     

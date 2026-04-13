@@ -50,7 +50,7 @@ interface PurchaseOrder {
   updatedAt: string;
 }
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 6;
 
 const statusConfig = {
   PENDING: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: Clock },
@@ -78,6 +78,8 @@ export default function PurchasesPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isBranchSelectModalOpen, setIsBranchSelectModalOpen] = useState(false);
   const [stockDistribution, setStockDistribution] = useState<Record<string, Record<string, number>>>({});
+  const [showSupplierFilter, setShowSupplierFilter] = useState(false);
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
 
   const initializeStockDistribution = () => {
     if (!selectedPurchase || !branches || branches.length === 0) return;
@@ -462,7 +464,7 @@ export default function PurchasesPage() {
             {(['ALL', 'PENDING', 'RECEIVED', 'CANCELLED'] as const).map((status) => (
               <button 
                 key={status} 
-                onClick={() => {setStatusFilter(status); setCurrentPage(1)}}
+                onClick={() => {setStatusFilter(status); setCurrentPage(1); setShowStatusFilter(false);}}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
                   statusFilter === status 
                     ? 'bg-slate-900 text-white shadow-sm' 
@@ -479,7 +481,7 @@ export default function PurchasesPage() {
 
           {/* Paginación */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-3 shrink-0 py-1 pl-2 sm:border-l sm:border-slate-200">
+            <div className="flex items-center gap-3 shrink-0 py-1 pl-2 sm:border-l sm:border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline-block">
                 Pág {currentPage} de {totalPages}
               </span>
@@ -496,155 +498,143 @@ export default function PurchasesPage() {
 
         </div>
 
-        {/* FILTROS ADICIONALES */}
-        <div className="px-4 py-3 bg-white border-t border-slate-100 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-bold text-slate-700">Filtros:</span>
-          </div>
-          
-          {/* Filtro por proveedor */}
-          <select
-            value={supplierFilter}
-            onChange={(e) => { setSupplierFilter(e.target.value); setCurrentPage(1); }}
-            className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
-          >
-            <option value="ALL">Todos los proveedores</option>
-            {suppliers?.filter((s: any) => s.isActive).map((supplier: any) => (
-              <option key={supplier.id} value={supplier.name}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Filtro de fecha desde */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Desde:</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
-              className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
-            />
-          </div>
-
-          {/* Filtro de fecha hasta */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Hasta:</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
-              className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
-            />
-          </div>
-
-          {/* Botón para limpiar filtros */}
-          {(supplierFilter !== 'ALL' || dateFrom || dateTo) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSupplierFilter('ALL');
-                setDateFrom('');
-                setDateTo('');
-                setCurrentPage(1);
-              }}
-              className="h-8 text-xs font-bold text-slate-600 hover:text-slate-900 px-3"
-            >
-              <XCircle className="w-3 h-3 mr-1" />
-              Limpiar filtros
-            </Button>
-          )}
-        </div>
-
-        {/* GRID DE TARJETAS */}
-        <div className="flex-1 p-4 bg-slate-50/30 overflow-y-auto custom-scrollbar">
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-52 w-full rounded-xl bg-slate-100" />)}
-            </div>
-          ) : paginatedPurchases.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center bg-white/50 rounded-xl border-2 border-dashed border-slate-200 py-20">
-              <Package className="w-12 h-12 text-slate-300 mb-3" />
-              <p className="font-bold text-sm text-slate-500">No se encontraron órdenes de compra</p>
-              <Button variant="link" onClick={() => { setSearchTerm(''); setStatusFilter('ALL'); }} className="text-slate-600 hover:text-slate-900 font-bold text-xs mt-2">Limpiar filtros</Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedPurchases.map((purchase: PurchaseOrder) => {
-                const statusInfo = statusConfig[purchase.status];
-                const StatusIcon = statusInfo.icon;
-
-                return (
+        {/* TABLA */}
+        <div className="overflow-x-auto flex-1 relative custom-scrollbar">
+          <table className="w-full text-left border-separate border-spacing-0 min-w-[1000px]">
+            <thead className="bg-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-30">
+              <tr>
+                <th className="px-5 py-3.5 font-semibold rounded-tl-xl relative select-none">
                   <div 
-                    key={purchase.id} 
-                    className="group relative bg-white rounded-xl border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-slate-300 transition-all flex flex-col overflow-hidden"
+                    className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${statusFilter !== 'ALL' || showStatusFilter ? 'text-slate-900 bg-slate-100' : ''}`}
+                    onClick={() => setShowStatusFilter(!showStatusFilter)}
                   >
-                    
-                    <div className="p-4 flex flex-col flex-1">
-                      
-                      {/* HEADER */}
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-black text-sm text-slate-900 leading-tight truncate">
-                            {purchase.supplier?.name || 'Sin proveedor'}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Badge className={`text-[9px] font-black px-2 py-0.5 h-5 shadow-none border ${statusInfo.color}`}>
-                              <StatusIcon className="w-2.5 h-2.5 mr-1" />
-                              {statusInfo.label}
-                            </Badge>
-                          </div>
-                        </div>
+                    Estado <Filter className={`w-3.5 h-3.5 ${statusFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                  </div>
+                  
+                  {showStatusFilter && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowStatusFilter(false)} />
+                      <div className="absolute top-10 left-3 w-[140px] bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
+                        <button onClick={() => {setStatusFilter('ALL'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors ${statusFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
+                          Todas
+                        </button>
+                        <button onClick={() => {setStatusFilter('PENDING'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors ${statusFilter === 'PENDING' ? 'bg-yellow-50 text-yellow-700' : 'text-yellow-600 hover:bg-yellow-50/50'}`}>
+                          Pendientes
+                        </button>
+                        <button onClick={() => {setStatusFilter('RECEIVED'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors ${statusFilter === 'RECEIVED' ? 'bg-green-50 text-green-700' : 'text-green-600 hover:bg-green-50/50'}`}>
+                          Recibidas
+                        </button>
+                        <button onClick={() => {setStatusFilter('CANCELLED'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors ${statusFilter === 'CANCELLED' ? 'bg-red-50 text-red-700' : 'text-red-600 hover:bg-red-50/50'}`}>
+                          Canceladas
+                        </button>
                       </div>
-
-                      {/* INFO - Layout más compacto */}
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-slate-500 flex-1">
-                        {/* Fecha de creación */}
-                        <div className="flex items-center gap-2 text-xs">
-                          <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-slate-700 text-[11px] truncate">{new Date(purchase.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
-                            <span className="text-[9px] text-slate-400 font-medium">Creada</span>
-                          </div>
-                        </div>
-
-                        {/* Fecha de recepción o espacio vacío */}
-                        {purchase.receivedDate ? (
-                          <div className="flex items-center gap-2 text-xs">
-                            <CheckCircle className="w-3.5 h-3.5 shrink-0 text-green-600" />
-                            <div className="flex flex-col min-w-0">
-                              <span className="font-bold text-slate-700 text-[11px] truncate">{new Date(purchase.receivedDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
-                              <span className="text-[9px] text-slate-400 font-medium">Recibida</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div></div>
-                        )}
-
-                        {/* Productos */}
-                        <div className="flex items-center gap-2 text-xs">
-                          <Package className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                          <span className="font-bold text-slate-700 text-[11px]">{purchase.items.length} producto(s)</span>
-                        </div>
-
-                        {/* Usuario */}
-                        {purchase.createdBy && (
-                          <div className="flex items-center gap-2 text-xs min-w-0">
-                            <User className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                            <span className="font-bold text-slate-700 text-[11px] truncate">{purchase.createdBy.name}</span>
-                          </div>
-                        )}
+                    </>
+                  )}
+                </th>
+                <th className="px-5 py-3.5 font-semibold relative select-none">
+                  <div 
+                    className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${supplierFilter !== 'ALL' || showSupplierFilter ? 'text-slate-900 bg-slate-100' : ''}`}
+                    onClick={() => setShowSupplierFilter(!showSupplierFilter)}
+                  >
+                    Proveedor <Filter className={`w-3.5 h-3.5 ${supplierFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                  </div>
+                  
+                  {showSupplierFilter && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowSupplierFilter(false)} />
+                      <div className="absolute top-10 left-3 w-[200px] bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 max-h-60 overflow-y-auto custom-scrollbar">
+                        <button onClick={() => {setSupplierFilter('ALL'); setShowSupplierFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors ${supplierFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
+                          Todos los proveedores
+                        </button>
+                        <div className="h-px bg-slate-100 my-1 mx-2" />
+                        {suppliers?.filter((s: any) => s.isActive).map((supplier: any) => (
+                          <button key={supplier.id} onClick={() => {setSupplierFilter(supplier.name); setShowSupplierFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors ${supplierFilter === supplier.name ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                            {supplier.name}
+                          </button>
+                        ))}
                       </div>
+                    </>
+                  )}
+                </th>
+                <th className="px-5 py-3.5 font-semibold">Fecha</th>
+                <th className="px-5 py-3.5 font-semibold">Productos</th>
+                <th className="px-5 py-3.5 font-semibold">Total</th>
+                <th className="px-5 py-3.5 font-semibold">Creado por</th>
+                <th className="px-5 py-3.5 font-semibold rounded-tr-xl text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50/80">
+              {isLoading ? (
+                Array(6).fill(0).map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan={7} className="p-4">
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                    </td>
+                  </tr>
+                ))
+              ) : paginatedPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
+                      <ShoppingCart className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                      <p className="font-medium text-sm text-slate-500">No se encontraron órdenes de compra</p>
+                      <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setStatusFilter('ALL'); setSupplierFilter('ALL'); setDateFrom(''); setDateTo(''); setCurrentPage(1); }}>
+                        Limpiar filtros
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedPurchases.map((purchase: PurchaseOrder) => {
+                  const statusInfo = statusConfig[purchase.status];
+                  const StatusIcon = statusInfo.icon;
 
-                      {/* FOOTER */}
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                        <span className="font-bold text-slate-900 text-lg">S/ {Number(purchase.totalAmount).toFixed(2)}</span>
+                  return (
+                    <tr key={purchase.id} className="hover:bg-slate-50 transition-colors group text-xs">
+                      <td className="px-5 py-3">
+                        <Badge className={`text-[9px] font-black px-2 py-0.5 h-5 shadow-none border ${statusInfo.color}`}>
+                          <StatusIcon className="w-2.5 h-2.5 mr-1" />
+                          {statusInfo.label}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="text-slate-700 text-sm truncate max-w-[200px] block">
+                          {purchase.supplier?.name || 'Sin proveedor'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-700 text-[11px]">
+                              {new Date(purchase.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
+                            </span>
+                            <span className="text-[9px] text-slate-400">
+                              {new Date(purchase.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-slate-700 text-xs">{purchase.items.length} producto(s)</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="text-slate-700 text-sm">S/ {Number(purchase.totalAmount).toFixed(2)}</span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-slate-700 text-xs truncate max-w-[120px]">{purchase.createdBy?.name || '-'}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-center">
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm" 
-                          className="h-7 text-xs font-bold border-slate-200 hover:bg-slate-50 rounded-lg"
+                          className="h-7 text-xs font-bold hover:bg-slate-200 text-slate-600 hover:text-slate-900"
                           onClick={() => {
                             setSelectedPurchase(purchase);
                             setIsDetailModalOpen(true);
@@ -652,14 +642,13 @@ export default function PurchasesPage() {
                         >
                           Ver Detalle
                         </Button>
-                      </div>
-
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
       </div>
@@ -689,7 +678,7 @@ export default function PurchasesPage() {
                   <DialogTitle className="text-lg font-black text-slate-900">
                     Orden de Compra
                   </DialogTitle>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-700 mt-1">
                     {selectedPurchase.supplier?.name || 'Sin proveedor'}
                   </p>
                 </div>

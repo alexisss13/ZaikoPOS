@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Warehouse, Search } from 'lucide-react';
+import { Loader2, Warehouse, Search, Plus, Trash2, Scan } from 'lucide-react';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -33,10 +33,22 @@ interface StockMovementModalProps {
   branches: Branch[];
 }
 
+interface BulkItem {
+  id: string;
+  variantId: string;
+  productTitle: string;
+  variantName: string;
+  quantity: number;
+}
+
 export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: StockMovementModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<'single' | 'bulk'>('single');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
+  const [bulkReason, setBulkReason] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { data: products } = useSWR<Product[]>(isOpen ? '/api/products' : null, fetcher);
 
@@ -59,6 +71,9 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
       });
       setSelectedProduct(null);
       setSearchTerm('');
+      setBulkItems([]);
+      setBulkReason('');
+      setMode('single');
     }
   }, [isOpen, branches]);
 
@@ -75,6 +90,56 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
     if (product.variants.length === 1) {
       setFormData(prev => ({ ...prev, variantId: product.variants[0].id }));
     }
+  };
+
+  // Función para agregar producto al listado masivo
+  const addToBulkList = () => {
+    if (!selectedProduct || !formData.variantId || !formData.quantity) {
+      toast.error('Selecciona un producto y cantidad');
+      return;
+    }
+
+    const quantity = parseInt(formData.quantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      toast.error('La cantidad debe ser mayor a 0');
+      return;
+    }
+
+    const variant = selectedProduct.variants.find(v => v.id === formData.variantId);
+    if (!variant) return;
+
+    // Verificar si ya existe
+    const existingIndex = bulkItems.findIndex(item => item.variantId === formData.variantId);
+    
+    if (existingIndex >= 0) {
+      // Actualizar cantidad
+      const newItems = [...bulkItems];
+      newItems[existingIndex].quantity += quantity;
+      setBulkItems(newItems);
+      toast.success('Cantidad actualizada');
+    } else {
+      // Agregar nuevo
+      setBulkItems([...bulkItems, {
+        id: Date.now().toString(),
+        variantId: formData.variantId,
+        productTitle: selectedProduct.title,
+        variantName: variant.name,
+        quantity
+      }]);
+      toast.success('Producto agregado');
+    }
+
+    // Limpiar formulario para siguiente producto
+    setSearchTerm('');
+    setSelectedProduct(null);
+    setFormData(prev => ({ ...prev, variantId: '', quantity: '' }));
+    
+    // Enfocar el input de búsqueda
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+
+  const removeBulkItem = (id: string) => {
+    setBulkItems(bulkItems.filter(item => item.id !== id));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,9 +182,56 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
     }
   };
 
+  const handleBulkSubmit = async () => {
+    if (bulkItems.length === 0) {
+      toast.error('Agrega al menos un producto');
+      return;
+    }
+
+    if (!bulkReason.trim()) {
+      toast.error('Ingresa el motivo del movimiento');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Enviar todos los movimientos
+      const promises = bulkItems.map(item => 
+        fetch('/api/inventory/movements', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            variantId: item.variantId,
+            type: formData.type,
+            quantity: item.quantity,
+            reason: bulkReason,
+            targetBranchId: formData.targetBranchId,
+          }),
+        })
+      );
+
+      const results = await Promise.all(promises);
+      const failed = results.filter(r => !r.ok);
+
+      if (failed.length > 0) {
+        throw new Error(`${failed.length} movimiento(s) fallaron`);
+      }
+
+      toast.success(`${bulkItems.length} movimiento(s) registrados correctamente`);
+      onSuccess();
+      onClose();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error inesperado';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-3xl p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
         
         <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
@@ -130,12 +242,42 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
               Nuevo Movimiento de Inventario
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-0.5 font-medium">
-              Registra entradas, salidas o ajustes de stock
+              {mode === 'single' ? 'Registra un movimiento individual' : 'Registra múltiples movimientos (pistoleo)'}
             </DialogDescription>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30">
+        {/* Selector de Modo */}
+        <div className="px-6 pt-4 pb-2 bg-white border-b border-slate-100">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('single')}
+              className={`p-3 rounded-lg border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                mode === 'single'
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              Individual
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('bulk')}
+              className={`p-3 rounded-lg border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                mode === 'bulk'
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <Scan className="w-4 h-4" />
+              Masivo (Pistoleo)
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={mode === 'single' ? handleSubmit : (e) => e.preventDefault()} className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30">
           
           {/* Tipo de Movimiento */}
           <div className="space-y-2">
@@ -200,6 +342,7 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -269,15 +412,34 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
             <Label className="text-xs font-bold text-slate-700">
               Cantidad {formData.type === 'ADJUSTMENT' ? '(Stock Final)' : ''} <span className="text-red-500">*</span>
             </Label>
-            <input
-              type="number"
-              min="0"
-              value={formData.quantity}
-              onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
-              placeholder={formData.type === 'ADJUSTMENT' ? 'Ingresa el stock correcto' : 'Ingresa la cantidad'}
-              className="w-full h-11 px-3 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
-              required
-            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="0"
+                value={formData.quantity}
+                onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && mode === 'bulk') {
+                    e.preventDefault();
+                    addToBulkList();
+                  }
+                }}
+                placeholder={formData.type === 'ADJUSTMENT' ? 'Ingresa el stock correcto' : 'Ingresa la cantidad'}
+                className="flex-1 h-11 px-3 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
+                required
+              />
+              {mode === 'bulk' && (
+                <Button
+                  type="button"
+                  onClick={addToBulkList}
+                  disabled={!selectedProduct || !formData.variantId || !formData.quantity}
+                  className="h-11 px-4 bg-slate-900 hover:bg-slate-800"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar
+                </Button>
+              )}
+            </div>
             {formData.type === 'ADJUSTMENT' && (
               <p className="text-xs text-slate-500">
                 Para ajustes, ingresa el stock final correcto (no la diferencia)
@@ -285,18 +447,59 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
             )}
           </div>
 
+          {/* Lista de productos en modo masivo */}
+          {mode === 'bulk' && bulkItems.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700">Productos agregados ({bulkItems.length})</Label>
+              <div className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                {bulkItems.map((item) => (
+                  <div key={item.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
+                    <div className="flex-1">
+                      <div className="font-bold text-sm text-slate-900">{item.productTitle}</div>
+                      <div className="text-xs text-slate-500">{item.variantName}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-slate-900">x{item.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeBulkItem(item.id)}
+                        className="p-1 hover:bg-red-100 rounded text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Motivo */}
-          <div className="space-y-2">
-            <Label className="text-xs font-bold text-slate-700">Motivo <span className="text-red-500">*</span></Label>
-            <textarea
-              value={formData.reason}
-              onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-              placeholder="Describe el motivo del movimiento..."
-              rows={3}
-              className="w-full px-3 py-2 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300 resize-none"
-              required
-            />
-          </div>
+          {mode === 'single' ? (
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700">Motivo <span className="text-red-500">*</span></Label>
+              <textarea
+                value={formData.reason}
+                onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Describe el motivo del movimiento..."
+                rows={3}
+                className="w-full px-3 py-2 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300 resize-none"
+                required
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700">Motivo General <span className="text-red-500">*</span></Label>
+              <textarea
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                placeholder="Describe el motivo de estos movimientos..."
+                rows={3}
+                className="w-full px-3 py-2 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300 resize-none"
+                required
+              />
+            </div>
+          )}
 
         </form>
 
@@ -310,14 +513,25 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
           >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isLoading || !formData.variantId}
-            className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
-          >
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Registrar Movimiento
-          </Button>
+          {mode === 'single' ? (
+            <Button 
+              onClick={handleSubmit}
+              disabled={isLoading || !formData.variantId}
+              className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
+            >
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Registrar Movimiento
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleBulkSubmit}
+              disabled={isLoading || bulkItems.length === 0}
+              className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
+            >
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Registrar {bulkItems.length} Movimiento(s)
+            </Button>
+          )}
         </div>
 
       </DialogContent>

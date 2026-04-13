@@ -7,8 +7,17 @@ export async function GET(req: Request) {
   const branchId = req.headers.get('x-branch-id');
 
   try {
+    // Obtener parámetros de query
+    const { searchParams } = new URL(req.url);
+    const variantId = searchParams.get('variantId');
+
     // Construir el filtro base
     const whereClause: any = {};
+
+    // Filtrar por variantId si se proporciona
+    if (variantId) {
+      whereClause.variantId = variantId;
+    }
 
     // Si no es SUPER_ADMIN, filtrar por businessId
     if (role !== 'SUPER_ADMIN') {

@@ -1,34 +1,67 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
+  const userId = req.headers.get('x-user-id');
+  const role = req.headers.get('x-user-role');
+
+  if (!userId) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
-    const { productId, fromBranchId, toBranchId, requestedById, quantity } = body;
+    const { fromBranchId, toBranchId, reason, items } = body;
 
-    // 1. Validaciones básicas
-    if (!productId || !fromBranchId || !toBranchId || !requestedById || !quantity) {
-      return NextResponse.json({ error: 'Faltan datos requeridos para el traslado' }, { status: 400 });
+    // Validaciones
+    if (!fromBranchId || !toBranchId || !items || items.length === 0) {
+      return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
     }
 
-    if (quantity <= 0) {
-      return NextResponse.json({ error: 'La cantidad debe ser mayor a cero' }, { status: 400 });
+    if (fromBranchId === toBranchId) {
+      return NextResponse.json({ error: 'Las sucursales deben ser diferentes' }, { status: 400 });
     }
 
-    // 2. Obtener nombres para construir mensajes amigables (Consultas en paralelo para mayor velocidad)
-    const [product, fromBranch, toBranch, requester] = await Promise.all([
-      prisma.product.findUnique({ where: { id: productId }, select: { title: true } }),
+    // Obtener nombres de sucursales
+    const [fromBranch, toBranch] = await Promise.all([
       prisma.branch.findUnique({ where: { id: fromBranchId }, select: { name: true } }),
-      prisma.branch.findUnique({ where: { id: toBranchId }, select: { name: true } }),
-      prisma.user.findUnique({ where: { id: requestedById }, select: { name: true } })
+      prisma.branch.findUnique({ where: { id: toBranchId }, select: { name: true } })
     ]);
 
-    if (!product || !fromBranch || !toBranch || !requester) {
-      return NextResponse.json({ error: 'Registros de origen inválidos' }, { status: 400 });
+    if (!fromBranch || !toBranch) {
+      return NextResponse.json({ error: 'Sucursales no encontradas' }, { status: 404 });
     }
 
-    // 3. Obtener a los usuarios que deben ser notificados
-    // Dueños globales + Manager de tienda origen + Manager de tienda destino
+    // Crear el traslado con sus items
+    const transfer = await prisma.stockTransfer.create({
+      data: {
+        fromBranchId,
+        toBranchId,
+        requestedById: userId,
+        status: 'PENDING',
+        items: {
+          create: items.map((item: any) => ({
+            variantId: item.variantId,
+            quantity: item.quantity
+          }))
+        }
+      },
+      include: {
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: {
+                  select: { title: true }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Crear notificaciones para managers de ambas sucursales y owners
     const targetUsers = await prisma.user.findMany({
       where: {
         OR: [
@@ -36,78 +69,55 @@ export async function POST(req: Request) {
           { role: 'MANAGER', branchId: fromBranchId },
           { role: 'MANAGER', branchId: toBranchId }
         ],
-        isActive: true // Solo notificar a usuarios activos
+        isActive: true
       },
       select: { id: true, role: true, branchId: true }
     });
 
-    // 4. Construir las notificaciones personalizadas según el rol/sucursal de cada usuario
     const notificationsData = targetUsers.map(user => {
-      let title = 'Movimiento de Stock';
+      let title = 'Nueva Solicitud de Traslado';
       let message = '';
 
       if (user.branchId === fromBranchId && user.role === 'MANAGER') {
-        // Es el jefe de la tienda que TIENE el stock (Aprobador)
-        title = 'Nueva Petición de Stock';
-        message = `La tienda ${toBranch.name} solicita ${quantity}x "${product.title}". Solicitado por: ${requester.name}.`;
-      } 
-      else if (user.branchId === toBranchId && user.role === 'MANAGER') {
-        // Es el jefe de la tienda que PIDE el stock (Solo informativo)
+        title = 'Solicitud de Traslado (Aprobación Requerida)';
+        message = `${toBranch.name} solicita ${items.length} producto(s). Motivo: ${reason}`;
+      } else if (user.branchId === toBranchId && user.role === 'MANAGER') {
         title = 'Traslado Solicitado';
-        message = `Tu cajero ${requester.name} solicitó ${quantity}x "${product.title}" a la tienda ${fromBranch.name}.`;
-      } 
-      else {
-        // Es Dueño o Super Admin (Monitoreo global)
-        title = 'Solicitud de Traslado (Global)';
-        message = `${toBranch.name} solicitó ${quantity}x "${product.title}" a ${fromBranch.name} (Por: ${requester.name}).`;
+        message = `Se solicitó traslado de ${items.length} producto(s) desde ${fromBranch.name}`;
+      } else {
+        title = 'Solicitud de Traslado';
+        message = `${toBranch.name} solicitó traslado desde ${fromBranch.name} (${items.length} productos)`;
       }
 
       return {
-        userId: user.id, // Asignamos directamente al usuario
+        userId: user.id,
         title,
         message,
         type: 'TRANSFER_REQUEST' as const
       };
     });
 
-    // 5. Transacción: Creamos el traslado y las notificaciones simultáneamente
-    const result = await prisma.$transaction(async (tx) => {
-      const transfer = await tx.stockTransfer.create({
-        data: {
-          productId,
-          fromBranchId,
-          toBranchId,
-          requestedById,
-          quantity: Number(quantity),
-          status: 'PENDING'
-        }
+    if (notificationsData.length > 0) {
+      await prisma.notification.createMany({
+        data: notificationsData
       });
+    }
 
-      if (notificationsData.length > 0) {
-        await tx.notification.createMany({
-          data: notificationsData
-        });
-      }
-
-      return transfer;
-    });
-
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(transfer, { status: 201 });
   } catch (error) {
-    console.error('Error creando traslado:', error);
-    return NextResponse.json({ error: 'Error interno del servidor al crear traslado' }, { status: 500 });
+    console.error('[STOCK_TRANSFER_POST_ERROR]', error);
+    return NextResponse.json({ error: 'Error al crear traslado' }, { status: 500 });
   }
 }
 
 export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get('branchId');
-    const role = searchParams.get('role');
+  const branchId = req.headers.get('x-branch-id');
+  const role = req.headers.get('x-user-role');
 
-    let whereClause = {};
+  try {
+    let whereClause: any = {};
     
-    // Si NO es Super Admin o Dueño, solo ve los traslados que involucren a su sucursal
+    // Si no es Owner o Super Admin, solo ve traslados de su sucursal
     if (role !== 'SUPER_ADMIN' && role !== 'OWNER') {
       if (branchId && branchId !== 'NONE') {
         whereClause = {
@@ -119,17 +129,27 @@ export async function GET(req: Request) {
     const transfers = await prisma.stockTransfer.findMany({
       where: whereClause,
       include: {
-        product: { select: { title: true, images: true } },
         fromBranch: { select: { name: true } },
         toBranch: { select: { name: true } },
-        requestedBy: { select: { name: true } }
+        requestedBy: { select: { name: true } },
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: {
+                  select: { title: true, images: true }
+                }
+              }
+            }
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
 
     return NextResponse.json(transfers);
   } catch (error) {
-    console.error('Error obteniendo traslados:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    console.error('[STOCK_TRANSFER_GET_ERROR]', error);
+    return NextResponse.json({ error: 'Error al obtener traslados' }, { status: 500 });
   }
 }
