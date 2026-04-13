@@ -1,6 +1,5 @@
-// src/app/api/sales/history/route.ts
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma'; // Importación nombrada estricta
 
 export async function GET(req: Request) {
   try {
@@ -47,13 +46,23 @@ export async function GET(req: Request) {
       whereClause.userId = userId;
     }
 
-    // 3. Consultar las ventas con sus relaciones
+    // 3. Consultar las ventas con sus relaciones correctamente anidadas
     const sales = await prisma.sale.findMany({
       where: whereClause,
       include: {
         user: { select: { name: true } },
         items: {
-          include: { product: { select: { title: true, code: true } } }
+          include: {
+            variant: {
+              select: {
+                barcode: true,
+                sku: true,
+                product: {
+                  select: { title: true }
+                }
+              }
+            }
+          }
         },
         payments: true
       },
