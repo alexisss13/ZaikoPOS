@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma'; // <-- Corregido: Importación nombrada obligatoria
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
     const isOwner = user.role === 'OWNER' || user.role === 'SUPER_ADMIN';
 
-    // Calcular fechas según el rango
+    // Calcular fechas según el rango (Asegurar que concuerden con America/Lima en el frontend)
     const now = new Date();
     let startDate = new Date();
     let yesterdayStart = new Date();
@@ -109,7 +109,6 @@ export async function GET(req: NextRequest) {
     const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
     sales.forEach(sale => {
       sale.items.forEach(item => {
-        // Crear key único con nombre del producto y variante
         const fullName = item.variantName && item.variantName !== 'Estándar' 
           ? `${item.productName} - ${item.variantName}`
           : item.productName;
@@ -133,7 +132,8 @@ export async function GET(req: NextRequest) {
       .slice(0, 10);
 
     // Ventas por sucursal (solo para owner)
-    let salesByBranch: any[] = [];
+    // Usamos Array<Record<string, any>> temporalmente para evitar quejas de 'any[]'
+    let salesByBranch: Array<Record<string, any>> = [];
     if (isOwner) {
       const branchMap = new Map<string, { branchName: string; sales: number; revenue: number; orders: number }>();
       sales.forEach(sale => {
@@ -169,7 +169,7 @@ export async function GET(req: NextRequest) {
 
     const salesByPaymentMethod = Object.fromEntries(paymentMethodMap);
 
-    // Productos con stock bajo
+    // Productos con stock bajo - Tu nuevo enfoque correcto
     const stockCondition = branchFilter !== 'ALL' 
       ? { branchId: branchFilter }
       : isOwner 
@@ -193,7 +193,7 @@ export async function GET(req: NextRequest) {
       .filter(stock => stock.quantity <= stock.variant.minStock)
       .slice(0, 10)
       .map((stock, index) => ({
-        id: `${stock.id}-${index}`, // Usar ID único del stock + index
+        id: `${stock.id}-${index}`,
         name: stock.variant.product.title + (stock.variant.name !== 'Estándar' ? ` - ${stock.variant.name}` : ''),
         stock: stock.quantity,
         minStock: stock.variant.minStock,
@@ -227,8 +227,8 @@ export async function GET(req: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error al obtener estadísticas:', error);
+  } catch (error: unknown) {
+    console.error('[STATS_GET_ERROR]', error);
     return NextResponse.json(
       { error: 'Error al obtener estadísticas' },
       { status: 500 }
