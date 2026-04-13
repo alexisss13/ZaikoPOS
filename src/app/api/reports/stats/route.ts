@@ -20,17 +20,22 @@ export async function GET(req: Request) {
       _count: { id: true }
     });
 
-    // 2. Stock Bajo
-    const lowStockCount = await prisma.product.count({
+    // 2. Stock Bajo - Contar variantes con stock bajo
+    const lowStockVariants = await prisma.stock.findMany({
       where: {
-        businessId,
-        branchStock: {
-          some: {
-            quantity: { lte: 5 }
+        quantity: { lte: 5 },
+        variant: {
+          product: {
+            businessId
           }
         }
+      },
+      select: {
+        variantId: true
       }
     });
+
+    const lowStockCount = lowStockVariants.length;
 
     // 3. Gráfico Semanal
     const last7Days = subDays(today, 7);
