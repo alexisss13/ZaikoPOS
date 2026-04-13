@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const role = req.headers.get('x-user-role');
 
   if (role !== 'OWNER' && role !== 'MANAGER') {
@@ -10,6 +10,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   try {
     const body = await req.json();
+    // params ahora tipado como Promise se resuelve correctamente aquí
     const { id } = await params;
 
     if (!body.name || body.name.trim() === '') {
@@ -36,7 +37,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const role = req.headers.get('x-user-role');
 
   if (role !== 'OWNER' && role !== 'MANAGER') {
@@ -44,6 +45,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   try {
+    // params tipado como Promise se resuelve correctamente aquí
     const { id } = await params;
 
     await prisma.supplier.delete({
