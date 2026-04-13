@@ -84,9 +84,11 @@ export default function InventoryPage() {
 
   // Check URL params to switch to transfers tab if coming from notification
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'transfers') {
-      setActiveTab('transfers');
+    if (searchParams) {
+      const tab = searchParams.get('tab');
+      if (tab === 'transfers') {
+        setActiveTab('transfers');
+      }
     }
   }, [searchParams]);
   const [searchTerm, setSearchTerm] = useState('');
