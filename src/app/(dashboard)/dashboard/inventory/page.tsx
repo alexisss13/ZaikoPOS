@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
   Warehouse, Search, ChevronLeft, ChevronRight, Download, 
@@ -71,7 +71,7 @@ const movementTypeConfig = {
   TRANSFER: { label: 'Traslado', color: 'bg-cyan-100 text-cyan-700 border-cyan-300', icon: ArrowUpCircle },
 };
 
-export default function InventoryPage() {
+function InventoryPageContent() {
   const { role } = useAuth();
   const canManage = role === 'OWNER' || role === 'MANAGER';
   const searchParams = useSearchParams();
@@ -905,5 +905,23 @@ export default function InventoryPage() {
       />
 
     </div>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col h-full w-full gap-5 animate-in fade-in duration-300">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-48" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-full w-full rounded-xl" />
+        </div>
+      </div>
+    }>
+      <InventoryPageContent />
+    </Suspense>
   );
 }
