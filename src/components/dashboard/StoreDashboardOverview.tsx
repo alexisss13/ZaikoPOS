@@ -108,7 +108,7 @@ export default function StoreDashboardOverview() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Dashboard</h1>
           <BarChart3 className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
         </div>
 

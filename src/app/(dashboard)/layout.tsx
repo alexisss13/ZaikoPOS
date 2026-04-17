@@ -16,8 +16,34 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MobileHeader } from '@/components/layout/MobileHeader';
+import { MobileMenuDrawer, MenuItem, User as MobileUser } from '@/components/layout/MobileMenuDrawer';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+/**
+ * Build role-based menu items for mobile navigation
+ * Filters menu items based on user role (SUPER_ADMIN vs regular users)
+ */
+function buildMobileMenuItems(role: string, pathname: string): MenuItem[] {
+  const tiMenuItems: MenuItem[] = [
+    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, isActive: pathname === '/dashboard' },
+    { href: '/dashboard/businesses', label: 'Clientes', icon: Building2, isActive: pathname === '/dashboard/businesses' },
+    { href: '/dashboard/branches', label: 'Sucursales', icon: Store, isActive: pathname === '/dashboard/branches' },
+    { href: '/dashboard/users', label: 'Usuarios', icon: Users, isActive: pathname === '/dashboard/users' },
+    { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck, isActive: pathname === '/dashboard/audit' },
+  ];
+
+  const shopMenuItems: MenuItem[] = [
+    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, isActive: pathname === '/dashboard' },
+    { href: '/dashboard/products', label: 'Productos', icon: Package, isActive: pathname === '/dashboard/products' },
+    { href: '/dashboard/inventory', label: 'Inventario', icon: Warehouse, isActive: pathname === '/dashboard/inventory' },
+    { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: ContactRound, isActive: pathname === '/dashboard/cash-sessions' },
+    { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart, isActive: pathname === '/dashboard/purchases' },
+  ];
+
+  return role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;
+}
 
 interface Notification {
   id: string; title: string; message: string; read: boolean; createdAt: string; type: string;
@@ -204,6 +230,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const menuItems = role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;
 
+  // Build mobile menu items with role-based filtering
+  const mobileMenuItems = buildMobileMenuItems(role, pathname);
+
+  // Prepare mobile user object
+  const mobileUser: MobileUser = {
+    name: name || 'Usuario',
+    role: role || 'USER',
+    image: image || null,
+  };
+
   // Lógica de Iconos Condicionales para la parte superior
   let TopLogo;
   if (role === 'SUPER_ADMIN') {
@@ -353,58 +389,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ======================================================== */}
       <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
         
-        {/* HEADER SOLO PARA MÓVILES */}
-        <header className="lg:hidden h-14 bg-white text-slate-900 flex items-center justify-between px-4 shrink-0 shadow-sm border-b border-slate-200 z-30">
-          <div className="flex items-center gap-2">
-            <div className="bg-slate-900 p-1.5 rounded shadow-sm"><Store className="h-4 w-4 text-white" /></div>
-            <span className="font-bold text-sm text-slate-900">F&F ADMIN</span>
-          </div>
+        {/* MOBILE HEADER - New MobileHeader Component */}
+        <MobileHeader
+          onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          notificationCount={unreadCount}
+          onNotificationClick={() => setShowNotifs(!showNotifs)}
+          brandLogo={currentBranch?.logoUrl || undefined}
+          brandName={role === 'SUPER_ADMIN' ? 'F&F ADMIN' : currentBranch?.name || 'F&F ADMIN'}
+        />
 
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowNotifs(!showNotifs)} className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
-            </button>
-            <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600 hover:bg-slate-100 h-9 w-9 rounded-full">
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </header>
-
-        {/* MENU MÓVIL DESPLEGABLE */}
-        <div className={`lg:hidden absolute top-14 left-0 w-full bg-white border-b border-slate-200 transition-all duration-300 overflow-hidden z-40 ${isMobileMenuOpen ? 'max-h-[85vh] border-b shadow-2xl' : 'max-h-0 border-transparent'}`}>
-          <nav className="p-4 space-y-1.5 flex flex-col overflow-y-auto max-h-[75vh]">
-            <div className="flex items-center gap-3 p-3 mb-2 bg-slate-50 border border-slate-100 rounded-xl">
-              {image ? <img src={image} className="w-10 h-10 rounded-full object-cover shadow-sm" alt="" /> : <UserCircle className="w-10 h-10 text-slate-400" />}
-              <div>
-                <p className="text-sm font-bold text-slate-900">{name}</p>
-                <p className="text-[10px] text-slate-500 font-bold tracking-wider">{role}</p>
-              </div>
-            </div>
-            {menuItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
-                  <span className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-colors ${isActive ? 'bg-slate-900 text-white font-bold shadow-md' : 'text-slate-600 hover:bg-slate-50 font-medium'}`}>
-                    <item.icon className="w-[18px] h-[18px]" /> {item.label}
-                  </span>
-                </Link>
-              )
-            })}
-            {role !== 'SUPER_ADMIN' && (
-              <Link href="/dashboard/pos" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 mt-2 rounded-xl text-sm font-bold border transition-colors ${pathname === '/dashboard/pos' ? 'bg-emerald-600 text-white border-emerald-700 shadow-md' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}>
-                <ShoppingBag className="w-[18px] h-[18px]" /> IR AL POS
-              </Link>
-            )}
-            <div className="h-px bg-slate-100 my-2 w-full" />
-            <button onClick={() => { setIsMobileMenuOpen(false); setIsProfileModalOpen(true); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-slate-600 hover:bg-slate-50 font-bold w-full text-left transition-colors">
-              <UserCircle className="w-[18px] h-[18px]" /> Mi Perfil
-            </button>
-            <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 hover:text-red-600 font-bold w-full text-left transition-colors">
-              <LogOut className="w-[18px] h-[18px]" /> Cerrar Sesión
-            </button>
-          </nav>
-        </div>
+        {/* MOBILE MENU DRAWER - New MobileMenuDrawer Component */}
+        <MobileMenuDrawer
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          menuItems={mobileMenuItems}
+          user={mobileUser}
+          onLogout={handleLogout}
+          showPOSButton={role !== 'SUPER_ADMIN'}
+          isPOSActive={pathname === '/dashboard/pos'}
+        />
 
         {/* 🚀 CONTENIDO DE LAS PÁGINAS */}
         {/* El fondo del canvas ahora es blanco para todas las páginas que se renderizan dentro */}
