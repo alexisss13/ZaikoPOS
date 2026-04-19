@@ -64,16 +64,22 @@ export async function PATCH(req: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Esta sesión ya está cerrada' }, { status: 400 });
     }
 
-    // Calcular la diferencia asegurando que Prisma devuelva primitivos Number
+    // Calcular el efectivo esperado y la diferencia
+    const initialCash = Number(session.initialCash || 0);
     const income = Number(session.income || 0);
     const expense = Number(session.expense || 0);
-    const difference = numericFinalCash - (income - expense);
+    
+    // Efectivo esperado = Inicial + Ingresos - Egresos
+    const expectedCash = initialCash + income - expense;
+    
+    // Diferencia = Efectivo contado - Efectivo esperado
+    const difference = numericFinalCash - expectedCash;
 
     const updatedSession = await prisma.cashSession.update({
       where: { id },
       data: {
         status: 'CLOSED',
-        closedAt: new Date(), // Nota: Validar que esto use la hora de America/Lima si hay lógica intermedia
+        closedAt: new Date(),
         finalCash: numericFinalCash,
         difference: difference
       },

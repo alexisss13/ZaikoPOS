@@ -799,10 +799,6 @@ model PointTransaction {
 // ==========================================
 model Address {
   id        String  @id @default(uuid())
-  dni       String?
-  firstName String
-  lastName  String
-  phone     String
   address   String
   address2  String?
   city      String
