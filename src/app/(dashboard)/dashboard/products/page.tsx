@@ -4,7 +4,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags, FileText
+  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags, FileText, ChevronDown, SlidersHorizontal, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import { ImportProductsModal } from '@/components/dashboard/ImportProductsModal'
 import { BarcodeGeneratorModal } from '@/components/dashboard/BarcodeGeneratorModal';
 import Barcode from 'react-barcode';
 import { useAuth } from '@/context/auth-context';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -50,6 +51,7 @@ const ITEMS_PER_PAGE = 8;
 
 export default function ProductsPage() {
   const { user, role } = useAuth();
+  const { isMobile } = useResponsive();
   const permissions = user?.permissions || {};
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   
@@ -87,6 +89,19 @@ export default function ProductsPage() {
   
   const [barcodeProduct, setBarcodeProduct] = useState<Product | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
+
+  // Mobile card expand state
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const getBranchByCode = (code: string) => branches?.find(b => b.ecommerceCode === code);
 
@@ -591,86 +606,502 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
-      {/* TOOLBAR SUPERIOR */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
-        <div className="flex items-center gap-2.5 shrink-0">
-          <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Productos</h1>
-          <Package className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
-            <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+      {/* ── HEADER MÓVIL MEJORADO ── */}
+      {isMobile ? (
+        <div className="flex flex-col gap-4">
+          {/* Header principal */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">Productos</h1>
+              <p className="text-sm text-slate-500 mt-0.5">{filteredProducts.length} productos encontrados</p>
             </div>
-            <Input 
-              placeholder="Buscar producto, SKU..." 
-              value={searchTerm} 
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
-              className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" 
-            />
+            {canCreate && (
+              <Button
+                onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }}
+                className="h-12 w-12 p-0 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white shadow-lg rounded-2xl"
+              >
+                <Plus className="w-6 h-6" />
+              </Button>
+            )}
           </div>
+
+          {/* Buscador mejorado */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+              <Search className="w-5 h-5 text-slate-400" />
+            </div>
+            <Input
+              placeholder="Buscar por nombre, SKU o código..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="pl-12 pr-12 h-12 bg-white border-slate-200 rounded-2xl text-base shadow-sm focus:shadow-md transition-shadow"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            )}
+          </div>
+
+          {/* Filtros horizontales mejorados */}
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {/* Filtro principal */}
+            <button 
+              onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                codeFilter === 'ALL' 
+                  ? 'bg-slate-900 text-white shadow-lg' 
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" /> Todos
+            </button>
+
+            <button 
+              onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                codeFilter === 'GENERAL' 
+                  ? 'bg-slate-900 text-white shadow-lg' 
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <Globe className="w-4 h-4" /> Compartidos
+            </button>
+
+            {/* Sucursales */}
+            {visibleCodes.map(code => {
+              const b = getBranchByCode(code);
+              const isActive = codeFilter === code;
+              return (
+                <button 
+                  key={code} 
+                  onClick={() => {setCodeFilter(code); setCurrentPage(1); setCategoryFilter('ALL');}} 
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                    isActive 
+                      ? 'bg-slate-900 text-white shadow-lg' 
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {b?.logoUrl ? (
+                    <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover" alt="" />
+                  ) : (
+                    <Store className="w-4 h-4" />
+                  )}
+                  {b?.name || code}
+                </button>
+              );
+            })}
+
+            {/* Stock filters */}
+            <button 
+              onClick={() => {setStockFilter('LOW'); setCurrentPage(1);}} 
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                stockFilter === 'LOW' 
+                  ? 'bg-amber-500 text-white shadow-lg' 
+                  : 'bg-white text-amber-600 border border-amber-200 hover:border-amber-300'
+              }`}
+            >
+              Stock Bajo
+            </button>
+
+            <button 
+              onClick={() => {setStockFilter('OUT'); setCurrentPage(1);}} 
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                stockFilter === 'OUT' 
+                  ? 'bg-red-500 text-white shadow-lg' 
+                  : 'bg-white text-red-600 border border-red-200 hover:border-red-300'
+              }`}
+            >
+              Agotados
+            </button>
+
+            <button 
+              onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL');}} 
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                codeFilter === 'INACTIVE' 
+                  ? 'bg-red-500 text-white shadow-lg' 
+                  : 'bg-white text-red-600 border border-red-200 hover:border-red-300'
+              }`}
+            >
+              <PowerOff className="w-4 h-4" /> Inactivos
+            </button>
+          </div>
+
+          {/* Acciones rápidas */}
           {canCreate && (
-            <>
-              <Button 
-                onClick={() => setIsCategoryModalOpen(true)}
-                variant="ghost"
-                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+            <div className="grid grid-cols-4 gap-2">
+              <button 
+                onClick={() => setIsCategoryModalOpen(true)} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
               >
-                <Tags className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Categorías</span>
-              </Button>
-              <Button 
-                onClick={() => setIsImportModalOpen(true)}
-                variant="ghost"
-                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                <Tags className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Categorías</span>
+              </button>
+              <button 
+                onClick={() => setIsImportModalOpen(true)} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
               >
-                <FileText className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Importar</span>
-              </Button>
-              <div className="relative">
+                <FileText className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Importar</span>
+              </button>
+              <button 
+                onClick={() => setIsBarcodeModalOpen(true)} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
+              >
+                <BarcodeIcon className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Códigos</span>
+              </button>
+              <button 
+                onClick={exportToExcel} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
+              >
+                <Download className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Exportar</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ── TOOLBAR DESKTOP (sin cambios) ── */
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Productos</h1>
+            <Package className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
+              <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
+                <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+              </div>
+              <Input 
+                placeholder="Buscar producto, SKU..." 
+                value={searchTerm} 
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+                className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" 
+              />
+            </div>
+            {canCreate && (
+              <>
                 <Button 
-                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  onClick={() => setIsCategoryModalOpen(true)}
                   variant="ghost"
                   className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
                 >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Exportar</span>
+                  <Tags className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Categorías</span>
                 </Button>
-                
-                {showExportMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                    <div className="absolute right-0 top-12 w-40 bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                      <button
-                        onClick={exportToExcel}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        Excel
-                      </button>
-                      <button
-                        onClick={exportToPDF}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        PDF
-                      </button>
-                    </div>
-                  </>
-                )}
+                <Button 
+                  onClick={() => setIsImportModalOpen(true)}
+                  variant="ghost"
+                  className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                >
+                  <FileText className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Importar</span>
+                </Button>
+                <div className="relative">
+                  <Button 
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    variant="ghost"
+                    className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Exportar</span>
+                  </Button>
+                  
+                  {showExportMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                      <div className="absolute right-0 top-12 w-40 bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                        <button
+                          onClick={exportToExcel}
+                          className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Excel
+                        </button>
+                        <button
+                          onClick={exportToPDF}
+                          className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          PDF
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <Button 
+                  onClick={() => setIsBarcodeModalOpen(true)}
+                  variant="ghost"
+                  className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                >
+                  <BarcodeIcon className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Códigos</span>
+                </Button>
+                <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
+                  <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── VISTA MÓVIL: TARJETAS MEJORADAS ── */}
+      {isMobile ? (
+        <div className="flex flex-col flex-1 gap-3 overflow-y-auto pb-6">
+          {/* Paginación superior */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-sm text-slate-500">Página {currentPage} de {totalPages}</span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0 rounded-xl border-slate-200"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0 rounded-xl border-slate-200"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array(6).fill(0).map((_, i) => (
+                <div key={i} className="bg-white rounded-3xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-16 w-16 rounded-2xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                    <Skeleton className="h-8 w-16 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : paginatedProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <Package className="w-10 h-10 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                {codeFilter === 'INACTIVE' ? 'No hay productos inactivos' : 'No se encontraron productos'}
+              </h3>
+              <p className="text-slate-500 mb-4">
+                {codeFilter === 'INACTIVE' 
+                  ? 'Todos los productos están activos' 
+                  : 'Intenta ajustar los filtros o buscar algo diferente'}
+              </p>
               <Button 
-                onClick={() => setIsBarcodeModalOpen(true)}
-                variant="ghost"
-                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                variant="outline" 
+                onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}
+                className="rounded-xl"
               >
-                <BarcodeIcon className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Códigos</span>
+                Limpiar filtros
               </Button>
-              <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
-                <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Producto</span>
-              </Button>
-            </>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {paginatedProducts.map((product: Product) => {
+                const visibleStocks = canViewOthers
+                  ? (product.branchStocks || [])
+                  : (product.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
+                const totalPhysicalStock = visibleStocks.reduce((sum, bs) => sum + bs.quantity, 0);
+                const minStock = product.minStock || 5;
+                const hasWholesale = Number(product.wholesalePrice) > 0;
+                const isExpanded = expandedCards.has(product.id);
+
+                const isGlobalProduct = !product.branchOwnerId;
+                const isMyBranchProduct = product.branchOwnerId === user?.branchId;
+                const hasStockInMyBranch = product.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+                let canEditThisSpecificProduct = false;
+                if (canManageGlobal) canEditThisSpecificProduct = true;
+                else if (canEdit && (isGlobalProduct || isMyBranchProduct || hasStockInMyBranch)) canEditThisSpecificProduct = true;
+
+                // Stock status
+                let stockStatus = { color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
+                if (totalPhysicalStock <= 0) {
+                  stockStatus = { color: 'red', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
+                } else if (totalPhysicalStock <= minStock) {
+                  stockStatus = { color: 'amber', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+                }
+
+                const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
+                const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
+
+                return (
+                  <div
+                    key={product.id}
+                    className={`bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+                      !product.active ? 'opacity-60' : ''
+                    }`}
+                  >
+                    {/* Header de la tarjeta */}
+                    <div 
+                      className="p-4 cursor-pointer active:bg-slate-50 transition-colors"
+                      onClick={() => toggleCard(product.id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Imagen del producto */}
+                        <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${
+                          !product.active ? 'grayscale' : ''
+                        }`}>
+                          {product.images?.[0] ? (
+                            <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <ImageIcon className="w-6 h-6 text-slate-400" />
+                            </div>
+                          )}
+                          {!product.active && (
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
+                                INACTIVO
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info principal */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-slate-900 text-base leading-tight mb-1 truncate">
+                            {product.title}
+                          </h3>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm text-slate-500">{product.category?.name || 'Sin categoría'}</span>
+                            {(product.barcode || product.code || product.sku) && (
+                              <>
+                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                <span className="text-xs font-mono text-slate-400">
+                                  {product.barcode || product.code || product.sku}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          
+                          {/* Precio y stock en línea */}
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <span className="text-lg font-bold text-slate-900">S/ {Number(product.basePrice).toFixed(2)}</span>
+                              {hasWholesale && (
+                                <span className="text-xs text-emerald-600 font-medium">
+                                  (Mayor: S/ {Number(product.wholesalePrice).toFixed(2)})
+                                </span>
+                              )}
+                            </div>
+                            <div className={`px-3 py-1 rounded-full text-sm font-bold border ${stockStatus.bg} ${stockStatus.text} ${stockStatus.border}`}>
+                              {totalPhysicalStock} un.
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Chevron */}
+                        <div className="shrink-0">
+                          <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contenido expandible */}
+                    {isExpanded && (
+                      <div className="border-t border-slate-100 p-4 bg-slate-50/50 animate-in slide-in-from-top-1 duration-200">
+                        {/* Información detallada */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          {/* Sucursal/Catálogo */}
+                          <div className="bg-white rounded-2xl p-3 border border-slate-100">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Store className="w-4 h-4 text-slate-500" />
+                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Catálogo</span>
+                            </div>
+                            {branchesWithStock.length > 1 ? (
+                              <div className="flex items-center gap-1.5">
+                                {ownerBranch?.logoUrl ? (
+                                  <img src={ownerBranch.logoUrl} className="w-5 h-5 rounded-lg object-cover" alt="" />
+                                ) : (
+                                  <Store className="w-4 h-4 text-slate-600" />
+                                )}
+                                <span className="text-sm font-medium text-slate-700">{ownerBranch?.name || 'Sucursal'}</span>
+                                <Globe className="w-3.5 h-3.5 text-emerald-500" />
+                              </div>
+                            ) : product.branchOwnerId ? (
+                              <div className="flex items-center gap-1.5">
+                                {ownerBranch?.logoUrl ? (
+                                  <img src={ownerBranch.logoUrl} className="w-5 h-5 rounded-lg object-cover" alt="" />
+                                ) : (
+                                  <Store className="w-4 h-4 text-slate-600" />
+                                )}
+                                <span className="text-sm font-medium text-slate-700">{ownerBranch?.name || 'Sucursal'}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <Globe className="w-4 h-4 text-emerald-500" />
+                                <span className="text-sm font-medium text-emerald-600">Compartido</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Stock detallado */}
+                          <div className="bg-white rounded-2xl p-3 border border-slate-100">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Package className="w-4 h-4 text-slate-500" />
+                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inventario</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-slate-900">{totalPhysicalStock}</span>
+                              <span className="text-xs text-slate-500">unidades</span>
+                              {totalPhysicalStock <= minStock && totalPhysicalStock > 0 && (
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                                  Stock bajo
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => { 
+                              setSelectedProduct(product); 
+                              setCanEditSelected(canEditThisSpecificProduct); 
+                              setIsModalOpen(true); 
+                            }}
+                            className="flex-1 h-11 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white rounded-2xl font-semibold"
+                          >
+                            {canEditThisSpecificProduct ? 'Editar producto' : 'Ver detalles'}
+                          </Button>
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); openKardexModal(product); }}
+                            variant="outline"
+                            className="h-11 w-11 p-0 rounded-2xl border-slate-200 shrink-0"
+                          >
+                            <FileText className="w-5 h-5 text-slate-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-      </div>
-
+      ) : (
+      /* ── VISTA DESKTOP: TABLA ORIGINAL ── */
       <div className="flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         
         {/* SUBHEADER: TABS Y PAGINACIÓN INTEGRADA */}
@@ -962,6 +1393,7 @@ export default function ProductsPage() {
           </table>
         </div>
       </div>
+      )}{/* end desktop */}
 
       {/* SOLO DEJAMOS ESTE MODAL */}
       {isModalOpen && (
