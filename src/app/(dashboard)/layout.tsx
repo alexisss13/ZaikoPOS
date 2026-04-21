@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { 
-  Menu, X, LayoutDashboard, ShoppingBag, 
+  X, LayoutDashboard, ShoppingBag, 
   Package, Users, Store, LogOut, ShieldCheck, 
   Building2, Camera, UserCircle, Loader2, Bell, Globe, ShoppingCart, Warehouse, ContactRound
 } from 'lucide-react';
@@ -16,34 +16,9 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MobileHeader } from '@/components/layout/MobileHeader';
-import { MobileMenuDrawer, MenuItem, User as MobileUser } from '@/components/layout/MobileMenuDrawer';
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
-
-/**
- * Build role-based menu items for mobile navigation
- * Filters menu items based on user role (SUPER_ADMIN vs regular users)
- */
-function buildMobileMenuItems(role: string, pathname: string): MenuItem[] {
-  const tiMenuItems: MenuItem[] = [
-    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, isActive: pathname === '/dashboard' },
-    { href: '/dashboard/businesses', label: 'Clientes', icon: Building2, isActive: pathname === '/dashboard/businesses' },
-    { href: '/dashboard/branches', label: 'Sucursales', icon: Store, isActive: pathname === '/dashboard/branches' },
-    { href: '/dashboard/users', label: 'Usuarios', icon: Users, isActive: pathname === '/dashboard/users' },
-    { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck, isActive: pathname === '/dashboard/audit' },
-  ];
-
-  const shopMenuItems: MenuItem[] = [
-    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard, isActive: pathname === '/dashboard' },
-    { href: '/dashboard/products', label: 'Productos', icon: Package, isActive: pathname === '/dashboard/products' },
-    { href: '/dashboard/inventory', label: 'Inventario', icon: Warehouse, isActive: pathname === '/dashboard/inventory' },
-    { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: ContactRound, isActive: pathname === '/dashboard/cash-sessions' },
-    { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart, isActive: pathname === '/dashboard/purchases' },
-  ];
-
-  return role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;
-}
 
 interface Notification {
   id: string; title: string; message: string; read: boolean; createdAt: string; type: string;
@@ -177,7 +152,6 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 // MAIN LAYOUT COMPONENT
 // ------------------------------------------------------------
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); 
   const [showNotifs, setShowNotifs] = useState(false);
   
@@ -229,16 +203,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ];
 
   const menuItems = role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;
-
-  // Build mobile menu items with role-based filtering
-  const mobileMenuItems = buildMobileMenuItems(role, pathname);
-
-  // Prepare mobile user object
-  const mobileUser: MobileUser = {
-    name: name || 'Usuario',
-    role: role || 'USER',
-    image: image || null,
-  };
 
   // Lógica de Iconos Condicionales para la parte superior
   let TopLogo;
@@ -389,29 +353,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ======================================================== */}
       <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
         
-        {/* MOBILE HEADER - New MobileHeader Component */}
-        <MobileHeader
-          onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          notificationCount={unreadCount}
-          onNotificationClick={() => setShowNotifs(!showNotifs)}
-          brandLogo={currentBranch?.logoUrl || undefined}
-          brandName={role === 'SUPER_ADMIN' ? 'F&F ADMIN' : currentBranch?.name || 'F&F ADMIN'}
-        />
-
-        {/* MOBILE MENU DRAWER - New MobileMenuDrawer Component */}
-        <MobileMenuDrawer
-          isOpen={isMobileMenuOpen}
-          onClose={() => setIsMobileMenuOpen(false)}
-          menuItems={mobileMenuItems}
-          user={mobileUser}
-          onLogout={handleLogout}
-          showPOSButton={role !== 'SUPER_ADMIN'}
-          isPOSActive={pathname === '/dashboard/pos'}
-        />
-
         {/* 🚀 CONTENIDO DE LAS PÁGINAS */}
         {/* El fondo del canvas ahora es blanco para todas las páginas que se renderizan dentro */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 md:px-8 relative z-10 custom-scrollbar bg-slate-50/30">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 md:px-8 relative z-10 custom-scrollbar bg-slate-50/30 pb-20 lg:pb-6">
           
           {/* Notificaciones Móvil */}
           {showNotifs && (
@@ -437,6 +381,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav role={role} />
 
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </div>
