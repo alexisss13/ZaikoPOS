@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
   Warehouse, Search, ChevronLeft, ChevronRight, Download, 
-  ArrowUpCircle, ArrowDownCircle, Settings, Filter, Package, Store, User, Calendar, ArrowRightLeft, Check, X, XCircle
+  ArrowUpCircle, ArrowDownCircle, Settings, Filter, Package, Store, User, Calendar, ArrowRightLeft, Check, X, XCircle, Plus, SlidersHorizontal, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { StockMovementModal } from '@/components/dashboard/StockMovementModal';
 import { TransferModal } from '@/components/dashboard/TransferModal';
 import { ResponsiveTable, ColumnDef } from '@/components/ui/ResponsiveTable';
 import { useResponsive } from '@/hooks/useResponsive';
+import { toast } from 'sonner';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -74,10 +75,10 @@ const movementTypeConfig = {
 };
 
 function InventoryPageContent() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
+  const { isMobile } = useResponsive();
   const canManage = role === 'OWNER' || role === 'MANAGER';
   const searchParams = useSearchParams();
-  const { isMobile } = useResponsive();
 
   const { data: movements, isLoading, mutate } = useSWR<StockMovement[]>('/api/inventory/movements', fetcher);
   const { data: transfers, mutate: mutateTransfers } = useSWR<StockTransfer[]>('/api/stock-transfers', fetcher);
@@ -110,6 +111,26 @@ function InventoryPageContent() {
   const [showBranchFilter, setShowBranchFilter] = useState(false);
   const [showTransferStatusFilter, setShowTransferStatusFilter] = useState(false);
   const [expandedTransferCards, setExpandedTransferCards] = useState<Set<string>>(new Set());
+
+  const handleTransferAction = async (transferId: string, action: 'APPROVED' | 'REJECTED') => {
+    setProcessingTransferId(transferId);
+    try {
+      const res = await fetch(`/api/transfers/${transferId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action })
+      });
+      
+      if (!res.ok) throw new Error('Error al procesar traslado');
+      
+      mutateTransfers();
+      toast.success(`Traslado ${action === 'APPROVED' ? 'aprobado' : 'rechazado'} correctamente`);
+    } catch (error) {
+      toast.error('Error al procesar el traslado');
+    } finally {
+      setProcessingTransferId(null);
+    }
+  };
 
   const filteredMovements = useMemo(() => {
     if (!movements) return [];
@@ -525,7 +546,146 @@ function InventoryPageContent() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
-      {/* TOOLBAR SUPERIOR */}
+      {/* ── HEADER MÓVIL MEJORADO ── */}
+      {isMobile ? (
+        <div className="flex flex-col gap-4">
+          {/* Header principal */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">Inventario</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Kardex y movimientos de stock</p>
+            </div>
+            {canManage && (
+              <Button
+                onClick={() => setIsMovementModalOpen(true)}
+                className="h-12 w-12 p-0 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white shadow-lg rounded-2xl"
+              >
+                <Plus className="w-6 h-6" />
+              </Button>
+            )}
+          </div>
+
+          {/* Buscador mejorado */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+              <Search className="w-5 h-5 text-slate-400" />
+            </div>
+            <Input
+              placeholder="Buscar producto, motivo o usuario..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setKardexPage(1); }}
+              className="pl-12 pr-12 h-12 bg-white border-slate-200 rounded-2xl text-base shadow-sm focus:shadow-md transition-shadow"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            )}
+          </div>
+
+          {/* Tabs mejorados */}
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setActiveTab('kardex')} 
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
+                activeTab === 'kardex' 
+                  ? 'bg-slate-900 text-white shadow-lg' 
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <Package className="w-4 h-4" /> Movimientos
+            </button>
+            <button 
+              onClick={() => setActiveTab('transfers')} 
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
+                activeTab === 'transfers' 
+                  ? 'bg-slate-900 text-white shadow-lg' 
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <ArrowRightLeft className="w-4 h-4" /> Traslados
+            </button>
+          </div>
+
+          {/* Filtros horizontales */}
+          {activeTab === 'kardex' && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {['ALL', 'INPUT', 'OUTPUT', 'ADJUSTMENT', 'SALE_POS', 'TRANSFER'].map(type => (
+                <button 
+                  key={type}
+                  onClick={() => {setTypeFilter(type as any); setKardexPage(1);}} 
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                    typeFilter === type 
+                      ? 'bg-slate-900 text-white shadow-lg' 
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {type === 'ALL' && 'Todos'}
+                  {type === 'INPUT' && 'Entradas'}
+                  {type === 'OUTPUT' && 'Salidas'}
+                  {type === 'ADJUSTMENT' && 'Ajustes'}
+                  {type === 'SALE_POS' && 'Ventas POS'}
+                  {type === 'TRANSFER' && 'Traslados'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'transfers' && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {[
+                { key: 'ALL', label: 'Todos', color: 'slate' },
+                { key: 'PENDING', label: 'Pendientes', color: 'amber' },
+                { key: 'APPROVED', label: 'Aprobados', color: 'emerald' },
+                { key: 'REJECTED', label: 'Rechazados', color: 'red' }
+              ].map(status => (
+                <button 
+                  key={status.key}
+                  onClick={() => {setTransferStatusFilter(status.key as any); setTransfersPage(1);}} 
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                    transferStatusFilter === status.key 
+                      ? `bg-${status.color}-500 text-white shadow-lg` 
+                      : `bg-white text-${status.color}-600 border border-${status.color}-200 hover:border-${status.color}-300`
+                  }`}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Acciones rápidas */}
+          {canManage && (
+            <div className="grid grid-cols-3 gap-2">
+              <button 
+                onClick={() => setIsMovementModalOpen(true)} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
+              >
+                <ArrowUpCircle className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Movimiento</span>
+              </button>
+              <button 
+                onClick={() => {setActiveTab('transfers'); setIsTransferModalOpen(true);}} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
+              >
+                <ArrowRightLeft className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Traslado</span>
+              </button>
+              <button 
+                onClick={exportToExcel} 
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
+              >
+                <Download className="w-5 h-5 text-slate-600" />
+                <span className="text-xs font-medium text-slate-600">Exportar</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+      /* ── TOOLBAR DESKTOP (sin cambios) ── */
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         <div className="flex items-center gap-2.5 shrink-0">
           <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Kardex de Inventario</h1>
@@ -598,8 +758,273 @@ function InventoryPageContent() {
           )}
         </div>
       </div>
+      )}
 
-      {/* CONTENEDOR PRINCIPAL */}
+      {/* ── CONTENIDO PRINCIPAL ── */}
+      {isMobile ? (
+        /* ── VISTA MÓVIL: TARJETAS ── */
+        <div className="flex flex-col flex-1 gap-3 overflow-y-auto pb-6">
+          {activeTab === 'kardex' ? (
+            /* Movimientos en móvil */
+            <>
+              {/* Paginación superior */}
+              {Math.ceil(filteredMovements.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-sm text-slate-500">
+                    Página {kardexPage} de {Math.ceil(filteredMovements.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setKardexPage(p => Math.max(1, p - 1))} 
+                      disabled={kardexPage === 1}
+                      className="h-8 w-8 p-0 rounded-xl border-slate-200"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setKardexPage(p => Math.min(Math.ceil(filteredMovements.length / ITEMS_PER_PAGE), p + 1))} 
+                      disabled={kardexPage === Math.ceil(filteredMovements.length / ITEMS_PER_PAGE)}
+                      className="h-8 w-8 p-0 rounded-xl border-slate-200"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de movimientos */}
+              <div className="space-y-3">
+                {filteredMovements
+                  .slice((kardexPage - 1) * ITEMS_PER_PAGE, kardexPage * ITEMS_PER_PAGE)
+                  .map((movement) => {
+                    const typeConfig = {
+                      INPUT: { label: 'Entrada', color: 'emerald', icon: ArrowUpCircle },
+                      OUTPUT: { label: 'Salida', color: 'red', icon: ArrowDownCircle },
+                      ADJUSTMENT: { label: 'Ajuste', color: 'amber', icon: Settings },
+                      SALE_POS: { label: 'Venta POS', color: 'blue', icon: Package },
+                      SALE_ECOMMERCE: { label: 'Venta Online', color: 'indigo', icon: Package },
+                      PURCHASE: { label: 'Compra', color: 'purple', icon: ArrowUpCircle },
+                      TRANSFER: { label: 'Traslado', color: 'cyan', icon: ArrowRightLeft },
+                    }[movement.type] || { label: movement.type, color: 'slate', icon: Package };
+
+                    const Icon = typeConfig.icon;
+                    const isPositive = movement.type === 'INPUT' || movement.type === 'PURCHASE' || 
+                                     (movement.type === 'ADJUSTMENT' && movement.currentStock > movement.previousStock);
+
+                    return (
+                      <div key={movement.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+                        <div className="flex items-start gap-3">
+                          {/* Icono del tipo */}
+                          <div className={`w-12 h-12 rounded-2xl bg-${typeConfig.color}-50 flex items-center justify-center shrink-0`}>
+                            <Icon className={`w-6 h-6 text-${typeConfig.color}-600`} />
+                          </div>
+
+                          {/* Información principal */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-slate-900 text-sm truncate">
+                                {movement.variant.product.title}
+                              </h3>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold bg-${typeConfig.color}-100 text-${typeConfig.color}-700`}>
+                                {typeConfig.label}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
+                              <span className="flex items-center gap-1">
+                                <Store className="w-3.5 h-3.5" />
+                                {movement.branch.name}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <User className="w-3.5 h-3.5" />
+                                {movement.user.name}
+                              </span>
+                            </div>
+
+                            {movement.reason && (
+                              <p className="text-xs text-slate-400 mb-2 italic">"{movement.reason}"</p>
+                            )}
+
+                            {/* Stock change */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-400">Stock:</span>
+                                <span className="text-sm font-medium text-slate-600">{movement.previousStock}</span>
+                                <span className="text-slate-300">→</span>
+                                <span className="text-sm font-bold text-slate-900">{movement.currentStock}</span>
+                              </div>
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                                isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {isPositive ? '+' : ''}{movement.currentStock - movement.previousStock}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 mt-2">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-xs text-slate-400">
+                                {new Date(movement.createdAt).toLocaleDateString('es-PE', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
+          ) : (
+            /* Traslados en móvil */
+            <>
+              {/* Paginación superior */}
+              {Math.ceil(filteredTransfers.length / ITEMS_PER_PAGE) > 1 && (
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-sm text-slate-500">
+                    Página {transfersPage} de {Math.ceil(filteredTransfers.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setTransfersPage(p => Math.max(1, p - 1))} 
+                      disabled={transfersPage === 1}
+                      className="h-8 w-8 p-0 rounded-xl border-slate-200"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setTransfersPage(p => Math.min(Math.ceil(filteredTransfers.length / ITEMS_PER_PAGE), p + 1))} 
+                      disabled={transfersPage === Math.ceil(filteredTransfers.length / ITEMS_PER_PAGE)}
+                      className="h-8 w-8 p-0 rounded-xl border-slate-200"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de traslados */}
+              <div className="space-y-3">
+                {filteredTransfers
+                  .slice((transfersPage - 1) * ITEMS_PER_PAGE, transfersPage * ITEMS_PER_PAGE)
+                  .map((transfer) => {
+                    const statusConfig = {
+                      PENDING: { label: 'Pendiente', color: 'amber', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+                      APPROVED: { label: 'Aprobado', color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+                      REJECTED: { label: 'Rechazado', color: 'red', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+                    }[transfer.status];
+
+                    const isExpanded = expandedTransferCards.has(transfer.id);
+
+                    return (
+                      <div key={transfer.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        {/* Header */}
+                        <div 
+                          className="p-4 cursor-pointer active:bg-slate-50 transition-colors"
+                          onClick={() => {
+                            const newExpanded = new Set(expandedTransferCards);
+                            if (newExpanded.has(transfer.id)) {
+                              newExpanded.delete(transfer.id);
+                            } else {
+                              newExpanded.add(transfer.id);
+                            }
+                            setExpandedTransferCards(newExpanded);
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-12 h-12 rounded-2xl ${statusConfig.bg} flex items-center justify-center shrink-0`}>
+                              <ArrowRightLeft className={`w-6 h-6 ${statusConfig.text}`} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold text-slate-900 text-sm">
+                                  {transfer.fromBranch.name} → {transfer.toBranch.name}
+                                </h3>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                  {statusConfig.label}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center gap-1 text-xs text-slate-400">
+                                <User className="w-3.5 h-3.5" />
+                                <span>Solicitado por {transfer.requestedBy.name}</span>
+                              </div>
+
+                              <div className="flex items-center gap-1 mt-1">
+                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                <span className="text-xs text-slate-400">
+                                  {new Date(transfer.createdAt).toLocaleDateString('es-PE', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+
+                            <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+                              isExpanded ? 'rotate-180' : ''
+                            }`} />
+                          </div>
+                        </div>
+
+                        {/* Contenido expandible */}
+                        {isExpanded && (
+                          <div className="border-t border-slate-100 p-4 bg-slate-50/50">
+                            {/* Botones de acción para traslados pendientes */}
+                            {transfer.status === 'PENDING' && canManage && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransferAction(transfer.id, 'APPROVED');
+                                  }}
+                                  disabled={processingTransferId === transfer.id}
+                                  className="flex-1 h-11 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-2xl font-semibold"
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Aprobar
+                                </Button>
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransferAction(transfer.id, 'REJECTED');
+                                  }}
+                                  disabled={processingTransferId === transfer.id}
+                                  variant="outline"
+                                  className="flex-1 h-11 border-red-200 text-red-600 hover:bg-red-50 rounded-2xl font-semibold"
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Rechazar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+      /* ── VISTA DESKTOP: TABLA ORIGINAL ── */
       <div className="flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         
         {/* TABS: KARDEX Y TRASLADOS */}
@@ -1417,6 +1842,7 @@ function InventoryPageContent() {
           </>
         )}
       </div>
+      )}{/* end desktop */}
 
       {/* MODAL DE NUEVO MOVIMIENTO */}
       <StockMovementModal 

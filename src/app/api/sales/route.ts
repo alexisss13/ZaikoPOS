@@ -60,6 +60,10 @@ export async function POST(req: Request) {
       ...validatedData
     });
 
+    if (!sale) {
+      return NextResponse.json({ error: 'Error al crear la venta' }, { status: 500 });
+    }
+
     console.log('[API /api/sales] Venta creada exitosamente:', sale.code);
 
     // Convertir Decimals a números para el JSON
@@ -69,16 +73,7 @@ export async function POST(req: Request) {
       discount: Number(sale.discount),
       total: Number(sale.total),
       tenderedAmount: Number(sale.tenderedAmount),
-      changeAmount: Number(sale.changeAmount),
-      items: sale.items.map(item => ({
-        ...item,
-        price: Number(item.price),
-        subtotal: Number(item.subtotal)
-      })),
-      payments: sale.payments.map(p => ({
-        ...p,
-        amount: Number(p.amount)
-      }))
+      changeAmount: Number(sale.changeAmount)
     };
 
     return NextResponse.json(saleResponse, { status: 201 });
