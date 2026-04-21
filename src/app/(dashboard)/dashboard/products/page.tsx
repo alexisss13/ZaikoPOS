@@ -2,17 +2,18 @@
 'use client';
 
 import useSWR from 'swr';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { 
-  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags, FileText, ChevronDown, SlidersHorizontal, X
+  Plus, Search, Package, Image as ImageIcon, Barcode as BarcodeIcon, ChevronLeft, ChevronRight, Download, Filter, LayoutGrid, Store, Globe, PowerOff, Check, Banknote, Tags, FileText, ChevronDown, X, SlidersHorizontal, MoreHorizontal, RefreshCw
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ProductModal, ProductData } from '@/components/dashboard/ProductModal';
+import { ProductModal } from '@/components/dashboard/ProductModal';
 import { CategoryModal } from '@/components/dashboard/CategoryModal';
 import { ImportProductsModal } from '@/components/dashboard/ImportProductsModal';
 import { BarcodeGeneratorModal } from '@/components/dashboard/BarcodeGeneratorModal';
@@ -21,6 +22,11 @@ import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+// Haptic feedback helper
+const haptic = (ms = 10) => { try { navigator.vibrate?.(ms); } catch {} };
+
+const MOBILE_PAGE_SIZE = 12; // cuántos cargar inicialmente y por cada "cargar más"
 
 interface Product {
   id: string;
@@ -72,6 +78,7 @@ export default function ProductsPage() {
   const visibleCodes = canViewOthers ? uniqueCodes : uniqueCodes.filter(c => c === myCode);
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [codeFilter, setCodeFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [stockFilter, setStockFilter] = useState('ALL');
@@ -95,6 +102,7 @@ export default function ProductsPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const toggleCard = (id: string) => {
+    haptic(8);
     setExpandedCards(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -102,6 +110,52 @@ export default function ProductsPage() {
       return next;
     });
   };
+
+  // Debounce búsqueda 200ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 200);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // "Cargar más" — cuántos productos mostrar en móvil
+  const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
+  // Reset visibleCount cuando cambian los filtros
+  useEffect(() => { setVisibleCount(MOBILE_PAGE_SIZE); }, [codeFilter, categoryFilter, stockFilter, debouncedSearch]);
+
+  // Pull-to-refresh
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pullStartY = useRef(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (scrollRef.current && scrollRef.current.scrollTop === 0) {
+      pullStartY.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!pullStartY.current) return;
+    const dist = Math.max(0, Math.min(80, e.touches[0].clientY - pullStartY.current));
+    if (dist > 0 && scrollRef.current?.scrollTop === 0) {
+      setIsPulling(true);
+      setPullDistance(dist);
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (pullDistance >= 60 && !isRefreshing) {
+      setIsRefreshing(true);
+      haptic(20);
+      await mutate();
+      setTimeout(() => { setIsRefreshing(false); setPullDistance(0); setIsPulling(false); pullStartY.current = 0; }, 600);
+    } else {
+      setPullDistance(0);
+      setIsPulling(false);
+      pullStartY.current = 0;
+    }
+  }, [pullDistance, isRefreshing, mutate]);
 
   const getBranchByCode = (code: string) => branches?.find(b => b.ecommerceCode === code);
 
@@ -159,9 +213,9 @@ export default function ProductsPage() {
       }
 
       // Búsqueda por texto
-      const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            (p.barcode && p.barcode.includes(searchTerm)) ||
-                            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = p.title.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+                            (p.barcode && p.barcode.includes(debouncedSearch)) ||
+                            (p.sku && p.sku.toLowerCase().includes(debouncedSearch.toLowerCase()));
       
       // Filtrar por estado activo/inactivo
       if (codeFilter === 'INACTIVE') return matchesSearch && !p.active;
@@ -204,10 +258,14 @@ export default function ProductsPage() {
 
       return matchesSearch && matchesCode && matchesCategory && matchesStock;
     });
-  }, [products, searchTerm, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, user?.branchId, branches]);
+  }, [products, debouncedSearch, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, user?.branchId, branches]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Productos visibles en móvil (cargar más)
+  const mobileProducts = filteredProducts.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredProducts.length;
 
   const handleDelete = async (id: string) => {
     if (!confirm('🛑 ¿Dar de baja este producto? No aparecerá en ventas, pero podrás reactivarlo desde el filtro "Inactivos".')) return;
@@ -606,163 +664,259 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
       
-      {/* ── HEADER MÓVIL MEJORADO ── */}
+      {/* ── HEADER MÓVIL ── */}
       {isMobile ? (
-        <div className="flex flex-col gap-4">
-          {/* Header principal */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-black text-slate-900">Productos</h1>
-              <p className="text-sm text-slate-500 mt-0.5">{filteredProducts.length} productos encontrados</p>
+        <div className="flex flex-col gap-3">
+          {/* Top bar: título + acciones */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-slate-900 leading-tight">Productos</h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {filteredProducts.length} resultado{filteredProducts.length !== 1 ? 's' : ''}
+                {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
+                  <span className="ml-1 text-slate-500">· filtrado</span>
+                )}
+              </p>
             </div>
+
+            {/* Botón filtros con badge si hay filtros activos */}
+            <button
+              onClick={() => setShowMobileFilters(true)}
+              className={`relative flex items-center gap-1.5 h-10 px-3 rounded-xl border font-semibold text-sm transition-all ${
+                codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                  : 'bg-white text-slate-600 border-slate-200'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span className="text-xs">Filtros</span>
+              {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {[codeFilter !== 'ALL', categoryFilter !== 'ALL', stockFilter !== 'ALL'].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+
             {canCreate && (
               <Button
                 onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }}
-                className="h-12 w-12 p-0 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white shadow-lg rounded-2xl"
+                className="h-10 w-10 p-0 bg-slate-900 hover:bg-slate-800 text-white shadow-md rounded-xl shrink-0"
               >
-                <Plus className="w-6 h-6" />
+                <Plus className="w-5 h-5" />
               </Button>
             )}
+
+            {/* Menú de acciones secundarias */}
+            {canCreate && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(v => !v)}
+                  className="h-10 w-10 p-0 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shrink-0"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-12 w-44 bg-white border border-slate-200 shadow-xl rounded-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                      <button
+                        onClick={() => { setShowExportMenu(false); setIsCategoryModalOpen(true); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <Tags className="w-4 h-4 text-slate-400" /> Categorías
+                      </button>
+                      <button
+                        onClick={() => { setShowExportMenu(false); setIsImportModalOpen(true); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <FileText className="w-4 h-4 text-slate-400" /> Importar
+                      </button>
+                      <button
+                        onClick={() => { setShowExportMenu(false); setIsBarcodeModalOpen(true); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <BarcodeIcon className="w-4 h-4 text-slate-400" /> Códigos
+                      </button>
+                      <div className="h-px bg-slate-100 mx-2 my-1" />
+                      <button
+                        onClick={() => { setShowExportMenu(false); exportToExcel(); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-slate-400" /> Excel
+                      </button>
+                      <button
+                        onClick={() => { setShowExportMenu(false); exportToPDF(); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-slate-400" /> PDF
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Buscador mejorado */}
+          {/* Buscador compacto */}
           <div className="relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-              <Search className="w-5 h-5 text-slate-400" />
-            </div>
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <Input
-              placeholder="Buscar por nombre, SKU o código..."
+              placeholder="Nombre, SKU o código de barras..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="pl-12 pr-12 h-12 bg-white border-slate-200 rounded-2xl text-base shadow-sm focus:shadow-md transition-shadow"
+              className="pl-10 pr-9 h-10 bg-white border-slate-200 rounded-xl text-sm shadow-sm"
             />
             {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')} 
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full hover:bg-slate-100 transition-colors"
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
               >
-                <X className="w-4 h-4 text-slate-400" />
+                <X className="w-3.5 h-3.5 text-slate-400" />
               </button>
             )}
           </div>
 
-          {/* Filtros horizontales mejorados */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            {/* Filtro principal */}
-            <button 
-              onClick={() => {setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                codeFilter === 'ALL' 
-                  ? 'bg-slate-900 text-white shadow-lg' 
-                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" /> Todos
-            </button>
-
-            <button 
-              onClick={() => {setCodeFilter('GENERAL'); setCurrentPage(1); setCategoryFilter('ALL');}} 
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                codeFilter === 'GENERAL' 
-                  ? 'bg-slate-900 text-white shadow-lg' 
-                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <Globe className="w-4 h-4" /> Compartidos
-            </button>
-
-            {/* Sucursales */}
-            {visibleCodes.map(code => {
-              const b = getBranchByCode(code);
-              const isActive = codeFilter === code;
-              return (
-                <button 
-                  key={code} 
-                  onClick={() => {setCodeFilter(code); setCurrentPage(1); setCategoryFilter('ALL');}} 
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                    isActive 
-                      ? 'bg-slate-900 text-white shadow-lg' 
-                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  {b?.logoUrl ? (
-                    <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover" alt="" />
-                  ) : (
-                    <Store className="w-4 h-4" />
-                  )}
-                  {b?.name || code}
-                </button>
-              );
-            })}
-
-            {/* Stock filters */}
-            <button 
-              onClick={() => {setStockFilter('LOW'); setCurrentPage(1);}} 
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                stockFilter === 'LOW' 
-                  ? 'bg-amber-500 text-white shadow-lg' 
-                  : 'bg-white text-amber-600 border border-amber-200 hover:border-amber-300'
-              }`}
-            >
-              Stock Bajo
-            </button>
-
-            <button 
-              onClick={() => {setStockFilter('OUT'); setCurrentPage(1);}} 
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                stockFilter === 'OUT' 
-                  ? 'bg-red-500 text-white shadow-lg' 
-                  : 'bg-white text-red-600 border border-red-200 hover:border-red-300'
-              }`}
-            >
-              Agotados
-            </button>
-
-            <button 
-              onClick={() => {setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL');}} 
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
-                codeFilter === 'INACTIVE' 
-                  ? 'bg-red-500 text-white shadow-lg' 
-                  : 'bg-white text-red-600 border border-red-200 hover:border-red-300'
-              }`}
-            >
-              <PowerOff className="w-4 h-4" /> Inactivos
-            </button>
-          </div>
-
-          {/* Acciones rápidas */}
-          {canCreate && (
-            <div className="grid grid-cols-4 gap-2">
-              <button 
-                onClick={() => setIsCategoryModalOpen(true)} 
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
-              >
-                <Tags className="w-5 h-5 text-slate-600" />
-                <span className="text-xs font-medium text-slate-600">Categorías</span>
-              </button>
-              <button 
-                onClick={() => setIsImportModalOpen(true)} 
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
-              >
-                <FileText className="w-5 h-5 text-slate-600" />
-                <span className="text-xs font-medium text-slate-600">Importar</span>
-              </button>
-              <button 
-                onClick={() => setIsBarcodeModalOpen(true)} 
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
-              >
-                <BarcodeIcon className="w-5 h-5 text-slate-600" />
-                <span className="text-xs font-medium text-slate-600">Códigos</span>
-              </button>
-              <button 
-                onClick={exportToExcel} 
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
-              >
-                <Download className="w-5 h-5 text-slate-600" />
-                <span className="text-xs font-medium text-slate-600">Exportar</span>
-              </button>
+          {/* Chips de filtros activos */}
+          {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
+            <div className="flex gap-1.5 flex-wrap">
+              {codeFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-full">
+                  {codeFilter === 'GENERAL' ? 'Compartidos' : codeFilter === 'INACTIVE' ? 'Inactivos' : getBranchByCode(codeFilter)?.name || codeFilter}
+                  <button onClick={() => { setCodeFilter('ALL'); setCategoryFilter('ALL'); setCurrentPage(1); }} className="ml-0.5 hover:opacity-70"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {categoryFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-700 text-white text-xs font-semibold rounded-full">
+                  {availableCategories.find(c => c.id === categoryFilter)?.name || 'Categoría'}
+                  <button onClick={() => { setCategoryFilter('ALL'); setCurrentPage(1); }} className="ml-0.5 hover:opacity-70"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {stockFilter !== 'ALL' && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full ${stockFilter === 'LOW' ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {stockFilter === 'LOW' ? 'Stock bajo' : 'Agotados'}
+                  <button onClick={() => { setStockFilter('ALL'); setCurrentPage(1); }} className="ml-0.5 hover:opacity-70"><X className="w-3 h-3" /></button>
+                </span>
+              )}
             </div>
           )}
+
+          {/* Sheet solo de filtros */}
+          <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+            <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-10 max-h-[85vh] overflow-y-auto">
+              {/* Handle visual */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-slate-200" />
+              </div>
+
+              <SheetHeader className="px-6 pt-3 pb-0">
+                <SheetTitle className="text-xl font-black text-slate-900 text-left">Filtros</SheetTitle>
+              </SheetHeader>
+
+              <div className="px-6 pt-5 space-y-7">
+                {/* Sección: Catálogo */}
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Catálogo</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {[
+                      { value: 'ALL', label: 'Todos', icon: <LayoutGrid className="w-4 h-4" /> },
+                      { value: 'GENERAL', label: 'Compartidos', icon: <Globe className="w-4 h-4" /> },
+                      ...visibleCodes.map(code => {
+                        const b = getBranchByCode(code);
+                        return {
+                          value: code,
+                          label: b?.name || code,
+                          icon: b?.logoUrl
+                            ? <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover" alt="" />
+                            : <Store className="w-4 h-4" />,
+                        };
+                      }),
+                      { value: 'INACTIVE', label: 'Inactivos', icon: <PowerOff className="w-4 h-4" /> },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => { haptic(8); setCodeFilter(opt.value); setCategoryFilter('ALL'); setCurrentPage(1); }}
+                        className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${
+                          codeFilter === opt.value
+                            ? opt.value === 'INACTIVE' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {opt.icon}{opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sección: Categoría */}
+                {availableCategories.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Categoría</p>
+                    <div className="flex flex-wrap gap-2.5">
+                      <button
+                        onClick={() => { haptic(8); setCategoryFilter('ALL'); setCurrentPage(1); }}
+                        className={`px-4 py-3 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                      >
+                        Todas
+                      </button>
+                      {availableCategories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => { haptic(8); setCategoryFilter(cat.id); setCurrentPage(1); }}
+                          className={`px-4 py-3 rounded-2xl text-sm font-semibold border transition-all active:scale-95 max-w-[180px] truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sección: Stock */}
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Estado de stock</p>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <button
+                      onClick={() => { haptic(8); setStockFilter('ALL'); setCurrentPage(1); }}
+                      className={`py-3.5 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${stockFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      onClick={() => { haptic(8); setStockFilter('LOW'); setCurrentPage(1); }}
+                      className={`py-3.5 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${stockFilter === 'LOW' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-600 border-amber-200'}`}
+                    >
+                      Stock bajo
+                    </button>
+                    <button
+                      onClick={() => { haptic(8); setStockFilter('OUT'); setCurrentPage(1); }}
+                      className={`py-3.5 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${stockFilter === 'OUT' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-red-50 text-red-600 border-red-200'}`}
+                    >
+                      Agotados
+                    </button>
+                  </div>
+                </div>
+
+                {/* Footer: limpiar + cerrar */}
+                <div className="flex gap-3 pt-1">
+                  {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
+                    <button
+                      onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setCurrentPage(1); }}
+                      className="flex-1 h-13 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-600 active:scale-95 transition-transform"
+                    >
+                      Limpiar filtros
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { haptic(8); setShowMobileFilters(false); }}
+                    className="flex-1 h-13 py-3.5 rounded-2xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-transform"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
         </div>
       ) : (
         /* ── TOOLBAR DESKTOP (sin cambios) ── */
@@ -846,75 +1000,81 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* ── VISTA MÓVIL: TARJETAS MEJORADAS ── */}
+
+      {/* ── VISTA MÓVIL: TARJETAS ── */}
       {isMobile ? (
-        <div className="flex flex-col flex-1 gap-3 overflow-y-auto pb-6">
-          {/* Paginación superior */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-1">
-              <span className="text-sm text-slate-500">Página {currentPage} de {totalPages}</span>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                  disabled={currentPage === 1}
-                  className="h-8 w-8 p-0 rounded-xl border-slate-200"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-                  disabled={currentPage === totalPages}
-                  className="h-8 w-8 p-0 rounded-xl border-slate-200"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
+        <div
+          ref={scrollRef}
+          className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-6"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ overscrollBehavior: 'contain' }}
+        >
+          {/* Pull-to-refresh indicator */}
+          <div
+            className="flex items-center justify-center overflow-hidden transition-all duration-200"
+            style={{ height: isPulling || isRefreshing ? Math.min(pullDistance, 56) : 0, opacity: isPulling || isRefreshing ? 1 : 0 }}
+          >
+            <div className={`flex items-center gap-2 text-xs font-semibold text-slate-500`}>
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-slate-700' : pullDistance >= 60 ? 'text-slate-900' : 'text-slate-400'}`} />
+              {isRefreshing ? 'Actualizando...' : pullDistance >= 60 ? 'Suelta para actualizar' : 'Desliza para actualizar'}
             </div>
-          )}
+          </div>
 
           {isLoading ? (
-            <div className="space-y-3">
-              {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="bg-white rounded-3xl p-4 border border-slate-100">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-16 w-16 rounded-2xl" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+            /* Skeleton con forma real de tarjeta */
+            <div className="space-y-2.5">
+              {Array(5).fill(0).map((_, i) => (
+                <div key={i} className="bg-white rounded-3xl border border-slate-100 p-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+                    <div className="flex-1 space-y-2 min-w-0">
+                      <Skeleton className="h-4 w-3/4 rounded-lg" />
+                      <Skeleton className="h-3 w-1/3 rounded-lg" />
+                      <div className="flex items-center gap-2 pt-1">
+                        <Skeleton className="h-5 w-20 rounded-lg" />
+                        <Skeleton className="h-5 w-14 rounded-full" />
+                      </div>
                     </div>
-                    <Skeleton className="h-8 w-16 rounded-full" />
+                    <Skeleton className="w-4 h-4 rounded-full shrink-0" />
                   </div>
                 </div>
               ))}
             </div>
-          ) : paginatedProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <Package className="w-10 h-10 text-slate-400" />
+          ) : mobileProducts.length === 0 ? (
+            /* Empty state mejorado */
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+              <div className="relative mb-5">
+                <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center">
+                  <Package className="w-12 h-12 text-slate-300" strokeWidth={1.5} />
+                </div>
+                {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL' || debouncedSearch) && (
+                  <div className="absolute -top-1 -right-1 w-7 h-7 bg-slate-900 rounded-full flex items-center justify-center">
+                    <Filter className="w-3.5 h-3.5 text-white" />
+                  </div>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                {codeFilter === 'INACTIVE' ? 'No hay productos inactivos' : 'No se encontraron productos'}
+              <h3 className="text-base font-bold text-slate-900 mb-1">
+                {codeFilter === 'INACTIVE' ? 'Sin productos inactivos' : debouncedSearch ? `Sin resultados para "${debouncedSearch}"` : 'Sin productos aquí'}
               </h3>
-              <p className="text-slate-500 mb-4">
-                {codeFilter === 'INACTIVE' 
-                  ? 'Todos los productos están activos' 
-                  : 'Intenta ajustar los filtros o buscar algo diferente'}
+              <p className="text-sm text-slate-400 mb-5 leading-relaxed">
+                {codeFilter === 'INACTIVE'
+                  ? 'Todos los productos están activos.'
+                  : debouncedSearch
+                  ? 'Prueba con otro nombre, SKU o código.'
+                  : 'Ajusta los filtros o crea un nuevo producto.'}
               </p>
-              <Button 
-                variant="outline" 
-                onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}
-                className="rounded-xl"
+              <button
+                onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); haptic(); }}
+                className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-transform"
               >
                 Limpiar filtros
-              </Button>
+              </button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {paginatedProducts.map((product: Product) => {
+            <div className="space-y-2.5">
+              {mobileProducts.map((product: Product) => {
                 const visibleStocks = canViewOthers
                   ? (product.branchStocks || [])
                   : (product.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
@@ -930,13 +1090,9 @@ export default function ProductsPage() {
                 if (canManageGlobal) canEditThisSpecificProduct = true;
                 else if (canEdit && (isGlobalProduct || isMyBranchProduct || hasStockInMyBranch)) canEditThisSpecificProduct = true;
 
-                // Stock status
-                let stockStatus = { color: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
-                if (totalPhysicalStock <= 0) {
-                  stockStatus = { color: 'red', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
-                } else if (totalPhysicalStock <= minStock) {
-                  stockStatus = { color: 'amber', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
-                }
+                let stockStatus = { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
+                if (totalPhysicalStock <= 0) stockStatus = { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
+                else if (totalPhysicalStock <= minStock) stockStatus = { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
 
                 const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
                 const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
@@ -944,152 +1100,137 @@ export default function ProductsPage() {
                 return (
                   <div
                     key={product.id}
-                    className={`bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-                      !product.active ? 'opacity-60' : ''
-                    }`}
+                    className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all duration-150 active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`}
                   >
                     {/* Header de la tarjeta */}
-                    <div 
-                      className="p-4 cursor-pointer active:bg-slate-50 transition-colors"
+                    <div
+                      className="p-4 cursor-pointer select-none"
                       onClick={() => toggleCard(product.id)}
                     >
-                      <div className="flex items-center gap-4">
-                        {/* Imagen del producto */}
-                        <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${
-                          !product.active ? 'grayscale' : ''
-                        }`}>
+                      <div className="flex items-center gap-3">
+                        {/* Imagen */}
+                        <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`}>
                           {product.images?.[0] ? (
                             <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon className="w-6 h-6 text-slate-400" />
+                              <ImageIcon className="w-5 h-5 text-slate-400" />
                             </div>
                           )}
                           {!product.active && (
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                              <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
-                                INACTIVO
-                              </span>
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                              <span className="text-[9px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded-full leading-none">INACTIVO</span>
                             </div>
                           )}
                         </div>
 
-                        {/* Info principal */}
+                        {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-slate-900 text-base leading-tight mb-1 truncate">
-                            {product.title}
-                          </h3>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm text-slate-500">{product.category?.name || 'Sin categoría'}</span>
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight mb-0.5 truncate">{product.title}</h3>
+                          <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+                            <span className="text-xs text-slate-400 truncate max-w-[110px]">{product.category?.name || 'Sin categoría'}</span>
                             {(product.barcode || product.code || product.sku) && (
                               <>
-                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                <span className="text-xs font-mono text-slate-400">
-                                  {product.barcode || product.code || product.sku}
-                                </span>
+                                <span className="w-1 h-1 bg-slate-200 rounded-full shrink-0" />
+                                <span className="text-[10px] font-mono text-slate-300 truncate max-w-[70px]">{product.barcode || product.code || product.sku}</span>
                               </>
                             )}
                           </div>
-                          
-                          {/* Precio y stock en línea */}
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1">
-                              <span className="text-lg font-bold text-slate-900">S/ {Number(product.basePrice).toFixed(2)}</span>
-                              {hasWholesale && (
-                                <span className="text-xs text-emerald-600 font-medium">
-                                  (Mayor: S/ {Number(product.wholesalePrice).toFixed(2)})
-                                </span>
-                              )}
+                              <span className="text-sm font-bold text-slate-900">S/ {Number(product.basePrice).toFixed(2)}</span>
+                              {hasWholesale && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Tiene precio mayorista" />}
                             </div>
-                            <div className={`px-3 py-1 rounded-full text-sm font-bold border ${stockStatus.bg} ${stockStatus.text} ${stockStatus.border}`}>
+                            <div className={`px-2 py-0.5 rounded-full text-xs font-bold border ${stockStatus.bg} ${stockStatus.text} ${stockStatus.border}`}>
                               {totalPhysicalStock} un.
                             </div>
                           </div>
                         </div>
 
                         {/* Chevron */}
-                        <div className="shrink-0">
-                          <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
-                            isExpanded ? 'rotate-180' : ''
-                          }`} />
-                        </div>
+                        <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
                       </div>
                     </div>
 
                     {/* Contenido expandible */}
                     {isExpanded && (
-                      <div className="border-t border-slate-100 p-4 bg-slate-50/50 animate-in slide-in-from-top-1 duration-200">
-                        {/* Información detallada */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          {/* Sucursal/Catálogo */}
+                      <div className="border-t border-slate-100 p-4 bg-slate-50/50 animate-in slide-in-from-top-1 duration-150">
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          {/* Catálogo */}
                           <div className="bg-white rounded-2xl p-3 border border-slate-100">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Store className="w-4 h-4 text-slate-500" />
-                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Catálogo</span>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <Store className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Catálogo</span>
                             </div>
                             {branchesWithStock.length > 1 ? (
                               <div className="flex items-center gap-1.5">
-                                {ownerBranch?.logoUrl ? (
-                                  <img src={ownerBranch.logoUrl} className="w-5 h-5 rounded-lg object-cover" alt="" />
-                                ) : (
-                                  <Store className="w-4 h-4 text-slate-600" />
-                                )}
-                                <span className="text-sm font-medium text-slate-700">{ownerBranch?.name || 'Sucursal'}</span>
-                                <Globe className="w-3.5 h-3.5 text-emerald-500" />
+                                {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                                <span className="text-xs font-semibold text-slate-700 truncate">{ownerBranch?.name || 'Sucursal'}</span>
+                                <Globe className="w-3 h-3 text-emerald-500 shrink-0" />
                               </div>
                             ) : product.branchOwnerId ? (
                               <div className="flex items-center gap-1.5">
-                                {ownerBranch?.logoUrl ? (
-                                  <img src={ownerBranch.logoUrl} className="w-5 h-5 rounded-lg object-cover" alt="" />
-                                ) : (
-                                  <Store className="w-4 h-4 text-slate-600" />
-                                )}
-                                <span className="text-sm font-medium text-slate-700">{ownerBranch?.name || 'Sucursal'}</span>
+                                {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                                <span className="text-xs font-semibold text-slate-700 truncate">{ownerBranch?.name || 'Sucursal'}</span>
                               </div>
                             ) : (
                               <div className="flex items-center gap-1.5">
-                                <Globe className="w-4 h-4 text-emerald-500" />
-                                <span className="text-sm font-medium text-emerald-600">Compartido</span>
+                                <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                <span className="text-xs font-semibold text-emerald-600">Compartido</span>
                               </div>
                             )}
                           </div>
 
-                          {/* Stock detallado */}
+                          {/* Inventario */}
                           <div className="bg-white rounded-2xl p-3 border border-slate-100">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Package className="w-4 h-4 text-slate-500" />
-                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inventario</span>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <Package className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Inventario</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-slate-900">{totalPhysicalStock}</span>
-                              <span className="text-xs text-slate-500">unidades</span>
-                              {totalPhysicalStock <= minStock && totalPhysicalStock > 0 && (
-                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                                  Stock bajo
-                                </span>
-                              )}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-base font-bold text-slate-900">{totalPhysicalStock}</span>
+                              <span className="text-xs text-slate-400">un.</span>
+                              {totalPhysicalStock <= 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">Agotado</span>}
+                              {totalPhysicalStock > 0 && totalPhysicalStock <= minStock && <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-bold">Bajo</span>}
                             </div>
                           </div>
+
+                          {/* Precio */}
+                          <div className="bg-white rounded-2xl p-3 border border-slate-100">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <Banknote className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Precio</span>
+                            </div>
+                            <span className="text-base font-bold text-slate-900">S/ {Number(product.basePrice).toFixed(2)}</span>
+                          </div>
+
+                          {/* Mayorista */}
+                          {hasWholesale && (
+                            <div className="bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Mayorista</span>
+                              </div>
+                              <span className="text-base font-bold text-emerald-700">S/ {Number(product.wholesalePrice).toFixed(2)}</span>
+                              {product.wholesaleMinCount && <p className="text-[10px] text-emerald-500 mt-0.5">Mín. {product.wholesaleMinCount} un.</p>}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Botones de acción */}
+                        {/* Botones */}
                         <div className="flex gap-2">
                           <Button
-                            onClick={() => { 
-                              setSelectedProduct(product); 
-                              setCanEditSelected(canEditThisSpecificProduct); 
-                              setIsModalOpen(true); 
-                            }}
-                            className="flex-1 h-11 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white rounded-2xl font-semibold"
+                            onClick={() => { haptic(8); setSelectedProduct(product); setCanEditSelected(canEditThisSpecificProduct); setIsModalOpen(true); }}
+                            className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-sm active:scale-95 transition-transform"
                           >
-                            {canEditThisSpecificProduct ? 'Editar producto' : 'Ver detalles'}
+                            {canEditThisSpecificProduct ? 'Editar' : 'Ver detalles'}
                           </Button>
                           <Button
-                            onClick={(e) => { e.stopPropagation(); openKardexModal(product); }}
+                            onClick={(e) => { e.stopPropagation(); haptic(8); openKardexModal(product); }}
                             variant="outline"
-                            className="h-11 w-11 p-0 rounded-2xl border-slate-200 shrink-0"
+                            className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 active:scale-95 transition-transform"
                           >
-                            <FileText className="w-5 h-5 text-slate-600" />
+                            <FileText className="w-4 h-4" /> Kardex
                           </Button>
                         </div>
                       </div>
@@ -1097,6 +1238,24 @@ export default function ProductsPage() {
                   </div>
                 );
               })}
+
+              {/* Botón cargar más */}
+              {hasMore && (
+                <button
+                  onClick={() => { haptic(8); setVisibleCount(v => v + MOBILE_PAGE_SIZE); }}
+                  className="w-full py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  Cargar más · {filteredProducts.length - visibleCount} restantes
+                </button>
+              )}
+
+              {/* Fin de lista */}
+              {!hasMore && mobileProducts.length > MOBILE_PAGE_SIZE && (
+                <p className="text-center text-xs text-slate-300 py-3 font-medium">
+                  · {filteredProducts.length} productos ·
+                </p>
+              )}
             </div>
           )}
         </div>
