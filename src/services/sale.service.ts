@@ -209,7 +209,41 @@ export const saleService = {
         });
       }
 
-      return sale;
+      // G. Retornar venta con todos los datos necesarios para el ticket
+      const saleWithDetails = await tx.sale.findUnique({
+        where: { id: sale.id },
+        include: {
+          items: true,
+          payments: true,
+          customer: {
+            select: {
+              name: true,
+              docNumber: true
+            }
+          },
+          user: {
+            select: {
+              name: true
+            }
+          },
+          branch: {
+            select: {
+              name: true,
+              address: true,
+              phone: true,
+              logos: true
+            }
+          },
+          business: {
+            select: {
+              name: true,
+              ruc: true
+            }
+          }
+        }
+      });
+
+      return saleWithDetails;
     });
   }
 };

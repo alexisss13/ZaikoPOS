@@ -22,6 +22,7 @@ import { CashTransactionModal } from '@/components/pos/CashTransactionModal';
 import { CustomerModal } from '@/components/pos/CustomerModal';
 import { CustomerSearchModal } from '@/components/pos/CustomerSearchModal';
 import { DiscountModal } from '@/components/pos/DiscountModal';
+import { TicketPrint } from '@/components/pos/TicketPrint';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -81,6 +82,8 @@ export default function PosPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [ticketData, setTicketData] = useState<any>(null);
+  const [showTicketModal, setShowTicketModal] = useState(false);
   const [initialCash, setInitialCash] = useState('');
   const [finalCash, setFinalCash] = useState('');
   const [selectedBranch, setSelectedBranch] = useState<string>('');
@@ -435,11 +438,21 @@ export default function PosPage() {
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        console.error('Error parseando respuesta JSON:', jsonError);
+        throw new Error('Error en la respuesta del servidor');
+      }
 
       if (!res.ok) {
-        console.error('Error en venta:', data);
-        throw new Error(data.error || 'Error procesando la venta');
+        console.error('Error en venta:', {
+          status: res.status,
+          statusText: res.statusText,
+          data
+        });
+        throw new Error(data?.error || data?.message || 'Error procesando la venta');
       }
 
       // 🎉 Mostrar mensaje de éxito con puntos ganados si hay cliente vinculado
@@ -451,6 +464,33 @@ export default function PosPage() {
       } else {
         toast.success('¡Venta registrada con éxito!');
       }
+      
+      // 🎫 Guardar datos de la venta para el ticket
+      setTicketData({
+        code: data.code,
+        createdAt: data.createdAt,
+        subtotal: Number(data.subtotal),
+        discount: Number(data.discount),
+        total: Number(data.total),
+        tenderedAmount: Number(data.tenderedAmount),
+        changeAmount: Number(data.changeAmount),
+        pointsEarned: data.pointsEarned || 0,
+        items: data.items.map((item: any) => ({
+          productName: item.productName,
+          variantName: item.variantName,
+          quantity: item.quantity,
+          price: Number(item.price),
+          subtotal: Number(item.subtotal)
+        })),
+        payments: data.payments.map((p: any) => ({
+          method: p.method,
+          amount: Number(p.amount)
+        })),
+        customer: data.customer,
+        cashier: data.user,
+        branch: data.branch,
+        business: data.business
+      });
       
       setSaleState('PAID');
       setShowPayment(false);
@@ -468,18 +508,25 @@ export default function PosPage() {
   };
 
   const handleBoletear = () => {
-    toast.success('Comprobante emitido (Integración SUNAT pendiente)');
+    if (!ticketData) {
+      toast.error('No hay datos de venta para imprimir');
+      return;
+    }
+    // Mostrar modal con el ticket
+    setShowTicketModal(true);
   };
 
   const handleLiberar = () => {
     setCart([]);
     setFoundCustomer(null);
     setGlobalDiscountValue('');
+    setTicketData(null);
     setSaleState('DRAFT');
     toast.success('Caja liberada para nueva venta');
   };
 
   const handleAnular = () => {
+    setTicketData(null);
     setSaleState('DRAFT');
     toast.error('Pago anulado. Venta devuelta a borrador.');
   };
@@ -1547,6 +1594,17 @@ export default function PosPage() {
         }}
         subtotal={itemsSubtotal}
       />
+
+      {/* MODAL DE TICKET DE VENTA */}
+      {ticketData && showTicketModal && (
+        <TicketPrint
+          saleData={ticketData}
+          onComplete={() => {
+            setShowTicketModal(false);
+            toast.success('Ticket generado');
+          }}
+        />
+      )}
       </div>
     </div>
   );

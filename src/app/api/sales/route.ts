@@ -30,18 +30,24 @@ export async function POST(req: Request) {
     const userId = req.headers.get('x-user-id');
     const headerBranchId = req.headers.get('x-branch-id');
     
+    console.log('[API /api/sales] Iniciando POST - userId:', userId, 'headerBranchId:', headerBranchId);
+    
     if (!userId) {
       return NextResponse.json({ error: 'Usuario no autenticado' }, { status: 401 });
     }
 
     const body = await req.json();
+    console.log('[API /api/sales] Body recibido:', JSON.stringify(body, null, 2));
     
     // Parseo y validación estricta con Zod
     const validatedData = saleSchema.parse(body);
+    console.log('[API /api/sales] Datos validados correctamente');
     
     // Usar branchId del body si está disponible (para OWNER), sino del header
     // Filtrar strings vacíos también
     const branchId = validatedData.branchId || (headerBranchId && headerBranchId.trim() !== '' ? headerBranchId : null);
+    
+    console.log('[API /api/sales] branchId final:', branchId);
     
     if (!branchId) {
       return NextResponse.json({ error: 'No se pudo determinar la sucursal' }, { status: 401 });
@@ -54,7 +60,28 @@ export async function POST(req: Request) {
       ...validatedData
     });
 
-    return NextResponse.json(sale, { status: 201 });
+    console.log('[API /api/sales] Venta creada exitosamente:', sale.code);
+
+    // Convertir Decimals a números para el JSON
+    const saleResponse = {
+      ...sale,
+      subtotal: Number(sale.subtotal),
+      discount: Number(sale.discount),
+      total: Number(sale.total),
+      tenderedAmount: Number(sale.tenderedAmount),
+      changeAmount: Number(sale.changeAmount),
+      items: sale.items.map(item => ({
+        ...item,
+        price: Number(item.price),
+        subtotal: Number(item.subtotal)
+      })),
+      payments: sale.payments.map(p => ({
+        ...p,
+        amount: Number(p.amount)
+      }))
+    };
+
+    return NextResponse.json(saleResponse, { status: 201 });
 
   } catch (error: unknown) {
     console.error('Error en API /api/sales:', error);

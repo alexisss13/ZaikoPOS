@@ -7,6 +7,7 @@ import {
   Receipt, User, Loader2, Banknote, Wallet, CreditCard, 
   ArrowRightLeft, Printer, XCircle, ChevronLeft, ChevronRight 
 } from 'lucide-react';
+import { TicketPrint } from './TicketPrint';
 
 interface SalesHistoryModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ const ITEMS_PER_PAGE = 6;
 export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryModalProps) {
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [printingSale, setPrintingSale] = useState<any>(null);
+  const [showTicketModal, setShowTicketModal] = useState(false);
 
   const sales = salesData?.sales || [];
   const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
@@ -36,6 +39,38 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     setSelectedSale(null);
+  };
+
+  const handlePrintTicket = (sale: any) => {
+    // Transformar los datos de la venta al formato esperado por TicketPrint
+    const ticketData = {
+      code: sale.code,
+      createdAt: sale.createdAt,
+      subtotal: Number(sale.subtotal || sale.total),
+      discount: Number(sale.discount || 0),
+      total: Number(sale.total),
+      tenderedAmount: Number(sale.tenderedAmount),
+      changeAmount: Number(sale.changeAmount),
+      pointsEarned: sale.pointsEarned || 0,
+      items: sale.items.map((item: any) => ({
+        productName: item.productName,
+        variantName: item.variantName,
+        quantity: item.quantity,
+        price: Number(item.price),
+        subtotal: Number(item.subtotal)
+      })),
+      payments: sale.payments.map((p: any) => ({
+        method: p.method,
+        amount: Number(p.amount)
+      })),
+      customer: sale.customer,
+      cashier: sale.cashier || { name: 'Sin cajero' },
+      branch: sale.branch || salesData.branch || { name: 'Sucursal', address: '', phone: '', logos: null },
+      business: sale.business || salesData.business || { name: 'Negocio', ruc: '' }
+    };
+    
+    setPrintingSale(ticketData);
+    setShowTicketModal(true);
   };
 
   return (
@@ -178,7 +213,11 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
                     
                     {/* Acciones */}
                     <div className="flex gap-2">
-                      <Button variant="outline" className="h-8 px-3 text-xs font-semibold text-slate-600 border-slate-200 hover:bg-slate-50">
+                      <Button 
+                        onClick={() => handlePrintTicket(selectedSale)}
+                        variant="outline" 
+                        className="h-8 px-3 text-xs font-semibold text-slate-600 border-slate-200 hover:bg-slate-50"
+                      >
                         <Printer className="w-3.5 h-3.5 mr-1.5" /> Imprimir
                       </Button>
                       <Button variant="outline" className="h-8 px-3 text-xs font-semibold text-rose-600 border-rose-200 hover:bg-rose-50">
@@ -308,6 +347,17 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
             )}
           </div>
         </div>
+
+        {/* Componente de impresión de ticket */}
+        {printingSale && showTicketModal && (
+          <TicketPrint
+            saleData={printingSale}
+            onComplete={() => {
+              setPrintingSale(null);
+              setShowTicketModal(false);
+            }}
+          />
+        )}
 
       </DialogContent>
     </Dialog>

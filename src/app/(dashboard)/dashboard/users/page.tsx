@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Store, Filter, Check
+  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Store, Filter, Check, Edit, Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserModal, UserData } from '@/components/dashboard/UserModal';
+import { BasicUserModal } from '@/components/dashboard/BasicUserModal';
+import { PermissionsManager } from '@/components/dashboard/PermissionsManager';
 import { useAuth } from '@/context/auth-context';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -62,6 +64,8 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBasicModalOpen, setIsBasicModalOpen] = useState(false);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
@@ -95,7 +99,7 @@ export default function UsersPage() {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, statusFilter]);
 
-  const handleOpenNew = () => { setSelectedUser(null); setIsModalOpen(true); };
+  const handleOpenNew = () => { setSelectedUser(null); setIsBasicModalOpen(true); };
   
   const handleOpenEdit = (user: SystemUser, e?: React.MouseEvent) => {
     if(e) e.stopPropagation();
@@ -110,6 +114,38 @@ export default function UsersPage() {
       image: user.image || '', 
     });
     setIsModalOpen(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleOpenBasicEdit = (user: SystemUser, e?: React.MouseEvent) => {
+    if(e) e.stopPropagation();
+    setSelectedUser({ 
+      id: user.id, 
+      name: user.name || '', 
+      email: user.email || '', 
+      role: user.role, 
+      businessId: user.businessId,
+      branchId: user.branchId, 
+      permissions: user.permissions || {}, 
+      image: user.image || '', 
+    });
+    setIsBasicModalOpen(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleOpenPermissions = (user: SystemUser, e?: React.MouseEvent) => {
+    if(e) e.stopPropagation();
+    setSelectedUser({ 
+      id: user.id, 
+      name: user.name || '', 
+      email: user.email || '', 
+      role: user.role, 
+      businessId: user.businessId,
+      branchId: user.branchId, 
+      permissions: user.permissions || {}, 
+      image: user.image || '', 
+    });
+    setIsPermissionsModalOpen(true);
     setOpenDropdownId(null);
   };
 
@@ -284,7 +320,7 @@ export default function UsersPage() {
                   return (
                     <tr 
                       key={u.id} 
-                      onClick={() => handleOpenEdit(u)}
+                      onClick={() => handleOpenBasicEdit(u)}
                       className={`hover:bg-slate-50 transition-colors group text-xs cursor-pointer ${!u.isActive ? 'opacity-60 bg-slate-50/50' : ''}`}
                     >
                       <td className="px-5 py-3">
@@ -335,7 +371,35 @@ export default function UsersPage() {
                       </td>
                       <td className="px-5 py-3 text-right relative">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100" onClick={(e) => handleOpenEdit(u, e)}>
+                          {/* New differentiated action buttons */}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-500 hover:bg-blue-100 hover:text-blue-700 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100" 
+                            onClick={(e) => handleOpenBasicEdit(u, e)}
+                            title="Editar Datos Básicos"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-500 hover:bg-purple-100 hover:text-purple-700 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100" 
+                            onClick={(e) => handleOpenPermissions(u, e)}
+                            title="Gestionar Permisos"
+                          >
+                            <Shield className="w-4 h-4" />
+                          </Button>
+
+                          {/* Legacy edit button for compatibility */}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100" 
+                            onClick={(e) => handleOpenEdit(u, e)}
+                            title="Editar (Completo)"
+                          >
                             <UserCog className="w-4 h-4" />
                           </Button>
                           
@@ -370,6 +434,15 @@ export default function UsersPage() {
       </div>
 
       <UserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => mutate()} userToEdit={selectedUser} />
+      <BasicUserModal isOpen={isBasicModalOpen} onClose={() => setIsBasicModalOpen(false)} onSuccess={() => mutate()} userToEdit={selectedUser} />
+      {selectedUser && (
+        <PermissionsManager 
+          isOpen={isPermissionsModalOpen} 
+          onClose={() => setIsPermissionsModalOpen(false)} 
+          onSuccess={() => mutate()} 
+          userToEdit={selectedUser} 
+        />
+      )}
     </div>
   );
 }
