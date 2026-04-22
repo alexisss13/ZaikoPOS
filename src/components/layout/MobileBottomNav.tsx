@@ -211,16 +211,16 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 <button
                   key={index}
                   onClick={handleMoreClick}
-                  className="flex flex-col items-center justify-center p-2 min-w-0 flex-1 transition-colors"
+                  className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
                 >
-                  <div className={`p-2 rounded-xl transition-colors ${
+                  <div className={`p-2 rounded-xl transition-all duration-150 ${
                     item.isActive 
-                      ? 'bg-slate-900 text-white' 
-                      : 'text-slate-500 hover:bg-slate-100'
-                  }`}>
+                      ? 'bg-slate-900 text-white scale-105' 
+                      : 'text-slate-500'
+                  }`} style={{ willChange: 'transform, background-color' }}>
                     <item.icon className="w-5 h-5" />
                   </div>
-                  <span className={`text-xs font-medium mt-1 ${
+                  <span className={`text-xs font-medium mt-1 transition-colors duration-150 ${
                     item.isActive ? 'text-slate-900' : 'text-slate-500'
                   }`}>
                     {item.label}
@@ -233,16 +233,16 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center p-2 min-w-0 flex-1 transition-colors"
+                className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
               >
-                <div className={`p-2 rounded-xl transition-colors ${
+                <div className={`p-2 rounded-xl transition-all duration-150 ${
                   item.isActive 
-                    ? 'bg-slate-900 text-white' 
-                    : 'text-slate-500 hover:bg-slate-100'
-                }`}>
+                    ? 'bg-slate-900 text-white scale-105' 
+                    : 'text-slate-500'
+                }`} style={{ willChange: 'transform, background-color' }}>
                   <item.icon className="w-5 h-5" />
                 </div>
-                <span className={`text-xs font-medium mt-1 ${
+                <span className={`text-xs font-medium mt-1 transition-colors duration-150 ${
                   item.isActive ? 'text-slate-900' : 'text-slate-500'
                 }`}>
                   {item.label}

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useTransition } from 'react';
 import { Package, Image as ImageIcon, Store, Globe, Banknote, FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Product, Branch } from './types';
@@ -28,6 +28,8 @@ function ProductCardComponent({
   onEdit,
   onKardex,
 }: ProductCardProps) {
+  const [isPending, startTransition] = useTransition();
+  
   const visibleStocks = canViewOthers
     ? (product.branchStocks || [])
     : (product.branchStocks?.filter(bs => bs.branchId === userBranchId) || []);
@@ -42,10 +44,16 @@ function ProductCardComponent({
   const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
   const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
 
+  const handleToggle = () => {
+    startTransition(() => {
+      onToggle(product.id);
+    });
+  };
+
   return (
-    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-transform duration-150 active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ willChange: isExpanded ? 'height' : 'auto' }}>
+    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ transition: 'transform 0.1s ease-out' }}>
       {/* Header */}
-      <div className="p-4 cursor-pointer select-none" onClick={() => onToggle(product.id)}>
+      <div className="p-4 cursor-pointer select-none" onClick={handleToggle}>
         <div className="flex items-center gap-3">
           {/* Imagen */}
           <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`} style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden' }}>
@@ -86,13 +94,13 @@ function ProductCardComponent({
             </div>
           </div>
 
-          <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.15s ease-out', willChange: 'transform' }} />
         </div>
       </div>
 
       {/* Expandible */}
       {isExpanded && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/50">
+        <div className="border-t border-slate-100 p-4 bg-slate-50/50" style={{ animation: 'slideDown 0.15s ease-out' }}>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {/* Catálogo */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
@@ -159,14 +167,16 @@ function ProductCardComponent({
           <div className="flex gap-2">
             <Button
               onClick={() => onEdit(product)}
-              className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-sm active:scale-95 transition-transform"
+              className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-sm transition-transform duration-100 active:scale-95"
+              style={{ willChange: 'transform' }}
             >
               {canEdit ? 'Editar' : 'Ver detalles'}
             </Button>
             <Button
               onClick={(e) => { e.stopPropagation(); onKardex(product); }}
               variant="outline"
-              className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 active:scale-95 transition-transform"
+              className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 transition-transform duration-100 active:scale-95"
+              style={{ willChange: 'transform' }}
             >
               <FileText className="w-4 h-4" /> Kardex
             </Button>

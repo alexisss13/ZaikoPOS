@@ -184,12 +184,25 @@
     overscroll-behavior: contain;
   }
   
-  /* Optimizar animaciones en móvil */
-  .animate-in,
-  .transition-all,
-  .transition-colors,
+  /* Optimizar animaciones en móvil - usar duraciones más cortas */
+  .animate-in {
+    animation-duration: 150ms !important;
+  }
+  
+  /* Transiciones más rápidas en móvil */
+  .transition-all {
+    transition-duration: 100ms !important;
+    transition-timing-function: ease-out !important;
+  }
+  
+  .transition-colors {
+    transition-duration: 100ms !important;
+    transition-timing-function: ease-out !important;
+  }
+  
   .transition-transform {
-    will-change: auto;
+    transition-duration: 100ms !important;
+    transition-timing-function: ease-out !important;
   }
   
   /* Forzar aceleración por hardware en elementos fijos */
@@ -199,8 +212,32 @@
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
   }
+  
+  /* Optimizar elementos con active:scale */
+  [class*="active:scale"] {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Optimizar botones y elementos interactivos */
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
 }
 
 @keyframes shimmer {
   100% { transform: translateX(200%); }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
