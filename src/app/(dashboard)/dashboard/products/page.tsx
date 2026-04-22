@@ -129,10 +129,9 @@ export default function ProductsPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isKardexModalOpen, setIsKardexModalOpen] = useState(false);
   const [kardexProduct, setKardexProduct] = useState<Product | null>(null);
-  const [kardexMovements, setKardexMovements] = useState<any[]>([]);
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
+  const [kardexMovements, setKardexMovements] = useState<any[]>([]);
 
   const ticketRef = useRef<HTMLDivElement>(null);
 
@@ -147,45 +146,82 @@ export default function ProductsPage() {
 
   useEffect(() => { setVisibleCount(MOBILE_PAGE_SIZE); }, [codeFilter, categoryFilter, stockFilter, debouncedSearch]);
 
-  // ── Pull-to-refresh ──
+  // ── Pull-to-refresh OPTIMIZADO (sin causar re-renders masivos) ──
   const scrollRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef(0);
+  const pullDistanceRef = useRef(0); // Usar ref en lugar de state para evitar re-renders
+  const rafIdRef = useRef<number | null>(null);
   const [isPulling, setIsPulling] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const updatePullIndicator = useCallback(() => {
+    const indicator = document.getElementById('pull-indicator');
+    if (indicator) {
+      const distance = pullDistanceRef.current;
+      indicator.style.height = `${Math.min(distance, 56)}px`;
+      indicator.style.opacity = distance > 0 ? '1' : '0';
+      
+      const icon = indicator.querySelector('.refresh-icon');
+      if (icon) {
+        if (distance >= 60) {
+          icon.classList.add('text-slate-900');
+          icon.classList.remove('text-slate-400');
+        } else {
+          icon.classList.remove('text-slate-900');
+          icon.classList.add('text-slate-400');
+        }
+      }
+    }
+  }, []);
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (scrollRef.current?.scrollTop === 0) pullStartY.current = e.touches[0].clientY;
+    if (scrollRef.current?.scrollTop === 0) {
+      pullStartY.current = e.touches[0].clientY;
+    }
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!pullStartY.current) return;
+    
     const dist = Math.max(0, Math.min(80, e.touches[0].clientY - pullStartY.current));
-    if (dist > 0 && scrollRef.current?.scrollTop === 0) { setIsPulling(true); setPullDistance(dist); }
-  }, []);
+    
+    if (dist > 0 && scrollRef.current?.scrollTop === 0) {
+      // Usar requestAnimationFrame para actualizar la UI sin causar re-renders
+      pullDistanceRef.current = dist;
+      
+      if (!isPulling) setIsPulling(true);
+      
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(updatePullIndicator);
+    }
+  }, [isPulling, updatePullIndicator]);
 
   const handleTouchEnd = useCallback(async () => {
-    if (pullDistance >= 60 && !isRefreshing) {
-      setIsRefreshing(true); haptic(20); await mutate();
-      setTimeout(() => { setIsRefreshing(false); setPullDistance(0); setIsPulling(false); pullStartY.current = 0; }, 600);
-    } else { setPullDistance(0); setIsPulling(false); pullStartY.current = 0; }
-  }, [pullDistance, isRefreshing, mutate]);
+    const distance = pullDistanceRef.current;
+    
+    if (distance >= 60 && !isRefreshing) {
+      setIsRefreshing(true);
+      try { navigator.vibrate?.(20); } catch {}
+      await mutate();
+      setTimeout(() => {
+        setIsRefreshing(false);
+        setIsPulling(false);
+        pullStartY.current = 0;
+        pullDistanceRef.current = 0;
+        updatePullIndicator();
+      }, 600);
+    } else {
+      setIsPulling(false);
+      pullStartY.current = 0;
+      pullDistanceRef.current = 0;
+      updatePullIndicator();
+    }
+  }, [isRefreshing, mutate, updatePullIndicator]);
 
   // ── Helpers ──
   const getBranchByCode = useCallback((code: string) => branches?.find(b => b.ecommerceCode === code), [branches]);
 
-  const toggleCard = useCallback((id: string) => {
-    haptic(8);
-    setExpandedCards(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
+  // ⚡ OPTIMIZACIÓN: toggleCard removido - cada ProductCard maneja su propio estado de expansión
 
   const openKardexModal = useCallback(async (product: Product) => {
     setKardexProduct(product); setIsKardexModalOpen(true);
@@ -554,11 +590,23 @@ export default function ProductsPage() {
       {/* ── VISTA MÓVIL ── */}
       {isMobile ? (
         <div ref={scrollRef} className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-24" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', willChange: 'scroll-position' }}>
-          {/* Pull-to-refresh */}
-          <div className="flex items-center justify-center overflow-hidden transition-all duration-200" style={{ height: isPulling || isRefreshing ? Math.min(pullDistance, 56) : 0, opacity: isPulling || isRefreshing ? 1 : 0 }}>
+          {/* Pull-to-refresh - Optimizado con CSS y refs */}
+          <div 
+            id="pull-indicator"
+            className="flex items-center justify-center overflow-hidden transition-all duration-200" 
+            style={{ 
+              height: 0,
+              opacity: 0,
+              willChange: 'height, opacity'
+            }}
+          >
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-slate-700' : pullDistance >= 60 ? 'text-slate-900' : 'text-slate-400'}`} />
-              {isRefreshing ? 'Actualizando...' : pullDistance >= 60 ? 'Suelta para actualizar' : 'Desliza para actualizar'}
+              <div className={`refresh-icon w-4 h-4 text-slate-400 ${isRefreshing ? 'animate-spin text-slate-700' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
+              </div>
+              {isRefreshing ? 'Actualizando...' : isPulling ? 'Suelta para actualizar' : 'Desliza para actualizar'}
             </div>
           </div>
 
@@ -605,11 +653,9 @@ export default function ProductsPage() {
                     key={product.id}
                     product={product}
                     branches={branches}
-                    isExpanded={expandedCards.has(product.id)}
                     canEdit={canEditThis}
                     canViewOthers={canViewOthers}
                     userBranchId={user?.branchId}
-                    onToggle={toggleCard}
                     onEdit={handleOpenEdit}
                     onKardex={openKardexModal}
                   />

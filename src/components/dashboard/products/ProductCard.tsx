@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Package, Image as ImageIcon, Store, Globe, Banknote, FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Product, Branch } from './types';
@@ -8,11 +8,9 @@ import type { Product, Branch } from './types';
 interface ProductCardProps {
   product: Product;
   branches?: Branch[];
-  isExpanded: boolean;
   canEdit: boolean;
   canViewOthers: boolean;
   userBranchId?: string;
-  onToggle: (id: string) => void;
   onEdit: (product: Product) => void;
   onKardex: (product: Product) => void;
 }
@@ -20,14 +18,17 @@ interface ProductCardProps {
 function ProductCardComponent({
   product,
   branches,
-  isExpanded,
   canEdit,
   canViewOthers,
   userBranchId,
-  onToggle,
   onEdit,
   onKardex,
 }: ProductCardProps) {
+  // ⚡ OPTIMIZACIÓN: Estado de expansión ahora vive DENTRO del componente
+  // Esto evita re-renders de toda la página cuando se expande una tarjeta
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const haptic = (ms = 10) => { try { navigator.vibrate?.(ms); } catch {} };
   // Memoizar cálculos pesados
   const { visibleStocks, totalPhysicalStock, stockStatus, ownerBranch, branchesWithStock, hasWholesale } = useMemo(() => {
     const visibleStocks = canViewOthers
@@ -49,8 +50,9 @@ function ProductCardComponent({
   }, [product, branches, canViewOthers, userBranchId]);
 
   const handleToggle = useCallback(() => {
-    onToggle(product.id);
-  }, [onToggle, product.id]);
+    haptic(8);
+    setIsExpanded(prev => !prev);
+  }, []);
 
   const handleEdit = useCallback(() => {
     onEdit(product);
@@ -198,14 +200,14 @@ function ProductCardComponent({
   );
 }
 
-// Comparación personalizada para memo
+// Comparación personalizada para memo - más eficiente
 const areEqual = (prevProps: ProductCardProps, nextProps: ProductCardProps) => {
   // Comparaciones rápidas primero
   if (prevProps.product.id !== nextProps.product.id) return false;
-  if (prevProps.isExpanded !== nextProps.isExpanded) return false;
   if (prevProps.canEdit !== nextProps.canEdit) return false;
   if (prevProps.product.basePrice !== nextProps.product.basePrice) return false;
   if (prevProps.product.active !== nextProps.product.active) return false;
+  if (prevProps.product.title !== nextProps.product.title) return false;
   
   // Comparación de branchStocks (más eficiente que JSON.stringify)
   const prevStocks = prevProps.product.branchStocks || [];
