@@ -45,6 +45,8 @@ import Barcode from 'react-barcode';
 import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ProductCard } from '@/components/dashboard/products/ProductCard';
+import { SearchBar } from '@/components/dashboard/products/SearchBar';
+import { MobileProductList } from '@/components/dashboard/products/MobileProductList';
 import { useProductExports } from '@/components/dashboard/products/useProductExports';
 import { ProductsLoadingSkeleton } from '@/components/dashboard/products/ProductsLoadingSkeleton';
 import type { Product, Branch, Category } from '@/components/dashboard/products/types';
@@ -99,6 +101,20 @@ export default function ProductsPage() {
   // Mostrar loading solo si productos están cargando
   const isLoading = isLoadingProducts;
 
+  // ⚡ OPTIMIZACIÓN CARGA INICIAL: Mostrar productos básicos INMEDIATAMENTE
+  // Diferir cálculos pesados hasta después del primer render
+  const [isInitialRender, setIsInitialRender] = useState(true);
+  
+  useEffect(() => {
+    if (products && isInitialRender) {
+      // Diferir cálculos pesados al siguiente tick para no bloquear el primer render
+      const timer = setTimeout(() => {
+        setIsInitialRender(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [products, isInitialRender]);
+
   // Memoizar cálculos de branches
   const { myBranch, myCode, uniqueCodes, visibleCodes } = useMemo(() => {
     const myBranch = branches?.find(b => b.id === user?.branchId);
@@ -109,7 +125,6 @@ export default function ProductsPage() {
   }, [branches, user?.branchId, canViewOthers]);
 
   // ── Filtros ──
-  const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [codeFilter, setCodeFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -138,11 +153,11 @@ export default function ProductsPage() {
   // ── Exports hook ──
   const { exportToExcel, exportToPDF, exportKardexToExcel, exportKardexToPDF } = useProductExports({ products, branches });
 
-  // ── Debounce ──
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm), 200);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
+  // ⚡ OPTIMIZACIÓN: Callback para SearchBar (evita re-renders del padre al escribir)
+  const handleSearchChange = useCallback((value: string) => {
+    setDebouncedSearch(value);
+    setCurrentPage(1);
+  }, []);
 
   useEffect(() => { setVisibleCount(MOBILE_PAGE_SIZE); }, [codeFilter, categoryFilter, stockFilter, debouncedSearch]);
 
@@ -260,7 +275,22 @@ export default function ProductsPage() {
   const productsWithMetadata = useMemo(() => {
     if (!products) return [];
     
-    // Crear un mapa de branches por código para búsqueda O(1)
+    // Si es el primer render, usar cálculos mínimos para mostrar rápido
+    if (isInitialRender) {
+      return products.slice(0, MOBILE_PAGE_SIZE).map(p => ({
+        ...p,
+        _meta: {
+          isGlobal: !p.branchOwnerId,
+          isMine: p.branchOwnerId === user?.branchId,
+          hasMyStock: false, // Simplificado para primer render
+          canEditThis: canEdit, // Simplificado para primer render
+          totalStock: 0, // Simplificado para primer render
+          visibleStocks: [],
+        }
+      }));
+    }
+    
+    // Cálculos completos solo después del primer render
     const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
     
     return products.map(p => {
@@ -289,59 +319,26 @@ export default function ProductsPage() {
         }
       };
     });
-  }, [products, branches, user?.branchId, canManageGlobal, canEdit, canViewOthers]);
+  }, [products, branches, user?.branchId, canManageGlobal, canEdit, canViewOthers, isInitialRender]);
 
-  // Calcular categorías disponibles basadas en productos con metadata
-  const availableCategories = useMemo(() => {
-    if (!categories || !productsWithMetadata.length) return [];
-    
-    // Crear mapa de branches por código para búsqueda O(1)
-    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
-    
-    const base = productsWithMetadata.filter(p => {
-      const { isGlobal, isMine, hasMyStock } = p._meta;
-      
-      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
-      if (codeFilter === 'INACTIVE') return !p.active;
-      if (!p.active) return false;
-      
-      if (codeFilter === 'GENERAL') {
-        const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
-        return isGlobal || bws.length > 1;
-      }
-      
-      if (codeFilter !== 'ALL') {
-        const b = branchByCode.get(codeFilter);
-        return b ? p.branchOwnerId === b.id : true;
-      }
-      
-      return true;
-    });
-    
-    const ids = new Set(base.map(p => p.categoryId));
-    return categories.filter(c => ids.has(c.id));
-  }, [productsWithMetadata, categories, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
-
-  // ⚡ OPTIMIZACIÓN 3: Filtrado simplificado usando metadata pre-calculada
-  const filteredProducts = useMemo(() => {
+  // ⚡ OPTIMIZACIÓN: Filtrado base UNA SOLA VEZ (evitar doble iteración)
+  const baseFilteredProducts = useMemo(() => {
     if (!productsWithMetadata.length) return [];
     
-    // Crear mapa de branches por código para búsqueda rápida
+    // En el primer render, mostrar productos básicos sin filtros complejos
+    if (isInitialRender) {
+      return productsWithMetadata.filter(p => p.active); // Solo filtro básico
+    }
+    
+    // Filtros completos solo después del primer render
     const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
-    const q = debouncedSearch.toLowerCase();
     
     return productsWithMetadata.filter(p => {
-      const { isGlobal, isMine, hasMyStock, totalStock } = p._meta;
+      const { isGlobal, isMine, hasMyStock } = p._meta;
       
-      // Filtro de permisos
-      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
-      
-      // Filtro de búsqueda (solo si hay texto)
-      if (q) {
-        const matchesSearch = p.title.toLowerCase().includes(q) || 
-                            (p.barcode?.includes(debouncedSearch) ?? false) || 
-                            (p.sku?.toLowerCase().includes(q) ?? false);
-        if (!matchesSearch) return false;
+      // Filtro de permisos (común para categorías y productos)
+      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) {
+        return false;
       }
       
       // Filtro de activos/inactivos
@@ -351,10 +348,39 @@ export default function ProductsPage() {
       // Filtro de código/sucursal
       if (codeFilter === 'GENERAL') {
         const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
-        if (!isGlobal && bws.length <= 1) return false;
+        return isGlobal || bws.length > 1;
       } else if (codeFilter !== 'ALL') {
         const b = branchByCode.get(codeFilter);
-        if (b && p.branchOwnerId !== b.id) return false;
+        return b ? p.branchOwnerId === b.id : true;
+      }
+      
+      return true;
+    });
+  }, [productsWithMetadata, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal, isInitialRender]);
+
+  // Calcular categorías disponibles usando la lista base (sin re-filtrar)
+  const availableCategories = useMemo(() => {
+    if (!categories || !baseFilteredProducts.length) return [];
+    
+    const ids = new Set(baseFilteredProducts.map(p => p.categoryId));
+    return categories.filter(c => ids.has(c.id));
+  }, [baseFilteredProducts, categories]);
+
+  // ⚡ OPTIMIZACIÓN 3: Filtrado final usando la lista base (sin re-calcular permisos)
+  const filteredProducts = useMemo(() => {
+    if (!baseFilteredProducts.length) return [];
+    
+    const q = debouncedSearch.toLowerCase();
+    
+    return baseFilteredProducts.filter(p => {
+      const { totalStock } = p._meta;
+      
+      // Filtro de búsqueda (solo si hay texto)
+      if (q) {
+        const matchesSearch = p.title.toLowerCase().includes(q) || 
+                            (p.barcode?.includes(debouncedSearch) ?? false) || 
+                            (p.sku?.toLowerCase().includes(q) ?? false);
+        if (!matchesSearch) return false;
       }
       
       // Filtro de categoría
@@ -369,7 +395,7 @@ export default function ProductsPage() {
       
       return true;
     });
-  }, [productsWithMetadata, debouncedSearch, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, branches]);
+  }, [baseFilteredProducts, debouncedSearch, categoryFilter, stockFilter]);
 
   // Memoizar cálculos de paginación
   const { totalPages, paginatedProducts, mobileProducts, hasMore } = useMemo(() => {
@@ -403,7 +429,20 @@ export default function ProductsPage() {
 
   // ── Pantalla de carga inicial en móvil ──
   if (isMobile && isLoading) {
-    return <ProductsLoadingSkeleton />;
+    return (
+      <div className="flex flex-col h-full w-full gap-5" style={{ willChange: 'auto' }}>
+        {/* Header simplificado durante carga */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-slate-900 leading-tight">Productos</h1>
+              <p className="text-xs text-slate-400 mt-0.5">Cargando...</p>
+            </div>
+          </div>
+        </div>
+        <ProductsLoadingSkeleton />
+      </div>
+    );
   }
 
   // Si no hay productos pero ya terminó de cargar, mostrar mensaje
@@ -473,12 +512,12 @@ export default function ProductsPage() {
             )}
           </div>
 
-          {/* Buscador */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <Input placeholder="Nombre, SKU o código de barras..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="pl-10 pr-9 h-10 bg-white border-slate-200 rounded-xl text-sm shadow-sm" />
-            {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100"><X className="w-3.5 h-3.5 text-slate-400" /></button>}
-          </div>
+          {/* Buscador - Componente aislado para evitar re-renders */}
+          <SearchBar 
+            onSearchChange={handleSearchChange}
+            placeholder="Nombre, SKU o código de barras..."
+            debounceMs={200}
+          />
 
           {/* Chips activos */}
           {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
@@ -549,7 +588,7 @@ export default function ProductsPage() {
                 </div>
                 <div className="flex gap-3 pt-1">
                   {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
-                    <button onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setCurrentPage(1); }} className="flex-1 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-600 active:scale-95 transition-transform">Limpiar filtros</button>
+                    <button onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setDebouncedSearch(''); setCurrentPage(1); }} className="flex-1 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-600 active:scale-95 transition-transform">Limpiar filtros</button>
                   )}
                   <button onClick={() => { haptic(8); setShowMobileFilters(false); }} className="flex-1 py-3.5 rounded-2xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-transform">Aplicar</button>
                 </div>
@@ -569,7 +608,15 @@ export default function ProductsPage() {
               <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
                 <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
               </div>
-              <Input placeholder="Buscar producto, SKU..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" />
+              <div className="w-full">
+                <SearchBar 
+                  onSearchChange={handleSearchChange}
+                  placeholder="Buscar producto, SKU..."
+                  debounceMs={200}
+                  className="w-full"
+                  inputClassName="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm"
+                />
+              </div>
             </div>
             {canCreate && (
               <>
@@ -640,27 +687,20 @@ export default function ProductsPage() {
               </div>
               <h3 className="text-base font-bold text-slate-900 mb-1">{codeFilter === 'INACTIVE' ? 'Sin productos inactivos' : debouncedSearch ? `Sin resultados para "${debouncedSearch}"` : 'Sin productos aquí'}</h3>
               <p className="text-sm text-slate-400 mb-5 leading-relaxed">{codeFilter === 'INACTIVE' ? 'Todos los productos están activos.' : debouncedSearch ? 'Prueba con otro nombre, SKU o código.' : 'Ajusta los filtros o crea un nuevo producto.'}</p>
-              <button onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); haptic(); }} className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-transform">Limpiar filtros</button>
+              <button onClick={() => { setDebouncedSearch(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); haptic(); }} className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-transform">Limpiar filtros</button>
             </div>
           ) : (
-            <div className="space-y-2.5">
-              {mobileProducts.map(product => {
-                // ⚡ OPTIMIZACIÓN 4: Usar metadata pre-calculada (sin recalcular en cada render)
-                const { canEditThis } = product._meta;
-                
-                return (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    branches={branches}
-                    canEdit={canEditThis}
-                    canViewOthers={canViewOthers}
-                    userBranchId={user?.branchId}
-                    onEdit={handleOpenEdit}
-                    onKardex={openKardexModal}
-                  />
-                );
-              })}
+            <>
+              {/* ⚡ OPTIMIZACIÓN: Lista memoizada - no re-renderiza al abrir filtros */}
+              <MobileProductList
+                products={mobileProducts}
+                branches={branches}
+                canViewOthers={canViewOthers}
+                userBranchId={user?.branchId}
+                onEdit={handleOpenEdit}
+                onKardex={openKardexModal}
+                isInitialRender={isInitialRender}
+              />
               {hasMore && (
                 <button onClick={() => { haptic(8); setVisibleCount(v => v + MOBILE_PAGE_SIZE); }} className="w-full py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
                   <ChevronDown className="w-4 h-4" /> Cargar más · {filteredProducts.length - visibleCount} restantes
@@ -669,7 +709,7 @@ export default function ProductsPage() {
               {!hasMore && mobileProducts.length > MOBILE_PAGE_SIZE && (
                 <p className="text-center text-xs text-slate-300 py-3 font-medium">· {filteredProducts.length} productos ·</p>
               )}
-            </div>
+            </>
           )}
         </div>
       ) : (
@@ -747,7 +787,7 @@ export default function ProductsPage() {
               {isLoading ? (
                 Array(5).fill(0).map((_, i) => (<tr key={i}><td colSpan={5} className="p-4"><Skeleton className="h-10 w-full rounded-xl" /></td></tr>))
               ) : paginatedProducts.length === 0 ? (
-                <tr><td colSpan={5} className="py-20 text-center"><div className="flex flex-col items-center justify-center text-slate-400 space-y-2"><Package className="w-10 h-10 text-slate-200" strokeWidth={1} /><p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p><Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button></div></td></tr>
+                <tr><td colSpan={5} className="py-20 text-center"><div className="flex flex-col items-center justify-center text-slate-400 space-y-2"><Package className="w-10 h-10 text-slate-200" strokeWidth={1} /><p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p><Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setDebouncedSearch(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button></div></td></tr>
               ) : (
                 paginatedProducts.map(product => {
                   // ⚡ OPTIMIZACIÓN 5: Usar metadata pre-calculada en desktop
