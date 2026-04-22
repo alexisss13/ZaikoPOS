@@ -220,36 +220,6 @@ export default function ProductsPage() {
   }, [barcodeProduct]);
 
   // ── Filtrado ──
-  const availableCategories = useMemo(() => {
-    if (!categories || !productsWithMetadata.length) return [];
-    
-    // Crear mapa de branches por código para búsqueda O(1)
-    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
-    
-    const base = productsWithMetadata.filter(p => {
-      const { isGlobal, isMine, hasMyStock } = p._meta;
-      
-      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
-      if (codeFilter === 'INACTIVE') return !p.active;
-      if (!p.active) return false;
-      
-      if (codeFilter === 'GENERAL') {
-        const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
-        return isGlobal || bws.length > 1;
-      }
-      
-      if (codeFilter !== 'ALL') {
-        const b = branchByCode.get(codeFilter);
-        return b ? p.branchOwnerId === b.id : true;
-      }
-      
-      return true;
-    });
-    
-    const ids = new Set(base.map(p => p.categoryId));
-    return categories.filter(c => ids.has(c.id));
-  }, [productsWithMetadata, categories, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
-
   // ⚡ OPTIMIZACIÓN 2: Pre-calcular permisos y datos de productos UNA SOLA VEZ
   const productsWithMetadata = useMemo(() => {
     if (!products) return [];
@@ -284,6 +254,37 @@ export default function ProductsPage() {
       };
     });
   }, [products, branches, user?.branchId, canManageGlobal, canEdit, canViewOthers]);
+
+  // Calcular categorías disponibles basadas en productos con metadata
+  const availableCategories = useMemo(() => {
+    if (!categories || !productsWithMetadata.length) return [];
+    
+    // Crear mapa de branches por código para búsqueda O(1)
+    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
+    
+    const base = productsWithMetadata.filter(p => {
+      const { isGlobal, isMine, hasMyStock } = p._meta;
+      
+      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
+      if (codeFilter === 'INACTIVE') return !p.active;
+      if (!p.active) return false;
+      
+      if (codeFilter === 'GENERAL') {
+        const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
+        return isGlobal || bws.length > 1;
+      }
+      
+      if (codeFilter !== 'ALL') {
+        const b = branchByCode.get(codeFilter);
+        return b ? p.branchOwnerId === b.id : true;
+      }
+      
+      return true;
+    });
+    
+    const ids = new Set(base.map(p => p.categoryId));
+    return categories.filter(c => ids.has(c.id));
+  }, [productsWithMetadata, categories, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
 
   // ⚡ OPTIMIZACIÓN 3: Filtrado simplificado usando metadata pre-calculada
   const filteredProducts = useMemo(() => {
