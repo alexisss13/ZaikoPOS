@@ -2,7 +2,6 @@
 
 import { memo } from 'react';
 import { ProductCard } from './ProductCard';
-import { SimpleProductCard } from './SimpleProductCard';
 import type { Product, Branch } from './types';
 
 interface MobileProductListProps {
@@ -12,7 +11,6 @@ interface MobileProductListProps {
   userBranchId?: string;
   onEdit: (product: Product) => void;
   onKardex: (product: Product) => void;
-  isInitialRender?: boolean; // ⚡ Nueva prop para primer render
 }
 
 function MobileProductListComponent({
@@ -22,22 +20,10 @@ function MobileProductListComponent({
   userBranchId,
   onEdit,
   onKardex,
-  isInitialRender = false,
 }: MobileProductListProps) {
   return (
     <div className="space-y-2.5">
       {products.map(product => {
-        // ⚡ OPTIMIZACIÓN CARGA INICIAL: Usar tarjetas simples en el primer render
-        if (isInitialRender) {
-          return (
-            <SimpleProductCard
-              key={product.id}
-              product={product}
-            />
-          );
-        }
-        
-        // Tarjetas completas después del primer render
         const { canEditThis } = product._meta || {};
         
         return (
@@ -59,9 +45,6 @@ function MobileProductListComponent({
 
 // Comparación personalizada - solo re-renderizar si los productos cambian
 const areEqual = (prevProps: MobileProductListProps, nextProps: MobileProductListProps) => {
-  // Si cambió el modo de render, re-renderizar
-  if (prevProps.isInitialRender !== nextProps.isInitialRender) return false;
-  
   // Si la longitud cambió, definitivamente re-renderizar
   if (prevProps.products.length !== nextProps.products.length) return false;
   
@@ -69,9 +52,6 @@ const areEqual = (prevProps: MobileProductListProps, nextProps: MobileProductLis
   const prevIds = prevProps.products.map(p => p.id).join(',');
   const nextIds = nextProps.products.map(p => p.id).join(',');
   if (prevIds !== nextIds) return false;
-  
-  // En el primer render, no necesitamos comparar stocks (no se muestran)
-  if (prevProps.isInitialRender || nextProps.isInitialRender) return true;
   
   // Comparar primera y última cantidad de stock (detectar cambios sin iterar todo)
   if (prevProps.products.length > 0) {

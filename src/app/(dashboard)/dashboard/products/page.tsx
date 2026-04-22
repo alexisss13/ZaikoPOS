@@ -98,22 +98,9 @@ export default function ProductsPage() {
     dedupingInterval: 10000,
   });
 
-  // Mostrar loading solo si productos están cargando
-  const isLoading = isLoadingProducts;
-
-  // ⚡ OPTIMIZACIÓN CARGA INICIAL: Mostrar productos básicos INMEDIATAMENTE
-  // Diferir cálculos pesados hasta después del primer render
-  const [isInitialRender, setIsInitialRender] = useState(true);
-  
-  useEffect(() => {
-    if (products && isInitialRender) {
-      // Diferir cálculos pesados al siguiente tick para no bloquear el primer render
-      const timer = setTimeout(() => {
-        setIsInitialRender(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [products, isInitialRender]);
+  // ⚡ OPTIMIZACIÓN CRÍTICA: Esperar a que TODA la data vital esté lista
+  // Evita el "efecto metralleta" de 3 re-renders consecutivos
+  const isLoading = isLoadingProducts || !branches || !categories;
 
   // Memoizar cálculos de branches
   const { myBranch, myCode, uniqueCodes, visibleCodes } = useMemo(() => {
@@ -275,22 +262,7 @@ export default function ProductsPage() {
   const productsWithMetadata = useMemo(() => {
     if (!products) return [];
     
-    // Si es el primer render, usar cálculos mínimos para mostrar rápido
-    if (isInitialRender) {
-      return products.slice(0, MOBILE_PAGE_SIZE).map(p => ({
-        ...p,
-        _meta: {
-          isGlobal: !p.branchOwnerId,
-          isMine: p.branchOwnerId === user?.branchId,
-          hasMyStock: false, // Simplificado para primer render
-          canEditThis: canEdit, // Simplificado para primer render
-          totalStock: 0, // Simplificado para primer render
-          visibleStocks: [],
-        }
-      }));
-    }
-    
-    // Cálculos completos solo después del primer render
+    // Crear un mapa de branches por código para búsqueda O(1)
     const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
     
     return products.map(p => {
@@ -319,18 +291,13 @@ export default function ProductsPage() {
         }
       };
     });
-  }, [products, branches, user?.branchId, canManageGlobal, canEdit, canViewOthers, isInitialRender]);
+  }, [products, branches, user?.branchId, canManageGlobal, canEdit, canViewOthers]);
 
   // ⚡ OPTIMIZACIÓN: Filtrado base UNA SOLA VEZ (evitar doble iteración)
   const baseFilteredProducts = useMemo(() => {
     if (!productsWithMetadata.length) return [];
     
-    // En el primer render, mostrar productos básicos sin filtros complejos
-    if (isInitialRender) {
-      return productsWithMetadata.filter(p => p.active); // Solo filtro básico
-    }
-    
-    // Filtros completos solo después del primer render
+    // Crear mapa de branches por código para búsqueda O(1)
     const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
     
     return productsWithMetadata.filter(p => {
@@ -356,7 +323,7 @@ export default function ProductsPage() {
       
       return true;
     });
-  }, [productsWithMetadata, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal, isInitialRender]);
+  }, [productsWithMetadata, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
 
   // Calcular categorías disponibles usando la lista base (sin re-filtrar)
   const availableCategories = useMemo(() => {
@@ -699,7 +666,6 @@ export default function ProductsPage() {
                 userBranchId={user?.branchId}
                 onEdit={handleOpenEdit}
                 onKardex={openKardexModal}
-                isInitialRender={isInitialRender}
               />
               {hasMore && (
                 <button onClick={() => { haptic(8); setVisibleCount(v => v + MOBILE_PAGE_SIZE); }} className="w-full py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
@@ -713,9 +679,8 @@ export default function ProductsPage() {
           )}
         </div>
       ) : (
-
-      /* ── VISTA DESKTOP ── */
-      <div className="flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
+        /* ── VISTA DESKTOP ── */
+        <div className="flex flex-col flex-1 min-h-[400px] border-none overflow-hidden relative">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 w-full shrink-0">
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar w-full sm:w-auto flex-1">
             <button onClick={() => { setCodeFilter('ALL'); setCurrentPage(1); setCategoryFilter('ALL'); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}><LayoutGrid className="w-3.5 h-3.5" /> Todos</button>
