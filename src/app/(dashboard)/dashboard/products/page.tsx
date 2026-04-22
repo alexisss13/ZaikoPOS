@@ -1,6 +1,30 @@
 // src/app/(dashboard)/dashboard/products/page.tsx
 'use client';
 
+/**
+ * OPTIMIZACIONES DE RENDIMIENTO MÓVIL:
+ * 
+ * 1. Peticiones en PARALELO (no en cascada):
+ *    - Todas las APIs (products, branches, categories, suppliers) se cargan simultáneamente
+ *    - Antes: products → branches → categories (3 pasos secuenciales)
+ *    - Ahora: products + branches + categories (1 paso paralelo)
+ * 
+ * 2. Pre-cálculo de metadata (useMemo):
+ *    - Permisos (canEditThis, isGlobal, isMine, hasMyStock) se calculan UNA VEZ
+ *    - Stock total y visible se pre-calcula
+ *    - Evita recalcular en cada render/filtro
+ * 
+ * 3. Filtrado optimizado:
+ *    - Usa Map() para búsquedas O(1) en lugar de .find() O(n)
+ *    - Filtros de búsqueda solo se aplican si hay texto
+ *    - Usa metadata pre-calculada en lugar de recalcular
+ * 
+ * 4. Render sin cálculos:
+ *    - Vista móvil y desktop usan metadata pre-calculada
+ *    - No hay cálculos de permisos en el .map()
+ *    - Reduce carga del hilo principal durante el render
+ */
+
 import useSWR from 'swr';
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
@@ -46,44 +70,31 @@ export default function ProductsPage() {
   const canEdit = isSuperOrOwner || !!permissions.canEditProducts || canManageGlobal;
   const canViewOthers = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
 
-  // ⚡ OPTIMIZACIÓN: Cargar productos primero (crítico), lo demás después
+  // ⚡ OPTIMIZACIÓN 1: Cargar TODAS las peticiones en PARALELO (no en cascada)
   const { data: products, isLoading: isLoadingProducts, mutate } = useSWR<Product[]>('/api/products', fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     dedupingInterval: 5000,
   });
   
-  // Cargar branches solo después de tener productos
-  const { data: branches } = useSWR<Branch[]>(
-    products ? '/api/branches' : null, 
-    fetcher, 
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 10000,
-    }
-  );
+  // Cargar branches, categories y suppliers EN PARALELO (sin esperar a products)
+  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
   
-  // Cargar categories y suppliers en paralelo después
-  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>(
-    products ? '/api/categories' : null, 
-    fetcher, 
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 10000,
-    }
-  );
+  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
   
-  const { data: suppliers } = useSWR(
-    products ? '/api/suppliers' : null, 
-    fetcher, 
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 10000,
-    }
-  );
+  const { data: suppliers } = useSWR('/api/suppliers', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
 
   // Mostrar loading solo si productos están cargando
   const isLoading = isLoadingProducts;
@@ -210,45 +221,118 @@ export default function ProductsPage() {
 
   // ── Filtrado ──
   const availableCategories = useMemo(() => {
-    if (!categories || !products) return [];
-    const base = products.filter(p => {
-      const isGlobal = !p.branchOwnerId, isMine = p.branchOwnerId === user?.branchId;
-      const hasMyStock = p.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+    if (!categories || !productsWithMetadata.length) return [];
+    
+    // Crear mapa de branches por código para búsqueda O(1)
+    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
+    
+    const base = productsWithMetadata.filter(p => {
+      const { isGlobal, isMine, hasMyStock } = p._meta;
+      
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
       if (codeFilter === 'INACTIVE') return !p.active;
       if (!p.active) return false;
-      if (codeFilter === 'GENERAL') { const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || []; return isGlobal || bws.length > 1; }
-      if (codeFilter !== 'ALL') { const b = branches?.find(b => b.ecommerceCode === codeFilter); return b ? p.branchOwnerId === b.id : true; }
+      
+      if (codeFilter === 'GENERAL') {
+        const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
+        return isGlobal || bws.length > 1;
+      }
+      
+      if (codeFilter !== 'ALL') {
+        const b = branchByCode.get(codeFilter);
+        return b ? p.branchOwnerId === b.id : true;
+      }
+      
       return true;
     });
+    
     const ids = new Set(base.map(p => p.categoryId));
     return categories.filter(c => ids.has(c.id));
-  }, [products, categories, codeFilter, user?.branchId, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
+  }, [productsWithMetadata, categories, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
 
-  const filteredProducts = useMemo(() => {
+  // ⚡ OPTIMIZACIÓN 2: Pre-calcular permisos y datos de productos UNA SOLA VEZ
+  const productsWithMetadata = useMemo(() => {
     if (!products) return [];
-    return products.filter(p => {
-      const isGlobal = !p.branchOwnerId, isMine = p.branchOwnerId === user?.branchId;
+    
+    // Crear un mapa de branches por código para búsqueda O(1)
+    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
+    
+    return products.map(p => {
+      const isGlobal = !p.branchOwnerId;
+      const isMine = p.branchOwnerId === user?.branchId;
       const hasMyStock = p.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
-      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
-      const q = debouncedSearch.toLowerCase();
-      const matchesSearch = p.title.toLowerCase().includes(q) || (p.barcode?.includes(debouncedSearch) ?? false) || (p.sku?.toLowerCase().includes(q) ?? false);
-      if (codeFilter === 'INACTIVE') return matchesSearch && !p.active;
-      if (!p.active) return false;
-      let matchesCode = true;
-      if (codeFilter === 'GENERAL') { const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || []; matchesCode = isGlobal || bws.length > 1; }
-      else if (codeFilter !== 'ALL') { const b = branches?.find(b => b.ecommerceCode === codeFilter); matchesCode = b ? p.branchOwnerId === b.id : true; }
-      const matchesCategory = categoryFilter === 'ALL' || p.categoryId === categoryFilter;
-      let matchesStock = true;
-      if (stockFilter !== 'ALL') {
-        const vs = canViewOthers ? (p.branchStocks || []) : (p.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
-        const total = vs.reduce((s, bs) => s + bs.quantity, 0), min = p.minStock || 5;
-        if (stockFilter === 'LOW') matchesStock = total > 0 && total <= min;
-        else if (stockFilter === 'OUT') matchesStock = total <= 0;
-      }
-      return matchesSearch && matchesCode && matchesCategory && matchesStock;
+      
+      // Calcular permisos UNA VEZ
+      let canEditThis = false;
+      if (canManageGlobal) canEditThis = true;
+      else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
+      
+      // Pre-calcular stocks visibles
+      const visibleStocks = canViewOthers ? (p.branchStocks || []) : (p.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
+      const totalStock = visibleStocks.reduce((s, bs) => s + bs.quantity, 0);
+      
+      return {
+        ...p,
+        _meta: {
+          isGlobal,
+          isMine,
+          hasMyStock,
+          canEditThis,
+          totalStock,
+          visibleStocks,
+        }
+      };
     });
-  }, [products, debouncedSearch, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, user?.branchId, branches]);
+  }, [products, branches, user?.branchId, canManageGlobal, canEdit, canViewOthers]);
+
+  // ⚡ OPTIMIZACIÓN 3: Filtrado simplificado usando metadata pre-calculada
+  const filteredProducts = useMemo(() => {
+    if (!productsWithMetadata.length) return [];
+    
+    // Crear mapa de branches por código para búsqueda rápida
+    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
+    const q = debouncedSearch.toLowerCase();
+    
+    return productsWithMetadata.filter(p => {
+      const { isGlobal, isMine, hasMyStock, totalStock } = p._meta;
+      
+      // Filtro de permisos
+      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
+      
+      // Filtro de búsqueda (solo si hay texto)
+      if (q) {
+        const matchesSearch = p.title.toLowerCase().includes(q) || 
+                            (p.barcode?.includes(debouncedSearch) ?? false) || 
+                            (p.sku?.toLowerCase().includes(q) ?? false);
+        if (!matchesSearch) return false;
+      }
+      
+      // Filtro de activos/inactivos
+      if (codeFilter === 'INACTIVE') return !p.active;
+      if (!p.active) return false;
+      
+      // Filtro de código/sucursal
+      if (codeFilter === 'GENERAL') {
+        const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
+        if (!isGlobal && bws.length <= 1) return false;
+      } else if (codeFilter !== 'ALL') {
+        const b = branchByCode.get(codeFilter);
+        if (b && p.branchOwnerId !== b.id) return false;
+      }
+      
+      // Filtro de categoría
+      if (categoryFilter !== 'ALL' && p.categoryId !== categoryFilter) return false;
+      
+      // Filtro de stock
+      if (stockFilter !== 'ALL') {
+        const min = p.minStock || 5;
+        if (stockFilter === 'LOW' && (totalStock <= 0 || totalStock > min)) return false;
+        if (stockFilter === 'OUT' && totalStock > 0) return false;
+      }
+      
+      return true;
+    });
+  }, [productsWithMetadata, debouncedSearch, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, branches]);
 
   // Memoizar cálculos de paginación
   const { totalPages, paginatedProducts, mobileProducts, hasMore } = useMemo(() => {
@@ -259,13 +343,25 @@ export default function ProductsPage() {
     return { totalPages, paginatedProducts, mobileProducts, hasMore };
   }, [filteredProducts, currentPage, visibleCount]);
 
-  const handleOpenEdit = useCallback((product: Product) => {
-    const isGlobal = !product.branchOwnerId, isMine = product.branchOwnerId === user?.branchId;
-    const hasMyStock = product.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+  const handleOpenEdit = useCallback((product: Product | (Product & { _meta?: any })) => {
+    // Si el producto ya tiene metadata, usarla; si no, calcular
     let canEditThis = false;
-    if (canManageGlobal) canEditThis = true;
-    else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
-    haptic(8); setSelectedProduct(product); setCanEditSelected(canEditThis); setIsModalOpen(true);
+    
+    if ('_meta' in product && product._meta) {
+      canEditThis = product._meta.canEditThis;
+    } else {
+      const isGlobal = !product.branchOwnerId;
+      const isMine = product.branchOwnerId === user?.branchId;
+      const hasMyStock = product.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+      
+      if (canManageGlobal) canEditThis = true;
+      else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
+    }
+    
+    haptic(8); 
+    setSelectedProduct(product); 
+    setCanEditSelected(canEditThis); 
+    setIsModalOpen(true);
   }, [canManageGlobal, canEdit, user?.branchId]);
 
   // ── Pantalla de carga inicial en móvil ──
@@ -500,11 +596,9 @@ export default function ProductsPage() {
           ) : (
             <div className="space-y-2.5">
               {mobileProducts.map(product => {
-                const isGlobal = !product.branchOwnerId, isMine = product.branchOwnerId === user?.branchId;
-                const hasMyStock = product.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
-                let canEditThis = false;
-                if (canManageGlobal) canEditThis = true;
-                else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
+                // ⚡ OPTIMIZACIÓN 4: Usar metadata pre-calculada (sin recalcular en cada render)
+                const { canEditThis } = product._meta;
+                
                 return (
                   <ProductCard
                     key={product.id}
@@ -609,14 +703,12 @@ export default function ProductsPage() {
                 <tr><td colSpan={5} className="py-20 text-center"><div className="flex flex-col items-center justify-center text-slate-400 space-y-2"><Package className="w-10 h-10 text-slate-200" strokeWidth={1} /><p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p><Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button></div></td></tr>
               ) : (
                 paginatedProducts.map(product => {
-                  const visibleStocks = canViewOthers ? (product.branchStocks || []) : (product.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
-                  const totalPhysicalStock = visibleStocks.reduce((s, bs) => s + bs.quantity, 0);
+                  // ⚡ OPTIMIZACIÓN 5: Usar metadata pre-calculada en desktop
+                  const { canEditThis, visibleStocks, totalStock } = product._meta;
+                  const totalPhysicalStock = totalStock;
                   const hasWholesale = Number(product.wholesalePrice) > 0;
-                  const isGlobal = !product.branchOwnerId, isMine = product.branchOwnerId === user?.branchId;
-                  const hasMyStock = product.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
-                  let canEditThis = false;
-                  if (canManageGlobal) canEditThis = true;
-                  else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
+                  const isGlobal = product._meta.isGlobal;
+                  
                   return (
                     <tr key={product.id} onClick={() => { setSelectedProduct(product); setCanEditSelected(canEditThis); setIsModalOpen(true); }} className={`hover:bg-slate-50 transition-colors group text-xs cursor-pointer ${!product.active ? 'opacity-60 bg-slate-50/50' : ''}`}>
                       <td className="px-5 py-3">
