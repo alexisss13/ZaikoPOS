@@ -37,7 +37,7 @@ interface MobileCartSheetProps {
   subtotal: number;
   totalSavings: number;
   finalTotal: number;
-  saleState: 'DRAFT' | 'PAID';
+  saleState: 'IDLE' | 'PAID' | 'PROCESSING';
   foundCustomer: any;
   onCustomerAction: () => void;
   onDiscountAction: () => void;
@@ -110,7 +110,7 @@ function MobileCartSheetComponent({
             )}
           </div>
 
-          {saleState === 'DRAFT' && (
+          {saleState === 'IDLE' && (
             <div className="flex items-center gap-1 shrink-0">
               <button 
                 onClick={() => { haptic(8); foundCustomer ? onCustomerAction() : onCustomerAction(); }} 
@@ -195,7 +195,7 @@ function MobileCartSheetComponent({
                       </div>
                     </div>
 
-                    {saleState === 'DRAFT' ? (
+                    {saleState === 'IDLE' ? (
                       <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm h-8">
                         <button 
                           onClick={() => { haptic(5); onUpdateQuantity(item.variantId, -1); }} 
@@ -220,7 +220,7 @@ function MobileCartSheetComponent({
                     )}
                   </div>
 
-                  {saleState === 'DRAFT' && (
+                  {saleState === 'IDLE' && (
                     <button 
                       onClick={() => { haptic(10); onRemoveItem(item.variantId); }} 
                       className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
@@ -258,7 +258,7 @@ function MobileCartSheetComponent({
               </div>
             </div>
 
-            {saleState === 'DRAFT' && (
+            {saleState === 'IDLE' && (
               <Button 
                 onClick={() => { haptic(15); onCheckout(); }} 
                 disabled={cart.length === 0} 

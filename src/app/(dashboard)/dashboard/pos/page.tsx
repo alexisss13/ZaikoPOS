@@ -18,12 +18,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { toast } from 'sonner';
+
+// Hooks optimizados
+import { usePOSData, type ProductVariant, type Product } from '@/components/pos/hooks/usePOSData';
+import { useCashSession } from '@/components/pos/hooks/useCashSession';
+
+// Modales optimizados
+import { CashOpenModal } from '@/components/pos/modals/CashOpenModal';
+import { CashCloseModal } from '@/components/pos/modals/CashCloseModal';
 import { SalesHistoryModal } from '@/components/pos/SalesHistoryModal';
 import { CashTransactionModal } from '@/components/pos/CashTransactionModal';
 import { CustomerModal } from '@/components/pos/CustomerModal';
 import { CustomerSearchModal } from '@/components/pos/CustomerSearchModal';
 import { DiscountModal } from '@/components/pos/DiscountModal';
 import { TicketPrint } from '@/components/pos/TicketPrint';
+
+// Componentes móviles
 import { MobilePOSHeader } from '@/components/pos/mobile/MobilePOSHeader';
 import { MobilePOSFilters } from '@/components/pos/mobile/MobilePOSFilters';
 import { MobilePOSActiveFilters } from '@/components/pos/mobile/MobilePOSActiveFilters';
@@ -32,61 +42,38 @@ import { MobileCartFAB } from '@/components/pos/mobile/MobileCartFAB';
 import { MobileCartSheet } from '@/components/pos/mobile/MobileCartSheet';
 import { MobileCashClosed } from '@/components/pos/mobile/MobileCashClosed';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-
-interface BranchBasic { id: string; name: string; ecommerceCode: string | null; logoUrl?: string | null; }
-interface Category { id: string; name: string; ecommerceCode?: string | null; }
-interface Product {
-  id: string; title: string; basePrice: number; wholesalePrice: number | null;
-  wholesaleMinCount: number | null; discountPercentage: number;
-  images: string[]; categoryId: string;
-  category?: { name: string; ecommerceCode: string | null };
-  variants: ProductVariant[];
-}
-
-interface ProductVariant {
-  id: string; name: string; sku: string | null; barcode: string | null;
-  price: number | null; cost: number; minStock: number; active: boolean;
-  attributes: unknown; images: string[];
-  stock: { branchId: string; quantity: number }[];
-}
-
-interface CartItem {
-  variantId: string;
-  productId: string;
-  productName: string;
-  variantName: string;
-  price: number;
-  wholesalePrice: number | null;
-  wholesaleMinCount: number | null;
-  discountPercentage: number;
-  images: string[];
-  cartQuantity: number;
-  localStock: number;
-}
+// Tipos
+import type { CartItem } from '@/components/pos/hooks/usePOSData';
 
 export default function PosPage() {
   const { user, userId } = useAuth();
   const { isMobile } = useResponsive();
   
-  // 🚀 Cash session management
-  const { data: cashData, isLoading: loadingCash, mutate: mutateCash } = useSWR('/api/cash/current', fetcher);
-  const cashSession = cashData?.session;
-  const hasCashOpen = cashSession?.status === 'OPEN';
+  // Hooks optimizados
+  const { 
+    cashSession, 
+    hasCashOpen, 
+    mutateCash, 
+    products, 
+    categories, 
+    branches, 
+    mutateProducts,
+    loadingCash,
+    loadingProducts,
+    loadingCats
+  } = usePOSData();
+  
+  const cashHook = useCashSession();
   
   const isGlobalUser = user?.role === 'SUPER_ADMIN' || user?.role === 'OWNER';
-  
-  // 🚀 EXTRAEMOS EL MUTATE DE LOS PRODUCTOS PARA ACTUALIZAR STOCK EN VIVO
-  const { data: products, isLoading: loadingProducts, mutate: mutateProducts } = useSWR<Product[]>('/api/products', fetcher);
-  const { data: categories, isLoading: loadingCats } = useSWR<Category[]>('/api/categories', fetcher);
-  const { data: branches } = useSWR<BranchBasic[]>('/api/branches', fetcher);
-  
   const currentBranch = branches?.find(b => b.id === user?.branchId);
 
-  // Cash modals
-  const [showOpenCash, setShowOpenCash] = useState(false);
-  const [showCloseCash, setShowCloseCash] = useState(false);
+  // Modales
   const [showSalesHistory, setShowSalesHistory] = useState(false);
+  
+  // Sales history
+  const fetcher = (url: string) => fetch(url).then(r => r.json());
+  const { data: salesData } = useSWR(showSalesHistory ? '/api/sales/current-session' : null, fetcher);
   const [showCashTransaction, setShowCashTransaction] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -95,26 +82,20 @@ export default function PosPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [ticketData, setTicketData] = useState<any>(null);
   const [showTicketModal, setShowTicketModal] = useState(false);
-  const [initialCash, setInitialCash] = useState('');
-  const [finalCash, setFinalCash] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState<string>('');
-  const [isOpeningCash, setIsOpeningCash] = useState(false);
-  const [isClosingCash, setIsClosingCash] = useState(false);
-  const [closeResult, setCloseResult] = useState<{ difference: number } | null>(null);
 
-  // Sales history
-  const { data: salesData } = useSWR(showSalesHistory ? '/api/sales/current-session' : null, fetcher);
-
+  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [codeFilter, setCodeFilter] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  
+  // Carrito
   const [cart, setCart] = useState<CartItem[]>([]);
-
-  const [saleState, setSaleState] = useState<'DRAFT' | 'PAID'>('DRAFT');
   const [foundCustomer, setFoundCustomer] = useState<any>(null);
   const [globalDiscountType, setGlobalDiscountType] = useState<'FIXED' | 'PERCENT'>('FIXED');
   const [globalDiscountValue, setGlobalDiscountValue] = useState('');
+  const [saleState, setSaleState] = useState<'IDLE' | 'PAID' | 'PROCESSING'>('IDLE');
 
+  // Pagos
   const [showPayment, setShowPayment] = useState(false);
   const [splitPayments, setSplitPayments] = useState<Array<{
     method: 'CASH' | 'YAPE' | 'PLIN' | 'CARD' | 'TRANSFER';
@@ -122,10 +103,9 @@ export default function PosPage() {
     reference?: string;
   }>>([{ method: 'CASH', amount: '', reference: '' }]);
   const [cashReceived, setCashReceived] = useState('');
-  
-  // 🚀 NUEVO ESTADO: BLOQUEAR BOTÓN MIENTRAS SE GUARDA EN BD
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Transferencias
   const [transferProduct, setTransferProduct] = useState<Product | null>(null);
   const [transferVariant, setTransferVariant] = useState<ProductVariant | null>(null);
   const [transferFromBranch, setTransferFromBranch] = useState<string>('');
@@ -532,13 +512,13 @@ export default function PosPage() {
     setFoundCustomer(null);
     setGlobalDiscountValue('');
     setTicketData(null);
-    setSaleState('DRAFT');
+    setSaleState('IDLE');
     toast.success('Caja liberada para nueva venta');
   };
 
   const handleAnular = () => {
     setTicketData(null);
-    setSaleState('DRAFT');
+    setSaleState('IDLE');
     toast.error('Pago anulado. Venta devuelta a borrador.');
   };
 
@@ -581,83 +561,6 @@ export default function PosPage() {
     }
   };
 
-  // Cash session handlers
-  const handleOpenCash = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isGlobalUser && !selectedBranch) {
-      return toast.error('Debes seleccionar una sucursal.');
-    }
-
-    if (!initialCash || isNaN(Number(initialCash)) || Number(initialCash) < 0) {
-      return toast.error('Ingresa un monto inicial válido.');
-    }
-
-    setIsOpeningCash(true);
-    try {
-      const payload: { initialCash: number; branchId?: string } = { 
-        initialCash: Number(initialCash) 
-      };
-
-      if (isGlobalUser && selectedBranch) {
-        payload.branchId = selectedBranch;
-      }
-
-      const res = await fetch('/api/cash/open', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error || 'Error al abrir caja');
-
-      toast.success('¡Caja abierta! Buen turno.');
-      setShowOpenCash(false);
-      setInitialCash('');
-      setSelectedBranch('');
-      mutateCash();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al abrir caja';
-      toast.error(errorMessage);
-    } finally {
-      setIsOpeningCash(false);
-    }
-  };
-
-  const handleCloseCash = async () => {
-    if (!finalCash || isNaN(Number(finalCash)) || Number(finalCash) < 0) {
-      return toast.error('Ingresa el efectivo contado.');
-    }
-
-    setIsClosingCash(true);
-    try {
-      const res = await fetch('/api/cash/close', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ finalCash: Number(finalCash) }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al cerrar caja');
-
-      setCloseResult({ difference: Number(data.difference) });
-      setFinalCash('');
-      mutateCash();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al cerrar caja';
-      toast.error(errorMessage);
-    } finally {
-      setIsClosingCash(false);
-    }
-  };
-
-  const handleExitAfterClose = () => {
-    setCloseResult(null);
-    setShowCloseCash(false);
-    window.location.reload();
-  };
-
   // Mobile-specific handlers
   const handleMobileCustomerAction = () => {
     if (foundCustomer) {
@@ -697,7 +600,7 @@ export default function PosPage() {
       {isMobile ? (
         !hasCashOpen ? (
           /* Vista de caja cerrada en móvil */
-          <MobileCashClosed onOpenCash={() => setShowOpenCash(true)} />
+          <MobileCashClosed onOpenCash={() => cashHook.setShowOpenCash(true)} />
         ) : (
           /* Vista normal del POS móvil */
           <div className="flex flex-col h-full w-full gap-3">
@@ -708,7 +611,7 @@ export default function PosPage() {
               onNewCustomer={() => setShowCustomerModal(true)}
               onHistory={() => setShowSalesHistory(true)}
               onCashTransaction={() => setShowCashTransaction(true)}
-              onCloseCash={() => setShowCloseCash(true)}
+              onCloseCash={() => cashHook.setShowCloseCash(true)}
               onOpenFilters={() => setShowMobileFilters(true)}
               hasActiveFilters={hasActiveFilters}
               disabled={saleState === 'PAID'}
@@ -843,7 +746,7 @@ export default function PosPage() {
                 <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Ingresos/Egresos</span>
               </Button>
               <Button 
-                onClick={() => setShowCloseCash(true)} 
+                onClick={() => cashHook.setShowCloseCash(true)} 
                 className="h-9 px-4 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm transition-all shrink-0"
               >
                 <LogOut className="w-3.5 h-3.5 mr-1.5" /> Cerrar Caja
@@ -1050,7 +953,7 @@ export default function PosPage() {
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {saleState === 'DRAFT' && (
+            {saleState === 'IDLE' && (
               <>
                 <button 
                   onClick={() => foundCustomer ? setFoundCustomer(null) : setShowCustomerSearch(true)} 
@@ -1114,7 +1017,7 @@ export default function PosPage() {
                       </div>
                     </div>
 
-                    {saleState === 'DRAFT' ? (
+                    {saleState === 'IDLE' ? (
                       <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm h-7">
                         <button onClick={() => updateQuantity(item.variantId, -1)} className="w-7 flex items-center justify-center text-slate-500 hover:text-slate-900"><Minus className="w-3.5 h-3.5" /></button>
                         <span className="text-xs font-semibold text-slate-800 w-6 text-center tabular-nums">{item.cartQuantity}</span>
@@ -1125,7 +1028,7 @@ export default function PosPage() {
                     )}
                   </div>
 
-                  {saleState === 'DRAFT' && (
+                  {saleState === 'IDLE' && (
                     <button onClick={() => removeFromCart(item.variantId)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1156,7 +1059,7 @@ export default function PosPage() {
             </div>
           </div>
 
-          {saleState === 'DRAFT' ? (
+          {saleState === 'IDLE' ? (
             <Button onClick={openPaymentModal} disabled={cart.length === 0} className="w-full h-12 text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md transition-all active:scale-[0.98]">
               Amortizar (Pagar) <ChevronRight className="w-4 h-4 ml-1.5" />
             </Button>
@@ -1443,241 +1346,37 @@ export default function PosPage() {
               <p className="text-base font-black text-slate-900 tracking-tight">Caja Cerrada</p>
               <p className="text-xs text-slate-500 font-medium mt-0.5">Apertura tu caja para comenzar a vender</p>
             </div>
-            <Button onClick={() => setShowOpenCash(true)} className="h-11 px-5 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95">
+            <Button onClick={() => cashHook.setShowOpenCash(true)} className="h-11 px-5 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95">
               <Wallet className="w-4 h-4 mr-2" /> Abrir Caja
             </Button>
           </div>
         </div>
       )}
 
-      {/* MODAL DE APERTURA DE CAJA */}
-      <Dialog open={showOpenCash} onOpenChange={setShowOpenCash}>
-        <DialogContent className="w-[95vw] max-w-md p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-3xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Apertura de Caja</DialogTitle>
-            <DialogDescription>Configura el monto inicial para comenzar tu turno</DialogDescription>
-          </DialogHeader>
-          
-          {/* Header mejorado para móvil */}
-          <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-md">
-                <Wallet className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Apertura de Caja</h2>
-                <p className="text-sm text-slate-600 font-medium mt-1 leading-relaxed">
-                  {isGlobalUser ? "Selecciona sucursal y monto inicial" : "Configura el monto inicial de efectivo"}
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Modales de caja optimizados */}
+      <CashOpenModal
+        isOpen={cashHook.showOpenCash}
+        onClose={() => cashHook.setShowOpenCash(false)}
+        onSubmit={(e) => cashHook.handleOpenCash(e, mutateCash)}
+        initialCash={cashHook.initialCash}
+        setInitialCash={cashHook.setInitialCash}
+        selectedBranch={cashHook.selectedBranch}
+        setSelectedBranch={cashHook.setSelectedBranch}
+        branches={branches}
+        isGlobalUser={isGlobalUser}
+        isOpening={cashHook.isOpeningCash}
+      />
 
-          {/* Form Content mejorado */}
-          <div className="p-6 bg-white">
-            <form onSubmit={handleOpenCash} className="space-y-6">
-              
-              {isGlobalUser && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-500" /> Sucursal
-                  </Label>
-                  <Select value={selectedBranch} onValueChange={setSelectedBranch} disabled={isOpeningCash}>
-                    <SelectTrigger className="w-full h-12 text-base font-semibold bg-slate-50 border-slate-200 rounded-xl focus:ring-slate-400 transition-all">
-                      <SelectValue placeholder="Seleccionar sucursal..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {branches?.map(b => (
-                        <SelectItem key={b.id} value={b.id} className="font-medium text-slate-700 py-3">
-                          {b.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-slate-500" /> Monto Inicial
-                </Label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                    <span className="text-slate-500 font-bold text-xl">S/</span>
-                  </div>
-                  <Input
-                    type="number"
-                    step="0.10"
-                    min="0"
-                    autoFocus={!isGlobalUser}
-                    placeholder="0.00"
-                    value={initialCash}
-                    onChange={(e) => setInitialCash(e.target.value)}
-                    className="pl-14 h-16 text-3xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-2xl tabular-nums text-center"
-                    disabled={isOpeningCash}
-                    required
-                  />
-                </div>
-                <p className="text-xs text-slate-500 text-center font-medium">
-                  Ingresa el efectivo que tienes para comenzar
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowOpenCash(false)}
-                  disabled={isOpeningCash}
-                  className="flex-1 h-12 text-sm font-bold text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1 h-12 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                  disabled={isOpeningCash || (isGlobalUser && !selectedBranch)}
-                >
-                  {isOpeningCash ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Abriendo...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Iniciar Turno</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* MODAL DE CIERRE DE CAJA */}
-      <Dialog open={showCloseCash} onOpenChange={(open) => !closeResult && setShowCloseCash(open)}>
-        <DialogContent className="w-[95vw] max-w-md font-sans p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-3xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Cierre de Caja</DialogTitle>
-            <DialogDescription>Declara el efectivo final para cerrar tu turno</DialogDescription>
-          </DialogHeader>
-          
-          {closeResult ? (
-            // Vista de resultado mejorada para móvil
-            <>
-              <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 border rounded-2xl flex items-center justify-center shadow-md ${Math.abs(closeResult.difference) < 0.5 ? 'bg-white border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-700'}`}>
-                    <CheckCircle2 className="w-7 h-7" strokeWidth={2.5} />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Turno Cerrado</h2>
-                    <p className="text-sm text-slate-600 font-medium mt-1 leading-relaxed">
-                      La auditoría de caja ha concluido
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-white">
-                <div className="space-y-4">
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-slate-500 mb-2">Diferencia Detectada</p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black text-slate-900 tabular-nums">
-                        {closeResult.difference > 0 ? '+' : ''}{closeResult.difference < 0 ? '-' : ''}S/ {Math.abs(closeResult.difference).toFixed(2)}
-                      </span>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-md ${Math.abs(closeResult.difference) < 0.5 ? 'bg-emerald-100 text-emerald-700' : closeResult.difference < 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {Math.abs(closeResult.difference) < 0.5 ? 'Cuadrada' : closeResult.difference < 0 ? 'Faltante' : 'Sobrante'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-500 text-center">
-                    El turno ha sido registrado correctamente en el sistema
-                  </p>
-                </div>
-
-                <Button onClick={handleExitAfterClose} className="w-full h-12 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all active:scale-[0.98] mt-6">
-                  Entendido
-                </Button>
-              </div>
-            </>
-          ) : (
-            // Vista del formulario mejorada para móvil
-            <>
-              <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-md">
-                    <LogOut className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Cerrar Turno</h2>
-                    <p className="text-sm text-slate-600 font-medium mt-1 leading-relaxed">
-                      Declara el efectivo total contabilizado
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-6 bg-white">
-                <div className="space-y-3">
-                  <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <Calculator className="w-4 h-4 text-slate-500" /> Efectivo Físico Total
-                  </Label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                      <span className="text-slate-500 font-bold text-xl">S/</span>
-                    </div>
-                    <Input
-                      type="number"
-                      step="0.10"
-                      placeholder="0.00"
-                      className="pl-14 h-16 text-3xl font-black text-slate-900 border-slate-200 focus-visible:ring-slate-400 rounded-2xl bg-slate-50 tabular-nums transition-all text-center"
-                      value={finalCash}
-                      onChange={(e) => setFinalCash(e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 text-center font-medium">
-                    Cuenta todo el efectivo que tienes en caja
-                  </p>
-                </div>
-
-                <div className="flex gap-3 pt-6">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowCloseCash(false)} 
-                    disabled={isClosingCash} 
-                    className="flex-1 h-12 text-sm font-bold text-slate-600 border-slate-200 bg-white hover:bg-slate-50 rounded-xl transition-all"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={handleCloseCash} 
-                    disabled={!finalCash || isClosingCash} 
-                    className="flex-1 h-12 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-lg rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    {isClosingCash ? (
-                      <>
-                        <Loader2 className="animate-spin w-4 h-4" />
-                        <span>Cerrando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Cerrar Turno</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CashCloseModal
+        isOpen={cashHook.showCloseCash}
+        onClose={() => cashHook.setShowCloseCash(false)}
+        onSubmit={() => cashSession && cashHook.handleCloseCash(cashSession.id, mutateCash)}
+        onExit={cashHook.handleExitAfterClose}
+        finalCash={cashHook.finalCash}
+        setFinalCash={cashHook.setFinalCash}
+        isClosing={cashHook.isClosingCash}
+        closeResult={cashHook.closeResult}
+      />
 
       {/* MODAL DE HISTORIAL DE VENTAS DEL TURNO */}
       <SalesHistoryModal 
