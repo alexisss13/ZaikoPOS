@@ -22,6 +22,7 @@ import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ProductCard } from '@/components/dashboard/products/ProductCard';
 import { useProductExports } from '@/components/dashboard/products/useProductExports';
+import { ProductsLoadingSkeleton } from '@/components/dashboard/products/ProductsLoadingSkeleton';
 import type { Product, Branch, Category } from '@/components/dashboard/products/types';
 
 // ── Lazy-load modales pesados (no se descargan hasta que se abren) ──
@@ -32,7 +33,7 @@ const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/Barco
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 const haptic = (ms = 10) => { try { navigator.vibrate?.(ms); } catch {} };
-const MOBILE_PAGE_SIZE = 12;
+const MOBILE_PAGE_SIZE = 8;
 const ITEMS_PER_PAGE = 8;
 
 export default function ProductsPage() {
@@ -213,6 +214,11 @@ export default function ProductsPage() {
     else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
     haptic(8); setSelectedProduct(product); setCanEditSelected(canEditThis); setIsModalOpen(true);
   }, [canManageGlobal, canEdit, user?.branchId]);
+
+  // ── Pantalla de carga inicial en móvil ──
+  if (isMobile && (isLoading || !products)) {
+    return <ProductsLoadingSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
