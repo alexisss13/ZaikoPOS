@@ -46,26 +46,47 @@ export default function ProductsPage() {
   const canEdit = isSuperOrOwner || !!permissions.canEditProducts || canManageGlobal;
   const canViewOthers = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
 
-  const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher, {
+  // ⚡ OPTIMIZACIÓN: Cargar productos primero (crítico), lo demás después
+  const { data: products, isLoading: isLoadingProducts, mutate } = useSWR<Product[]>('/api/products', fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     dedupingInterval: 5000,
   });
-  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 10000,
-  });
-  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 10000,
-  });
-  const { data: suppliers } = useSWR('/api/suppliers', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 10000,
-  });
+  
+  // Cargar branches solo después de tener productos
+  const { data: branches } = useSWR<Branch[]>(
+    products ? '/api/branches' : null, 
+    fetcher, 
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 10000,
+    }
+  );
+  
+  // Cargar categories y suppliers en paralelo después
+  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>(
+    products ? '/api/categories' : null, 
+    fetcher, 
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 10000,
+    }
+  );
+  
+  const { data: suppliers } = useSWR(
+    products ? '/api/suppliers' : null, 
+    fetcher, 
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 10000,
+    }
+  );
+
+  // Mostrar loading solo si productos están cargando
+  const isLoading = isLoadingProducts;
 
   // Memoizar cálculos de branches
   const { myBranch, myCode, uniqueCodes, visibleCodes } = useMemo(() => {
@@ -248,8 +269,19 @@ export default function ProductsPage() {
   }, [canManageGlobal, canEdit, user?.branchId]);
 
   // ── Pantalla de carga inicial en móvil ──
-  if (isMobile && (isLoading || !products)) {
+  if (isMobile && isLoading) {
     return <ProductsLoadingSkeleton />;
+  }
+
+  // Si no hay productos pero ya terminó de cargar, mostrar mensaje
+  if (isMobile && !isLoading && !products) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
+        <Package className="w-16 h-16 text-slate-300" />
+        <p className="text-sm text-slate-500 text-center">No se pudieron cargar los productos</p>
+        <Button onClick={() => mutate()} className="mt-2">Reintentar</Button>
+      </div>
+    );
   }
 
   return (

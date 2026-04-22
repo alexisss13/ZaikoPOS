@@ -165,6 +165,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     userId ? `/api/notifications?userId=${userId}` : null, fetcher, { refreshInterval: 15000 }
   );
 
+  // ⚡ PREFETCH: Cargar datos críticos en background para páginas comunes
+  useSWR('/api/products', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false,
+    dedupingInterval: 5000,
+  });
+  useSWR('/api/branches', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
+  useSWR('/api/categories', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
+
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   const handleLogout = async () => {
