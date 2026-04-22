@@ -73,20 +73,20 @@ function MobileCashClosedComponent({
 
   // Vista del formulario - experiencia fluida tipo app
   return (
-    <div className="flex flex-col h-full w-full gap-5" style={{ willChange: 'auto' }}>
-      {/* Header mejorado con mejor navegación */}
-      <div className="flex flex-col gap-3 px-4">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col h-full w-full bg-slate-50" style={{ willChange: 'auto' }}>
+      {/* Header profesional con fondo */}
+      <div className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-4">
           <button
             onClick={() => setShowForm(false)}
             disabled={isOpening}
-            className="flex items-center justify-center w-10 h-10 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-30 active:scale-95"
+            className="flex items-center justify-center w-9 h-9 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-30 active:scale-95 shrink-0"
           >
             <ChevronRight className="w-5 h-5 rotate-180" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-black text-slate-900 leading-tight">Apertura de Caja</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h1 className="text-lg font-black text-slate-900 leading-tight">Apertura de Caja</h1>
+            <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
               {isGlobalUser ? "Selecciona sucursal y configura el monto" : "Configura el monto inicial de efectivo"}
             </p>
           </div>
@@ -94,10 +94,10 @@ function MobileCashClosedComponent({
       </div>
 
       {/* Contenido del formulario compacto */}
-      <div className="flex-1 flex flex-col px-4 pb-24 overflow-y-auto">
+      <div className="flex-1 flex flex-col px-4 pb-24 overflow-y-auto bg-slate-50">
         {/* Ícono y mensaje reducido */}
-        <div className="text-center mb-5 pt-2">
-          <div className="w-14 h-14 bg-gradient-to-br from-slate-100 via-slate-50 to-white rounded-2xl flex items-center justify-center mx-auto mb-2.5 border border-slate-200 shadow-sm">
+        <div className="text-center mb-5 pt-6">
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2.5 border border-slate-200 shadow-sm">
             <Wallet className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
           </div>
           <h2 className="text-base font-black text-slate-900 mb-0.5">¡Comencemos el turno!</h2>
@@ -122,7 +122,7 @@ function MobileCashClosedComponent({
                       type="button"
                       onClick={() => setSelectedBranch(b.id)}
                       disabled={isOpening}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all active:scale-95 disabled:opacity-30 ${
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all active:scale-95 disabled:opacity-30 shadow-sm ${
                         selectedBranch === b.id
                           ? 'bg-slate-900 border-slate-900 text-white shadow-lg'
                           : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'

@@ -24,7 +24,7 @@ export function useCashSession() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           branchId: selectedBranch || undefined,
-          initialAmount: Number(initialCash),
+          initialCash: Number(initialCash),
         }),
       });
 
@@ -52,9 +52,9 @@ export function useCashSession() {
     setIsClosingCash(true);
     try {
       const res = await fetch(`/api/cash-sessions/${cashSessionId}/close`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ finalAmount: Number(finalCash) }),
+        body: JSON.stringify({ finalCash: Number(finalCash) }),
       });
 
       const data = await res.json();
