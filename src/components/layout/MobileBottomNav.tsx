@@ -263,7 +263,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           />
           
           {/* Drawer Content */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom-full max-h-[80vh] overflow-hidden">
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[80vh] overflow-hidden">
             <div className="p-6 pb-0">
               {/* Header del Drawer */}
               <div className="flex items-center justify-between mb-6">

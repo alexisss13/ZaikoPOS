@@ -816,7 +816,7 @@ export default function ProductsPage() {
                 {/* Sección: Catálogo */}
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Catálogo</p>
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {[
                       { value: 'ALL', label: 'Todos', icon: <LayoutGrid className="w-4 h-4" /> },
                       { value: 'GENERAL', label: 'Compartidos', icon: <Globe className="w-4 h-4" /> },
@@ -835,7 +835,7 @@ export default function ProductsPage() {
                       <button
                         key={opt.value}
                         onClick={() => { haptic(8); setCodeFilter(opt.value); setCategoryFilter('ALL'); setCurrentPage(1); }}
-                        className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${
+                        className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${
                           codeFilter === opt.value
                             ? opt.value === 'INACTIVE' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm'
                             : 'bg-slate-50 text-slate-600 border-slate-200'
@@ -851,10 +851,10 @@ export default function ProductsPage() {
                 {availableCategories.length > 0 && (
                   <div>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Categoría</p>
-                    <div className="flex flex-wrap gap-2.5">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={() => { haptic(8); setCategoryFilter('ALL'); setCurrentPage(1); }}
-                        className={`px-4 py-3 rounded-2xl text-sm font-semibold border transition-all active:scale-95 ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                        className={`px-4 py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
                       >
                         Todas
                       </button>
@@ -862,7 +862,7 @@ export default function ProductsPage() {
                         <button
                           key={cat.id}
                           onClick={() => { haptic(8); setCategoryFilter(cat.id); setCurrentPage(1); }}
-                          className={`px-4 py-3 rounded-2xl text-sm font-semibold border transition-all active:scale-95 max-w-[180px] truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                          className={`px-4 py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
                         >
                           {cat.name}
                         </button>
@@ -1005,7 +1005,7 @@ export default function ProductsPage() {
       {isMobile ? (
         <div
           ref={scrollRef}
-          className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-6"
+          className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-24"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -1100,7 +1100,7 @@ export default function ProductsPage() {
                 return (
                   <div
                     key={product.id}
-                    className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all duration-150 active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`}
+                    className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-transform duration-150 active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`}
                   >
                     {/* Header de la tarjeta */}
                     <div
@@ -1154,7 +1154,7 @@ export default function ProductsPage() {
 
                     {/* Contenido expandible */}
                     {isExpanded && (
-                      <div className="border-t border-slate-100 p-4 bg-slate-50/50 animate-in slide-in-from-top-1 duration-150">
+                      <div className="border-t border-slate-100 p-4 bg-slate-50/50">
                         <div className="grid grid-cols-2 gap-2 mb-3">
                           {/* Catálogo */}
                           <div className="bg-white rounded-2xl p-3 border border-slate-100">
