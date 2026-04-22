@@ -1,25 +1,22 @@
 'use client';
 
-import { Package, SlidersHorizontal, Plus, MoreHorizontal, Search } from 'lucide-react';
+import { memo } from 'react';
+import { Package, SlidersHorizontal, MoreHorizontal, Search } from 'lucide-react';
 
 // Shimmer base reutilizable
-function Shimmer({ className }: { className?: string }) {
+const Shimmer = memo(({ className }: { className?: string }) => {
   return (
-    <div
-      className={`relative overflow-hidden bg-slate-100 rounded-xl ${className}`}
-    >
+    <div className={`relative overflow-hidden bg-slate-100 rounded-xl ${className}`}>
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
     </div>
   );
-}
+});
+Shimmer.displayName = 'Shimmer';
 
 // Tarjeta skeleton individual
-function CardSkeleton({ delay = 0 }: { delay?: number }) {
+const CardSkeleton = memo(({ delay = 0 }: { delay?: number }) => {
   return (
-    <div
-      className="bg-white rounded-3xl border border-slate-100 p-4 shadow-sm"
-      style={{ animationDelay: `${delay}ms` }}
-    >
+    <div className="bg-white rounded-3xl border border-slate-100 p-4 shadow-sm" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-center gap-3">
         {/* Imagen */}
         <Shimmer className="w-14 h-14 rounded-2xl shrink-0" />
@@ -37,9 +34,10 @@ function CardSkeleton({ delay = 0 }: { delay?: number }) {
       </div>
     </div>
   );
-}
+});
+CardSkeleton.displayName = 'CardSkeleton';
 
-export function ProductsLoadingSkeleton() {
+export const ProductsLoadingSkeleton = memo(() => {
   return (
     <div className="flex flex-col h-full w-full gap-5">
       {/* Header skeleton */}
@@ -79,4 +77,5 @@ export function ProductsLoadingSkeleton() {
       </div>
     </div>
   );
-}
+});
+ProductsLoadingSkeleton.displayName = 'ProductsLoadingSkeleton';

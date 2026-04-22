@@ -51,10 +51,14 @@ export default function ProductsPage() {
   const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher);
   const { data: suppliers } = useSWR('/api/suppliers', fetcher);
 
-  const myBranch = branches?.find(b => b.id === user?.branchId);
-  const myCode = myBranch?.ecommerceCode;
-  const uniqueCodes = Array.from(new Set(branches?.map(b => b.ecommerceCode).filter(Boolean))) as string[];
-  const visibleCodes = canViewOthers ? uniqueCodes : uniqueCodes.filter(c => c === myCode);
+  // Memoizar cálculos de branches
+  const { myBranch, myCode, uniqueCodes, visibleCodes } = useMemo(() => {
+    const myBranch = branches?.find(b => b.id === user?.branchId);
+    const myCode = myBranch?.ecommerceCode;
+    const uniqueCodes = Array.from(new Set(branches?.map(b => b.ecommerceCode).filter(Boolean))) as string[];
+    const visibleCodes = canViewOthers ? uniqueCodes : uniqueCodes.filter(c => c === myCode);
+    return { myBranch, myCode, uniqueCodes, visibleCodes };
+  }, [branches, user?.branchId, canViewOthers]);
 
   // ── Filtros ──
   const [searchTerm, setSearchTerm] = useState('');
@@ -201,10 +205,14 @@ export default function ProductsPage() {
     });
   }, [products, debouncedSearch, codeFilter, categoryFilter, stockFilter, canViewOthers, canManageGlobal, isSuperOrOwner, user?.branchId, branches]);
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  const mobileProducts = filteredProducts.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredProducts.length;
+  // Memoizar cálculos de paginación
+  const { totalPages, paginatedProducts, mobileProducts, hasMore } = useMemo(() => {
+    const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
+    const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    const mobileProducts = filteredProducts.slice(0, visibleCount);
+    const hasMore = visibleCount < filteredProducts.length;
+    return { totalPages, paginatedProducts, mobileProducts, hasMore };
+  }, [filteredProducts, currentPage, visibleCount]);
 
   const handleOpenEdit = useCallback((product: Product) => {
     const isGlobal = !product.branchOwnerId, isMine = product.branchOwnerId === user?.branchId;
