@@ -440,13 +440,13 @@ export default function ProductsPage() {
 
             <button
               onClick={() => setShowMobileFilters(true)}
-              className={`relative flex items-center gap-1.5 h-10 px-3 rounded-xl border font-semibold text-sm ${codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white text-slate-600 border-slate-200'}`}
+              className="relative h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+              title="Filtros"
             >
               <SlidersHorizontal className="w-4 h-4" />
-              <span className="text-xs">Filtros</span>
               {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  {[codeFilter !== 'ALL', categoryFilter !== 'ALL', stockFilter !== 'ALL'].filter(Boolean).length}
+                  •
                 </span>
               )}
             </button>
@@ -459,7 +459,7 @@ export default function ProductsPage() {
 
             {canCreate && (
               <div className="relative">
-                <button onClick={() => setShowExportMenu(v => !v)} className="h-10 w-10 p-0 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shrink-0">
+                <button onClick={() => setShowExportMenu(v => !v)} className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all" title="Más opciones">
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
                 {showExportMenu && (

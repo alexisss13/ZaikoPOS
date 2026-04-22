@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/auth-context';
+import { useResponsive } from '@/hooks/useResponsive';
 import { toast } from 'sonner';
 import { SalesHistoryModal } from '@/components/pos/SalesHistoryModal';
 import { CashTransactionModal } from '@/components/pos/CashTransactionModal';
@@ -23,6 +24,13 @@ import { CustomerModal } from '@/components/pos/CustomerModal';
 import { CustomerSearchModal } from '@/components/pos/CustomerSearchModal';
 import { DiscountModal } from '@/components/pos/DiscountModal';
 import { TicketPrint } from '@/components/pos/TicketPrint';
+import { MobilePOSHeader } from '@/components/pos/mobile/MobilePOSHeader';
+import { MobilePOSFilters } from '@/components/pos/mobile/MobilePOSFilters';
+import { MobilePOSActiveFilters } from '@/components/pos/mobile/MobilePOSActiveFilters';
+import { MobileProductGrid } from '@/components/pos/mobile/MobileProductGrid';
+import { MobileCartFAB } from '@/components/pos/mobile/MobileCartFAB';
+import { MobileCartSheet } from '@/components/pos/mobile/MobileCartSheet';
+import { MobileCashClosed } from '@/components/pos/mobile/MobileCashClosed';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -59,6 +67,7 @@ interface CartItem {
 
 export default function PosPage() {
   const { user, userId } = useAuth();
+  const { isMobile } = useResponsive();
   
   // 🚀 Cash session management
   const { data: cashData, isLoading: loadingCash, mutate: mutateCash } = useSWR('/api/cash/current', fetcher);
@@ -82,6 +91,8 @@ export default function PosPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [ticketData, setTicketData] = useState<any>(null);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [initialCash, setInitialCash] = useState('');
@@ -647,6 +658,23 @@ export default function PosPage() {
     window.location.reload();
   };
 
+  // Mobile-specific handlers
+  const handleMobileCustomerAction = () => {
+    if (foundCustomer) {
+      setFoundCustomer(null);
+    } else {
+      setShowCustomerSearch(true);
+    }
+  };
+
+  const handleMobileDiscountAction = () => {
+    setShowDiscountModal(true);
+  };
+
+  const hasActiveFilters = codeFilter !== 'ALL' || selectedCategory !== 'ALL';
+
+  const pointsToEarn = foundCustomer ? Math.floor(finalGlobalTotal / 2) : 0;
+
   // Loading state
   if (loadingCash) {
     return (
@@ -660,40 +688,146 @@ export default function PosPage() {
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5 relative">
       
-      {/* Overlay cuando no hay caja abierta - cubre toda la página */}
-      {!hasCashOpen && (
+      {/* Overlay cuando no hay caja abierta - solo para desktop */}
+      {!hasCashOpen && !isMobile && (
         <div className="absolute inset-0 bg-slate-50/60 backdrop-blur-[0.5px] z-10 pointer-events-none"></div>
       )}
       
-      {/* TOOLBAR SUPERIOR */}
-      <div className="flex items-center justify-between gap-4 w-full">
-        <div className="flex items-center gap-2.5 shrink-0">
-          <h1 className="text-[26px] font-black text-slate-900 tracking-tight">POS</h1>
-          <ShoppingBag className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
-            <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
-            </div>
-            <Input 
-              autoFocus={hasCashOpen}
-              placeholder="Buscar producto, SKU..." 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
-              disabled={saleState === 'PAID' || !hasCashOpen}
-              className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" 
+      {/* VISTA MÓVIL */}
+      {isMobile ? (
+        !hasCashOpen ? (
+          /* Vista de caja cerrada en móvil */
+          <MobileCashClosed onOpenCash={() => setShowOpenCash(true)} />
+        ) : (
+          /* Vista normal del POS móvil */
+          <div className="flex flex-col h-full w-full gap-3">
+            {/* Header móvil con botón de filtros */}
+            <MobilePOSHeader
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onNewCustomer={() => setShowCustomerModal(true)}
+              onHistory={() => setShowSalesHistory(true)}
+              onCashTransaction={() => setShowCashTransaction(true)}
+              onCloseCash={() => setShowCloseCash(true)}
+              onOpenFilters={() => setShowMobileFilters(true)}
+              hasActiveFilters={hasActiveFilters}
+              disabled={saleState === 'PAID'}
             />
+
+          {/* Chips de filtros activos */}
+          <MobilePOSActiveFilters
+            codeFilter={codeFilter}
+            selectedCategory={selectedCategory}
+            getBranchByCode={getBranchByCode}
+            categories={availableCategories}
+            onClearCodeFilter={() => {
+              setCodeFilter('ALL');
+              setSelectedCategory('ALL');
+            }}
+            onClearCategoryFilter={() => setSelectedCategory('ALL')}
+          />
+
+          {/* Grid de productos - MÁS ESPACIO */}
+          <div className="flex-1 overflow-y-auto px-4 pb-20">
+            {loadingProducts || loadingCats ? (
+              <div className="grid grid-cols-2 gap-2.5">
+                {Array(8).fill(0).map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl border border-slate-100 p-2">
+                    <div className="aspect-square bg-slate-100 rounded-xl mb-2"></div>
+                    <div className="h-3 bg-slate-100 rounded mb-1"></div>
+                    <div className="h-4 bg-slate-100 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                <MobileProductGrid
+                  products={filteredProducts}
+                  onProductClick={addToCart}
+                  getLocalStock={getLocalStock}
+                  getGlobalStock={getGlobalStock}
+                  disabled={saleState === 'PAID' || !hasCashOpen}
+                />
+              </div>
+            )}
           </div>
-          {hasCashOpen && (
-            <>
-              <Button 
-                onClick={() => setShowCustomerModal(true)}
-                variant="ghost"
-                className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
-              >
-                <UserPlus className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Nuevo Cliente</span>
-              </Button>
+
+          {/* FAB del carrito */}
+          <MobileCartFAB
+            itemCount={cart.length}
+            total={finalGlobalTotal}
+            onClick={() => setShowMobileCart(true)}
+            disabled={!hasCashOpen}
+          />
+
+          {/* Sheet de filtros */}
+          <MobilePOSFilters
+            isOpen={showMobileFilters}
+            onClose={() => setShowMobileFilters(false)}
+            codeFilter={codeFilter}
+            onCodeFilterChange={setCodeFilter}
+            visibleCodes={visibleCodes}
+            getBranchByCode={getBranchByCode}
+            categories={availableCategories}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            disabled={saleState === 'PAID' || !hasCashOpen}
+          />
+
+          {/* Sheet del carrito */}
+          <MobileCartSheet
+            isOpen={showMobileCart}
+            onClose={() => setShowMobileCart(false)}
+            cart={cart}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeFromCart}
+            onClearCart={() => setCart([])}
+            onCheckout={openPaymentModal}
+            calculateItemFinancials={calculateItemFinancials}
+            subtotal={globalSubtotalBase}
+            totalSavings={totalSavings}
+            finalTotal={finalGlobalTotal}
+            saleState={saleState}
+            foundCustomer={foundCustomer}
+            onCustomerAction={handleMobileCustomerAction}
+            onDiscountAction={handleMobileDiscountAction}
+            globalDiscountValue={globalDiscountValue}
+            pointsToEarn={pointsToEarn}
+          />
+          </div>
+        )
+      ) : (
+        /* VISTA DESKTOP */
+        <>
+          {/* TOOLBAR SUPERIOR */}
+          <div className="flex items-center justify-between gap-4 w-full">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <h1 className="text-[26px] font-black text-slate-900 tracking-tight">POS</h1>
+              <ShoppingBag className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
+                <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
+                  <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+                </div>
+                <Input 
+                  autoFocus={hasCashOpen}
+                  placeholder="Buscar producto, SKU..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  disabled={saleState === 'PAID' || !hasCashOpen}
+                  className="w-full h-full pr-10 pl-4 bg-white border border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-slate-300 rounded-full opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 focus-within:translate-x-0 text-sm" 
+                />
+              </div>
+              {hasCashOpen && (
+                <>
+                  <Button 
+                    onClick={() => setShowCustomerModal(true)}
+                    variant="ghost"
+                    className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Nuevo Cliente</span>
+                  </Button>
               <Button 
                 onClick={() => setShowSalesHistory(true)}
                 variant="ghost"
@@ -1043,6 +1177,9 @@ export default function PosPage() {
           )}
         </div>
       </aside>
+          </div>
+        </>
+      )}
 
       {/* MODAL DE PAGO */}
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
@@ -1295,8 +1432,8 @@ export default function PosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* BANNER FLOTANTE DE CAJA CERRADA */}
-      {!hasCashOpen && (
+      {/* BANNER FLOTANTE DE CAJA CERRADA - solo desktop */}
+      {!hasCashOpen && !isMobile && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-500">
           <div className="bg-white border-2 border-slate-200 rounded-2xl shadow-xl p-5 flex items-center gap-4 min-w-[500px]">
             <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 shadow-sm shrink-0">
@@ -1315,43 +1452,43 @@ export default function PosPage() {
 
       {/* MODAL DE APERTURA DE CAJA */}
       <Dialog open={showOpenCash} onOpenChange={setShowOpenCash}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-2xl">
+        <DialogContent className="w-[95vw] max-w-md p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-3xl">
           <DialogHeader className="sr-only">
             <DialogTitle>Apertura de Caja</DialogTitle>
             <DialogDescription>Configura el monto inicial para comenzar tu turno</DialogDescription>
           </DialogHeader>
           
-          {/* Header */}
-          <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-slate-50/50">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                <Wallet className="w-6 h-6 text-slate-700" />
+          {/* Header mejorado para móvil */}
+          <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-md">
+                <Wallet className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-black text-slate-900 tracking-tight">Apertura de Caja</h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Apertura de Caja</h2>
+                <p className="text-sm text-slate-600 font-medium mt-1 leading-relaxed">
                   {isGlobalUser ? "Selecciona sucursal y monto inicial" : "Configura el monto inicial de efectivo"}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Form Content */}
+          {/* Form Content mejorado */}
           <div className="p-6 bg-white">
-            <form onSubmit={handleOpenCash} className="space-y-5">
+            <form onSubmit={handleOpenCash} className="space-y-6">
               
               {isGlobalUser && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-slate-500" /> Sucursal
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-slate-500" /> Sucursal
                   </Label>
                   <Select value={selectedBranch} onValueChange={setSelectedBranch} disabled={isOpeningCash}>
-                    <SelectTrigger className="w-full h-11 text-sm font-semibold bg-slate-50 border-slate-200 rounded-xl focus:ring-slate-400 transition-all">
+                    <SelectTrigger className="w-full h-12 text-base font-semibold bg-slate-50 border-slate-200 rounded-xl focus:ring-slate-400 transition-all">
                       <SelectValue placeholder="Seleccionar sucursal..." />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
                       {branches?.map(b => (
-                        <SelectItem key={b.id} value={b.id} className="font-medium text-slate-700">
+                        <SelectItem key={b.id} value={b.id} className="font-medium text-slate-700 py-3">
                           {b.name}
                         </SelectItem>
                       ))}
@@ -1360,13 +1497,13 @@ export default function PosPage() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Wallet className="w-3.5 h-3.5 text-slate-500" /> Monto Inicial
+              <div className="space-y-3">
+                <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-slate-500" /> Monto Inicial
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <span className="text-slate-400 font-bold text-lg">S/</span>
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <span className="text-slate-500 font-bold text-xl">S/</span>
                   </div>
                   <Input
                     type="number"
@@ -1376,37 +1513,40 @@ export default function PosPage() {
                     placeholder="0.00"
                     value={initialCash}
                     onChange={(e) => setInitialCash(e.target.value)}
-                    className="pl-11 h-14 text-2xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-xl tabular-nums"
+                    className="pl-14 h-16 text-3xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-2xl tabular-nums text-center"
                     disabled={isOpeningCash}
                     required
                   />
                 </div>
+                <p className="text-xs text-slate-500 text-center font-medium">
+                  Ingresa el efectivo que tienes para comenzar
+                </p>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4">
                 <Button 
                   type="button"
                   variant="outline"
                   onClick={() => setShowOpenCash(false)}
                   disabled={isOpeningCash}
-                  className="flex-1 h-11 text-xs font-bold text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
+                  className="flex-1 h-12 text-sm font-bold text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
-                  className="flex-1 h-11 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="flex-1 h-12 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   disabled={isOpeningCash || (isGlobalUser && !selectedBranch)}
                 >
                   {isOpeningCash ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Abriendo...</span>
                     </>
                   ) : (
                     <>
                       <span>Iniciar Turno</span>
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-5 h-5" />
                     </>
                   )}
                 </Button>
@@ -1418,23 +1558,23 @@ export default function PosPage() {
 
       {/* MODAL DE CIERRE DE CAJA */}
       <Dialog open={showCloseCash} onOpenChange={(open) => !closeResult && setShowCloseCash(open)}>
-        <DialogContent className="sm:max-w-md font-sans p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-2xl">
+        <DialogContent className="w-[95vw] max-w-md font-sans p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-3xl">
           <DialogHeader className="sr-only">
             <DialogTitle>Cierre de Caja</DialogTitle>
             <DialogDescription>Declara el efectivo final para cerrar tu turno</DialogDescription>
           </DialogHeader>
           
           {closeResult ? (
-            // Vista de resultado - simplificada y consistente
+            // Vista de resultado mejorada para móvil
             <>
-              <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 border rounded-xl flex items-center justify-center shadow-sm ${Math.abs(closeResult.difference) < 0.5 ? 'bg-white border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-700'}`}>
-                    <CheckCircle2 className="w-6 h-6" />
+              <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 border rounded-2xl flex items-center justify-center shadow-md ${Math.abs(closeResult.difference) < 0.5 ? 'bg-white border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-700'}`}>
+                    <CheckCircle2 className="w-7 h-7" strokeWidth={2.5} />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Turno Cerrado</h2>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Turno Cerrado</h2>
+                    <p className="text-sm text-slate-600 font-medium mt-1 leading-relaxed">
                       La auditoría de caja ha concluido
                     </p>
                   </div>
@@ -1460,22 +1600,22 @@ export default function PosPage() {
                   </p>
                 </div>
 
-                <Button onClick={handleExitAfterClose} className="w-full h-11 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] mt-5">
+                <Button onClick={handleExitAfterClose} className="w-full h-12 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all active:scale-[0.98] mt-6">
                   Entendido
                 </Button>
               </div>
             </>
           ) : (
-            // Vista del formulario - similar al modal de apertura
+            // Vista del formulario mejorada para móvil
             <>
-              <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                    <LogOut className="w-6 h-6 text-slate-700" />
+              <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-md">
+                    <LogOut className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Cerrar Turno</h2>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Cerrar Turno</h2>
+                    <p className="text-sm text-slate-600 font-medium mt-1 leading-relaxed">
                       Declara el efectivo total contabilizado
                     </p>
                   </div>
@@ -1483,39 +1623,42 @@ export default function PosPage() {
               </div>
               
               <div className="p-6 bg-white">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                    <Calculator className="w-3.5 h-3.5 text-slate-500" /> Efectivo Físico Total
+                <div className="space-y-3">
+                  <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-slate-500" /> Efectivo Físico Total
                   </Label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <span className="text-slate-400 font-bold text-lg">S/</span>
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <span className="text-slate-500 font-bold text-xl">S/</span>
                     </div>
                     <Input
                       type="number"
                       step="0.10"
                       placeholder="0.00"
-                      className="pl-11 h-14 text-2xl font-black text-slate-900 border-slate-200 focus-visible:ring-slate-400 rounded-xl bg-slate-50 tabular-nums transition-all"
+                      className="pl-14 h-16 text-3xl font-black text-slate-900 border-slate-200 focus-visible:ring-slate-400 rounded-2xl bg-slate-50 tabular-nums transition-all text-center"
                       value={finalCash}
                       onChange={(e) => setFinalCash(e.target.value)}
                       autoFocus
                     />
                   </div>
+                  <p className="text-xs text-slate-500 text-center font-medium">
+                    Cuenta todo el efectivo que tienes en caja
+                  </p>
                 </div>
 
-                <div className="flex gap-3 pt-5">
+                <div className="flex gap-3 pt-6">
                   <Button 
                     variant="outline" 
                     onClick={() => setShowCloseCash(false)} 
                     disabled={isClosingCash} 
-                    className="flex-1 h-11 text-xs font-bold text-slate-600 border-slate-200 bg-white hover:bg-slate-50 rounded-xl transition-all"
+                    className="flex-1 h-12 text-sm font-bold text-slate-600 border-slate-200 bg-white hover:bg-slate-50 rounded-xl transition-all"
                   >
                     Cancelar
                   </Button>
                   <Button 
                     onClick={handleCloseCash} 
                     disabled={!finalCash || isClosingCash} 
-                    className="flex-1 h-11 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="flex-1 h-12 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-lg rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
                     {isClosingCash ? (
                       <>
@@ -1605,7 +1748,6 @@ export default function PosPage() {
           }}
         />
       )}
-      </div>
     </div>
   );
 }
