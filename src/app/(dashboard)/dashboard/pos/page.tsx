@@ -600,7 +600,16 @@ export default function PosPage() {
       {isMobile ? (
         !hasCashOpen ? (
           /* Vista de caja cerrada en móvil */
-          <MobileCashClosed onOpenCash={() => cashHook.setShowOpenCash(true)} />
+          <MobileCashClosed 
+          onOpenCash={(e) => cashHook.handleOpenCash(e, mutateCash)}
+          initialCash={cashHook.initialCash}
+          setInitialCash={cashHook.setInitialCash}
+          selectedBranch={cashHook.selectedBranch}
+          setSelectedBranch={cashHook.setSelectedBranch}
+          branches={branches}
+          isGlobalUser={isGlobalUser}
+          isOpening={cashHook.isOpeningCash}
+        />
         ) : (
           /* Vista normal del POS móvil */
           <div className="flex flex-col h-full w-full gap-3">
@@ -786,6 +795,7 @@ export default function PosPage() {
 
               {visibleCodes.map(code => {
                 const bInfo = getBranchByCode(code);
+                const logoUrl = bInfo?.logos?.isotipo || bInfo?.logos?.imagotipo || bInfo?.logos?.alternate;
                 return (
                   <button 
                     title={bInfo?.name || code}
@@ -793,7 +803,7 @@ export default function PosPage() {
                     onClick={() => {setCodeFilter(code); setSelectedCategory('ALL');}} 
                     className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all overflow-hidden ${codeFilter === code ? 'ring-2 ring-slate-200 ring-offset-1 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200'}`}
                   >
-                    {bInfo?.logoUrl ? <img src={bInfo.logoUrl} className="w-full h-full object-cover bg-white" alt="" /> : <Store className="w-4 h-4 text-slate-500" />}
+                    {logoUrl ? <img src={logoUrl} className="w-full h-full object-cover bg-white" alt="" /> : <Store className="w-4 h-4 text-slate-500" />}
                   </button>
                 )
               })}
@@ -1353,19 +1363,21 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* Modales de caja optimizados */}
-      <CashOpenModal
-        isOpen={cashHook.showOpenCash}
-        onClose={() => cashHook.setShowOpenCash(false)}
-        onSubmit={(e) => cashHook.handleOpenCash(e, mutateCash)}
-        initialCash={cashHook.initialCash}
-        setInitialCash={cashHook.setInitialCash}
-        selectedBranch={cashHook.selectedBranch}
-        setSelectedBranch={cashHook.setSelectedBranch}
-        branches={branches}
-        isGlobalUser={isGlobalUser}
-        isOpening={cashHook.isOpeningCash}
-      />
+      {/* Modales de caja optimizados - solo desktop */}
+      {!isMobile && (
+        <CashOpenModal
+          isOpen={cashHook.showOpenCash}
+          onClose={() => cashHook.setShowOpenCash(false)}
+          onSubmit={(e) => cashHook.handleOpenCash(e, mutateCash)}
+          initialCash={cashHook.initialCash}
+          setInitialCash={cashHook.setInitialCash}
+          selectedBranch={cashHook.selectedBranch}
+          setSelectedBranch={cashHook.setSelectedBranch}
+          branches={branches}
+          isGlobalUser={isGlobalUser}
+          isOpening={cashHook.isOpeningCash}
+        />
+      )}
 
       <CashCloseModal
         isOpen={cashHook.showCloseCash}

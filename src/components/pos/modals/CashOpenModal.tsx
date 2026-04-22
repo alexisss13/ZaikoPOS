@@ -1,12 +1,11 @@
 'use client';
 
 import { memo } from 'react';
-import { Wallet, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { Wallet, MapPin, ChevronRight, Loader2, Store } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { BranchBasic } from '../hooks/usePOSData';
 
 interface CashOpenModalProps {
@@ -64,20 +63,37 @@ function CashOpenModalComponent({
             {isGlobalUser && (
               <div className="space-y-3">
                 <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-slate-500" /> Sucursal
+                  <MapPin className="w-4 h-4 text-slate-500" /> Selecciona tu sucursal
                 </Label>
-                <Select value={selectedBranch} onValueChange={setSelectedBranch} disabled={isOpening}>
-                  <SelectTrigger className="w-full h-12 text-base font-semibold bg-slate-50 border-slate-200 rounded-xl focus:ring-slate-400 transition-all">
-                    <SelectValue placeholder="Seleccionar sucursal..." />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {branches?.map(b => (
-                      <SelectItem key={b.id} value={b.id} className="font-medium text-slate-700 py-3">
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  {branches?.map(b => {
+                    const logoUrl = b.logos?.isotipo || b.logos?.imagotipo || b.logos?.alternate;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setSelectedBranch(b.id)}
+                        disabled={isOpening}
+                        className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all active:scale-95 disabled:opacity-30 ${
+                          selectedBranch === b.id
+                            ? 'bg-slate-900 border-slate-900 text-white shadow-lg'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden ${
+                          selectedBranch === b.id ? '' : ''
+                        }`}>
+                          {logoUrl ? (
+                            <img src={logoUrl} alt={b.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Store className={`w-7 h-7 ${selectedBranch === b.id ? 'text-white' : 'text-slate-400'}`} />
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-center leading-tight">{b.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -86,7 +102,7 @@ function CashOpenModalComponent({
                 <Wallet className="w-4 h-4 text-slate-500" /> Monto Inicial
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <span className="text-slate-500 font-bold text-xl">S/</span>
                 </div>
                 <Input
@@ -97,7 +113,7 @@ function CashOpenModalComponent({
                   placeholder="0.00"
                   value={initialCash}
                   onChange={(e) => setInitialCash(e.target.value)}
-                  className="pl-14 h-16 text-3xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-2xl tabular-nums text-center"
+                  className="pl-12 h-16 !text-xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-2xl tabular-nums text-center"
                   disabled={isOpening}
                   required
                 />

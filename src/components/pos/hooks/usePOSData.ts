@@ -6,7 +6,13 @@ export interface BranchBasic {
   id: string; 
   name: string; 
   ecommerceCode: string | null; 
-  logoUrl?: string | null; 
+  logos?: { 
+    isotipo?: string; 
+    isotipoWhite?: string; 
+    imagotipo?: string; 
+    imagotipoWhite?: string; 
+    alternate?: string; 
+  } | null; 
 }
 
 export interface Category { 
