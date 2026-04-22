@@ -517,18 +517,18 @@ export default function ProductsPage() {
               <SheetHeader className="px-6 pt-3 pb-0">
                 <SheetTitle className="text-xl font-black text-slate-900 text-left">Filtros</SheetTitle>
               </SheetHeader>
-              <div className="px-6 pt-5 space-y-7">
+              <div className="px-5 pt-4 space-y-4">
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Catálogo</p>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Catálogo</p>
+                  <div className="grid grid-cols-2 gap-1.5">
                     {[
-                      { value: 'ALL', label: 'Todos', icon: <LayoutGrid className="w-4 h-4" /> },
-                      { value: 'GENERAL', label: 'Compartidos', icon: <Globe className="w-4 h-4" /> },
-                      ...visibleCodes.map(code => { const b = getBranchByCode(code); return { value: code, label: b?.name || code, icon: b?.logoUrl ? <img src={b.logoUrl} className="w-4 h-4 rounded-sm object-cover" alt="" /> : <Store className="w-4 h-4" /> }; }),
-                      { value: 'INACTIVE', label: 'Inactivos', icon: <PowerOff className="w-4 h-4" /> },
+                      { value: 'ALL', label: 'Todos', icon: <LayoutGrid className="w-3 h-3" /> },
+                      { value: 'GENERAL', label: 'Compartidos', icon: <Globe className="w-3 h-3" /> },
+                      ...visibleCodes.map(code => { const b = getBranchByCode(code); return { value: code, label: b?.name || code, icon: b?.logoUrl ? <img src={b.logoUrl} className="w-3 h-3 rounded-sm object-cover" alt="" /> : <Store className="w-3 h-3" /> }; }),
+                      { value: 'INACTIVE', label: 'Inactivos', icon: <PowerOff className="w-3 h-3" /> },
                     ].map(opt => (
                       <button key={opt.value} onClick={() => { haptic(8); setCodeFilter(opt.value); setCategoryFilter('ALL'); setCurrentPage(1); }}
-                        className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${codeFilter === opt.value ? (opt.value === 'INACTIVE' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm') : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                        className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${codeFilter === opt.value ? (opt.value === 'INACTIVE' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm') : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                         {opt.icon}{opt.label}
                       </button>
                     ))}
@@ -536,28 +536,28 @@ export default function ProductsPage() {
                 </div>
                 {availableCategories.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Categoría</p>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <button onClick={() => { haptic(8); setCategoryFilter('ALL'); setCurrentPage(1); }} className={`px-4 py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todas</button>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Categoría</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button onClick={() => { haptic(8); setCategoryFilter('ALL'); setCurrentPage(1); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todas</button>
                       {availableCategories.map(cat => (
-                        <button key={cat.id} onClick={() => { haptic(8); setCategoryFilter(cat.id); setCurrentPage(1); }} className={`px-4 py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{cat.name}</button>
+                        <button key={cat.id} onClick={() => { haptic(8); setCategoryFilter(cat.id); setCurrentPage(1); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{cat.name}</button>
                       ))}
                     </div>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Estado de stock</p>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <button onClick={() => { haptic(8); setStockFilter('ALL'); setCurrentPage(1); }} className={`py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${stockFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todos</button>
-                    <button onClick={() => { haptic(8); setStockFilter('LOW'); setCurrentPage(1); }} className={`py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${stockFilter === 'LOW' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>Stock bajo</button>
-                    <button onClick={() => { haptic(8); setStockFilter('OUT'); setCurrentPage(1); }} className={`py-3.5 rounded-2xl text-sm font-semibold border active:scale-95 transition-transform ${stockFilter === 'OUT' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-red-50 text-red-600 border-red-200'}`}>Agotados</button>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button onClick={() => { haptic(8); setStockFilter('ALL'); setCurrentPage(1); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todos</button>
+                    <button onClick={() => { haptic(8); setStockFilter('LOW'); setCurrentPage(1); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'LOW' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>Bajo</button>
+                    <button onClick={() => { haptic(8); setStockFilter('OUT'); setCurrentPage(1); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'OUT' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-red-50 text-red-600 border-red-200'}`}>Agotado</button>
                   </div>
                 </div>
-                <div className="flex gap-3 pt-1">
+                <div className="flex gap-2 pt-1">
                   {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
-                    <button onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setDebouncedSearch(''); setCurrentPage(1); }} className="flex-1 py-3.5 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-600 active:scale-95 transition-transform">Limpiar filtros</button>
+                    <button onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setDebouncedSearch(''); setCurrentPage(1); }} className="flex-1 py-2.5 rounded-lg border border-slate-200 bg-white text-[10px] font-bold text-slate-600 active:scale-95 transition-transform">Limpiar</button>
                   )}
-                  <button onClick={() => { haptic(8); setShowMobileFilters(false); }} className="flex-1 py-3.5 rounded-2xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-transform">Aplicar</button>
+                  <button onClick={() => { haptic(8); setShowMobileFilters(false); }} className="flex-1 py-2.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold active:scale-95 transition-transform">Aplicar</button>
                 </div>
               </div>
             </SheetContent>

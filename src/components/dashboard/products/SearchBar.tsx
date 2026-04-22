@@ -42,7 +42,8 @@ function SearchBarComponent({
 
   return (
     <div className={`relative ${className}`}>
-      {!className.includes('absolute') && (
+      {/* Solo mostrar ícono si no hay className personalizado (modo normal) */}
+      {!className && (
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       )}
       <Input
@@ -51,7 +52,7 @@ function SearchBarComponent({
         onChange={handleChange}
         className={inputClassName || "pl-10 pr-9 h-10 bg-white border-slate-200 rounded-xl text-sm shadow-sm"}
       />
-      {localValue && !className.includes('absolute') && (
+      {localValue && !className && (
         <button
           onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100"
