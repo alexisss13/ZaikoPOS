@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useTransition } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Package, Image as ImageIcon, Store, Globe, Banknote, FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Product, Branch } from './types';
@@ -28,27 +28,38 @@ function ProductCardComponent({
   onEdit,
   onKardex,
 }: ProductCardProps) {
-  const [isPending, startTransition] = useTransition();
-  
-  const visibleStocks = canViewOthers
-    ? (product.branchStocks || [])
-    : (product.branchStocks?.filter(bs => bs.branchId === userBranchId) || []);
-  const totalPhysicalStock = visibleStocks.reduce((sum, bs) => sum + bs.quantity, 0);
-  const minStock = product.minStock || 5;
-  const hasWholesale = Number(product.wholesalePrice) > 0;
+  // Memoizar cálculos pesados
+  const { visibleStocks, totalPhysicalStock, stockStatus, ownerBranch, branchesWithStock, hasWholesale } = useMemo(() => {
+    const visibleStocks = canViewOthers
+      ? (product.branchStocks || [])
+      : (product.branchStocks?.filter(bs => bs.branchId === userBranchId) || []);
+    
+    const totalPhysicalStock = visibleStocks.reduce((sum, bs) => sum + bs.quantity, 0);
+    const minStock = product.minStock || 5;
+    const hasWholesale = Number(product.wholesalePrice) > 0;
 
-  let stockStatus = { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
-  if (totalPhysicalStock <= 0) stockStatus = { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
-  else if (totalPhysicalStock <= minStock) stockStatus = { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+    let stockStatus = { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
+    if (totalPhysicalStock <= 0) stockStatus = { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
+    else if (totalPhysicalStock <= minStock) stockStatus = { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
 
-  const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
-  const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
+    const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
+    const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
 
-  const handleToggle = () => {
-    startTransition(() => {
-      onToggle(product.id);
-    });
-  };
+    return { visibleStocks, totalPhysicalStock, stockStatus, ownerBranch, branchesWithStock, hasWholesale };
+  }, [product, branches, canViewOthers, userBranchId]);
+
+  const handleToggle = useCallback(() => {
+    onToggle(product.id);
+  }, [onToggle, product.id]);
+
+  const handleEdit = useCallback(() => {
+    onEdit(product);
+  }, [onEdit, product]);
+
+  const handleKardex = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onKardex(product);
+  }, [onKardex, product]);
 
   return (
     <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ transition: 'transform 0.1s ease-out' }}>
@@ -58,7 +69,7 @@ function ProductCardComponent({
           {/* Imagen */}
           <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`} style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden' }}>
             {product.images?.[0] ? (
-              <img src={product.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img src={product.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <ImageIcon className="w-5 h-5 text-slate-400" />
@@ -94,13 +105,13 @@ function ProductCardComponent({
             </div>
           </div>
 
-          <ChevronDown className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.15s ease-out', willChange: 'transform' }} />
+          <ChevronDown className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.12s ease-out', willChange: 'transform' }} />
         </div>
       </div>
 
-      {/* Expandible */}
+      {/* Expandible - Solo renderizar cuando está expandido */}
       {isExpanded && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/50" style={{ animation: 'slideDown 0.15s ease-out' }}>
+        <div className="border-t border-slate-100 p-4 bg-slate-50/50" style={{ animation: 'slideDown 0.12s ease-out' }}>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {/* Catálogo */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
@@ -110,13 +121,13 @@ function ProductCardComponent({
               </div>
               {branchesWithStock.length > 1 ? (
                 <div className="flex items-center gap-1.5">
-                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" loading="lazy" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
                   <span className="text-xs font-semibold text-slate-700 truncate">{ownerBranch?.name || 'Sucursal'}</span>
                   <Globe className="w-3 h-3 text-emerald-500 shrink-0" />
                 </div>
               ) : product.branchOwnerId ? (
                 <div className="flex items-center gap-1.5">
-                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" loading="lazy" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
                   <span className="text-xs font-semibold text-slate-700 truncate">{ownerBranch?.name || 'Sucursal'}</span>
                 </div>
               ) : (
@@ -137,7 +148,7 @@ function ProductCardComponent({
                 <span className="text-base font-bold text-slate-900">{totalPhysicalStock}</span>
                 <span className="text-xs text-slate-400">un.</span>
                 {totalPhysicalStock <= 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">Agotado</span>}
-                {totalPhysicalStock > 0 && totalPhysicalStock <= minStock && <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-bold">Bajo</span>}
+                {totalPhysicalStock > 0 && totalPhysicalStock <= (product.minStock || 5) && <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-bold">Bajo</span>}
               </div>
             </div>
 
@@ -166,14 +177,14 @@ function ProductCardComponent({
           {/* Botones */}
           <div className="flex gap-2">
             <Button
-              onClick={() => onEdit(product)}
+              onClick={handleEdit}
               className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-sm transition-transform duration-100 active:scale-95"
               style={{ willChange: 'transform' }}
             >
               {canEdit ? 'Editar' : 'Ver detalles'}
             </Button>
             <Button
-              onClick={(e) => { e.stopPropagation(); onKardex(product); }}
+              onClick={handleKardex}
               variant="outline"
               className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 transition-transform duration-100 active:scale-95"
               style={{ willChange: 'transform' }}
@@ -187,4 +198,16 @@ function ProductCardComponent({
   );
 }
 
-export const ProductCard = memo(ProductCardComponent);
+// Comparación personalizada para memo
+const areEqual = (prevProps: ProductCardProps, nextProps: ProductCardProps) => {
+  return (
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.isExpanded === nextProps.isExpanded &&
+    prevProps.canEdit === nextProps.canEdit &&
+    prevProps.product.basePrice === nextProps.product.basePrice &&
+    prevProps.product.active === nextProps.product.active &&
+    JSON.stringify(prevProps.product.branchStocks) === JSON.stringify(nextProps.product.branchStocks)
+  );
+};
+
+export const ProductCard = memo(ProductCardComponent, areEqual);

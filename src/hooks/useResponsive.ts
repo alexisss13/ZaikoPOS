@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 
 export interface ResponsiveBreakpoint {
   isMobile: boolean;
@@ -10,14 +10,20 @@ export interface ResponsiveBreakpoint {
   height: number;
 }
 
-/**
- * useResponsive Hook
- *
- * SSR-safe: always starts with isMobile=false (desktop-first) to match
- * the server render, then updates after hydration on the client.
- */
-export function useResponsive(): ResponsiveBreakpoint {
-  const [breakpoint, setBreakpoint] = useState<ResponsiveBreakpoint>({
+// Store para sincronización externa (evita hydration mismatch)
+const createResponsiveStore = () => {
+  let listeners: (() => void)[] = [];
+  let snapshot: ResponsiveBreakpoint = {
+    isMobile: false,
+    isTablet: false,
+    isDesktop: true,
+    width: 0,
+    height: 0,
+  };
+
+  const getSnapshot = () => snapshot;
+  
+  const getServerSnapshot = () => ({
     isMobile: false,
     isTablet: false,
     isDesktop: true,
@@ -25,35 +31,55 @@ export function useResponsive(): ResponsiveBreakpoint {
     height: 0,
   });
 
-  useEffect(() => {
-    const update = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      setBreakpoint({
-        isMobile: width < 768,
-        isTablet: width >= 768 && width < 1024,
-        isDesktop: width >= 768,
-        width,
-        height,
-      });
+  const subscribe = (listener: () => void) => {
+    listeners.push(listener);
+    return () => {
+      listeners = listeners.filter(l => l !== listener);
     };
+  };
 
-    update();
+  const updateSnapshot = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    snapshot = {
+      isMobile: width < 768,
+      isTablet: width >= 768 && width < 1024,
+      isDesktop: width >= 768,
+      width,
+      height,
+    };
+    listeners.forEach(listener => listener());
+  };
 
+  // Inicializar inmediatamente si estamos en el cliente
+  if (typeof window !== 'undefined') {
+    updateSnapshot();
+    
     let timeoutId: ReturnType<typeof setTimeout>;
     const debounced = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(update, 150);
+      timeoutId = setTimeout(updateSnapshot, 100);
     };
 
-    window.addEventListener('resize', debounced);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', debounced);
-    };
-  }, []);
+    window.addEventListener('resize', debounced, { passive: true });
+  }
 
-  return breakpoint;
+  return { getSnapshot, getServerSnapshot, subscribe };
+};
+
+const responsiveStore = createResponsiveStore();
+
+/**
+ * useResponsive Hook - Optimizado con useSyncExternalStore
+ *
+ * Evita re-renders innecesarios y sincroniza correctamente con SSR
+ */
+export function useResponsive(): ResponsiveBreakpoint {
+  return useSyncExternalStore(
+    responsiveStore.subscribe,
+    responsiveStore.getSnapshot,
+    responsiveStore.getServerSnapshot
+  );
 }
 
 export function useMediaQuery(query: string): boolean {

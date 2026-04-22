@@ -184,25 +184,25 @@
     overscroll-behavior: contain;
   }
   
-  /* Optimizar animaciones en móvil - usar duraciones más cortas */
+  /* Optimizar animaciones en móvil - usar duraciones MUY cortas */
   .animate-in {
-    animation-duration: 150ms !important;
+    animation-duration: 120ms !important;
   }
   
-  /* Transiciones más rápidas en móvil */
+  /* Transiciones ultra rápidas en móvil */
   .transition-all {
-    transition-duration: 100ms !important;
-    transition-timing-function: ease-out !important;
+    transition-duration: 80ms !important;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
   
   .transition-colors {
-    transition-duration: 100ms !important;
-    transition-timing-function: ease-out !important;
+    transition-duration: 80ms !important;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
   
   .transition-transform {
-    transition-duration: 100ms !important;
-    transition-timing-function: ease-out !important;
+    transition-duration: 80ms !important;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
   
   /* Forzar aceleración por hardware en elementos fijos */
@@ -217,6 +217,8 @@
   [class*="active:scale"] {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
   
   /* Optimizar botones y elementos interactivos */
@@ -224,6 +226,14 @@
   a {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Optimizar imágenes */
+  img {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 }
 
@@ -234,7 +244,7 @@
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
