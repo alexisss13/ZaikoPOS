@@ -43,12 +43,12 @@ function ProductCardComponent({
   const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
 
   return (
-    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-transform duration-150 active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`}>
+    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-transform duration-150 active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ willChange: isExpanded ? 'height' : 'auto' }}>
       {/* Header */}
       <div className="p-4 cursor-pointer select-none" onClick={() => onToggle(product.id)}>
         <div className="flex items-center gap-3">
           {/* Imagen */}
-          <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`}>
+          <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`} style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden' }}>
             {product.images?.[0] ? (
               <img src={product.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
             ) : (

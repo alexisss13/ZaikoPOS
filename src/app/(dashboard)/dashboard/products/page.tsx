@@ -221,7 +221,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">
+    <div className="flex flex-col h-full w-full gap-5" style={{ willChange: 'auto' }}>
 
       {/* ── HEADER MÓVIL ── */}
       {isMobile ? (
@@ -392,7 +392,7 @@ export default function ProductsPage() {
 
       {/* ── VISTA MÓVIL ── */}
       {isMobile ? (
-        <div ref={scrollRef} className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-24" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ overscrollBehavior: 'contain' }}>
+        <div ref={scrollRef} className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-24" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', willChange: 'scroll-position' }}>
           {/* Pull-to-refresh */}
           <div className="flex items-center justify-center overflow-hidden transition-all duration-200" style={{ height: isPulling || isRefreshing ? Math.min(pullDistance, 56) : 0, opacity: isPulling || isRefreshing ? 1 : 0 }}>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">

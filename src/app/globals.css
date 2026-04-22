@@ -166,6 +166,41 @@
   background-color: rgb(148 163 184);
 }
 
+/* Optimizaciones de rendimiento móvil */
+@media (max-width: 1024px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Mejorar rendimiento de scroll en móvil */
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Optimizar animaciones en móvil */
+  .animate-in,
+  .transition-all,
+  .transition-colors,
+  .transition-transform {
+    will-change: auto;
+  }
+  
+  /* Forzar aceleración por hardware en elementos fijos */
+  .fixed {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
 @keyframes shimmer {
   100% { transform: translateX(200%); }
 }

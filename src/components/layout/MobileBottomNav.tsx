@@ -203,7 +203,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
   return (
     <>
       {/* Bottom Navigation Bar - Solo visible en móvil */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}>
         <div className="flex items-center justify-around px-2 py-2 safe-area-pb">
           {bottomNavItems.map((item, index) => {
             if (item.label === 'Más') {
@@ -258,12 +258,12 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         <>
           {/* Overlay */}
           <div 
-            className="lg:hidden fixed inset-0 bg-black/50 z-50 transition-opacity"
+            className="lg:hidden fixed inset-0 bg-black/50 z-50 transition-opacity animate-in fade-in duration-200"
             onClick={() => setIsDrawerOpen(false)}
           />
           
           {/* Drawer Content */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[80vh] overflow-hidden">
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom duration-300" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}>
             <div className="p-6 pb-0">
               {/* Header del Drawer */}
               <div className="flex items-center justify-between mb-6">
