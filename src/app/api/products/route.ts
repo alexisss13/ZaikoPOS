@@ -6,31 +6,50 @@ export async function GET(req: Request) {
   const role = req.headers.get('x-user-role');
 
   try {
+    // ⚡ OPTIMIZACIÓN: Query más ligera, solo campos necesarios
     const products = await prisma.product.findMany({
       where: role === 'SUPER_ADMIN' ? {} : { businessId: businessId || '' },
-      include: { 
-        category: { select: { name: true, ecommerceCode: true } },
-        supplier: { select: { id: true, name: true } },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        slug: true,
+        images: true,
+        basePrice: true,
+        wholesalePrice: true,
+        wholesaleMinCount: true,
+        discountPercentage: true,
+        groupTag: true,
+        tags: true,
+        isAvailable: true,
+        active: true,
+        type: true,
+        branchOwnerId: true,
+        categoryId: true,
+        supplierId: true,
+        createdAt: true,
+        category: { 
+          select: { 
+            id: true,
+            name: true, 
+            ecommerceCode: true 
+          } 
+        },
+        supplier: { 
+          select: { 
+            id: true, 
+            name: true 
+          } 
+        },
         variants: {
+          where: { active: true },
           select: {
             id: true,
             name: true,
             sku: true,
             barcode: true,
             price: true,
-            cost: true,
             minStock: true,
-            active: true,
-            attributes: true,
-            images: true,
-            uomId: true,
-            uom: {
-              select: {
-                id: true,
-                name: true,
-                abbreviation: true,
-              }
-            },
             stock: {
               select: {
                 branchId: true,
@@ -38,10 +57,11 @@ export async function GET(req: Request) {
               }
             }
           },
-          where: { active: true }
+          take: 5, // Limitar variantes
         }
       },
       orderBy: { createdAt: 'desc' },
+      take: 500, // Limitar productos
     });
     
     // Transform the data to include branchStocks at product level
@@ -68,20 +88,49 @@ export async function GET(req: Request) {
       const sku = standardVariant?.sku || null;
       
       return {
-        ...product,
+        id: product.id,
+        title: product.title,
+        description: product.description,
+        slug: product.slug,
+        images: product.images,
+        basePrice: product.basePrice,
+        wholesalePrice: product.wholesalePrice,
+        wholesaleMinCount: product.wholesaleMinCount,
+        discountPercentage: product.discountPercentage,
+        groupTag: product.groupTag,
+        tags: product.tags,
+        isAvailable: product.isAvailable,
+        active: product.active,
+        type: product.type,
+        branchOwnerId: product.branchOwnerId,
+        categoryId: product.categoryId,
+        supplierId: product.supplierId,
+        createdAt: product.createdAt,
+        category: product.category,
+        supplier: product.supplier,
         branchStocks,
         minStock,
         barcode,
         sku,
-        // Keep variants with stock for transfer modal
+        code: barcode || sku || product.id.slice(0, 8),
         variants: product.variants.map(v => ({
-          ...v,
+          id: v.id,
+          name: v.name,
+          sku: v.sku,
+          barcode: v.barcode,
+          price: v.price,
+          minStock: v.minStock,
           stock: v.stock
         }))
       };
     });
     
-    return NextResponse.json(productsWithStocks);
+    // ⚡ Agregar cache headers
+    return NextResponse.json(productsWithStocks, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+      },
+    });
   } catch (error) {
     console.error('[PRODUCTS_GET_ERROR]', error);
     return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest --watch",
-    "test:ci": "jest --ci"
+    "test:ci": "jest --ci",
+    "db:indexes": "tsx scripts/add-indexes.ts",
+    "db:optimize": "tsx scripts/add-indexes.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
