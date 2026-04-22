@@ -4,11 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { 
-  X, LayoutDashboard, ShoppingBag, 
-  Package, Users, Store, LogOut, ShieldCheck, 
-  Building2, Camera, UserCircle, Loader2, Bell, Globe, ShoppingCart, Warehouse, ContactRound
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,6 +12,26 @@ import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+
+import {
+  UserCircleIcon,
+  Cancel01Icon,
+  Loading02Icon,
+  Camera01Icon,
+  UserMultipleIcon,
+  Store01Icon,
+  Home01Icon,
+  Building01Icon,
+  SecurityCheckIcon,
+  PackageIcon,
+  PackageDeliveredIcon,
+  UserAccountIcon,
+  ShoppingCart01Icon,
+  Globe02Icon,
+  ShoppingBag01Icon,
+  Notification01Icon,
+  Logout01Icon
+} from 'hugeicons-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -80,7 +95,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 font-sans">
         <DialogHeader className="px-6 py-5 bg-white border-b border-slate-200 shadow-sm flex-row items-center gap-3">
-          <div className="bg-slate-100 p-2.5 rounded-xl"><UserCircle className="w-5 h-5 text-slate-600" /></div>
+          <div className="bg-slate-100 p-2.5 rounded-xl"><UserCircleIcon className="text-slate-600" size={20} strokeWidth={2} /></div>
           <div className="flex flex-col items-start">
             <DialogTitle className="text-lg font-bold text-slate-800">Configuración de Perfil</DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-0.5">Actualiza tus datos y credenciales de acceso.</DialogDescription>
@@ -91,12 +106,14 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             {formData.image ? (
               <div className="relative w-16 h-16 rounded-full border-2 border-slate-200 overflow-hidden shadow-sm group">
                 <img src={formData.image} alt="Perfil" className="w-full h-full object-cover" />
-                <button type="button" onClick={() => setFormData(p => ({...p, image: ''}))} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-5 h-5" /></button>
+                <button type="button" onClick={() => setFormData(p => ({...p, image: ''}))} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Cancel01Icon size={20} strokeWidth={2} />
+                </button>
               </div>
             ) : (
               <div className="relative w-16 h-16 rounded-full border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer shadow-sm">
                 <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                {isUploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-600" /> : <Camera className="w-6 h-6 text-slate-400" />}
+                {isUploading ? <Loading02Icon className="animate-spin text-slate-600" size={20} strokeWidth={2} /> : <Camera01Icon className="text-slate-400" size={24} strokeWidth={2} />}
               </div>
             )}
             <div className="flex flex-col"><Label className="text-sm font-bold text-slate-700 mb-1">Foto de Perfil</Label><span className="text-xs text-slate-500 leading-tight">Haz clic en el icono para subir tu fotografía. Formato 1:1 recomendado.</span></div>
@@ -120,8 +137,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                 }}
                 className="w-full h-10 text-xs font-bold text-slate-700 hover:bg-slate-50 border-slate-300"
               >
-                <Users className="w-4 h-4 mr-2" />
-                Gestionar Personal
+                <UserMultipleIcon size={16} strokeWidth={2} /> <span className="ml-2">Gestionar Personal</span>
               </Button>
               <Button 
                 type="button"
@@ -132,15 +148,17 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                 }}
                 className="w-full h-10 text-xs font-bold text-slate-700 hover:bg-slate-50 border-slate-300"
               >
-                <Store className="w-4 h-4 mr-2" />
-                Gestionar Sucursales
+                <Store01Icon size={16} strokeWidth={2} /> <span className="ml-2">Gestionar Sucursales</span>
               </Button>
             </div>
           )}
 
           <div className="flex justify-end gap-3 pt-5 border-t border-slate-200 mt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10 text-xs font-bold text-slate-600">Cancelar</Button>
-            <Button type="submit" disabled={isLoading || isUploading} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-8 shadow-sm">{isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Guardar Cambios</Button>
+            <Button type="submit" disabled={isLoading || isUploading} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-8 shadow-sm">
+              {isLoading && <Loading02Icon className="animate-spin mr-2" size={16} strokeWidth={2} />}
+              Guardar Cambios
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -204,19 +222,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const tiMenuItems = [
-    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
-    { href: '/dashboard/businesses', label: 'Clientes', icon: Building2 },
-    { href: '/dashboard/branches', label: 'Sucursales', icon: Store },
-    { href: '/dashboard/users', label: 'Usuarios', icon: Users },
-    { href: '/dashboard/audit', label: 'Auditoría', icon: ShieldCheck },
+    { href: '/dashboard', label: 'Resumen', icon: Home01Icon },
+    { href: '/dashboard/businesses', label: 'Clientes', icon: Building01Icon },
+    { href: '/dashboard/branches', label: 'Sucursales', icon: Store01Icon },
+    { href: '/dashboard/users', label: 'Usuarios', icon: UserMultipleIcon },
+    { href: '/dashboard/audit', label: 'Auditoría', icon: SecurityCheckIcon },
   ];
 
   const shopMenuItems = [
-    { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
-    { href: '/dashboard/products', label: 'Productos', icon: Package },
-    { href: '/dashboard/inventory', label: 'Inventario', icon: Warehouse },
-    { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: ContactRound },
-    { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart },
+    { href: '/dashboard', label: 'Resumen', icon: Home01Icon },
+    { href: '/dashboard/products', label: 'Productos', icon: PackageIcon },
+    { href: '/dashboard/inventory', label: 'Inventario', icon: PackageDeliveredIcon },
+    { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: UserAccountIcon },
+    { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart01Icon },
   ];
 
   const menuItems = role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;
@@ -224,14 +242,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Lógica de Iconos Condicionales para la parte superior
   let TopLogo;
   if (role === 'SUPER_ADMIN') {
-    TopLogo = <ShieldCheck className="w-5 h-5 text-slate-800" />;
+    TopLogo = <SecurityCheckIcon className="text-slate-800" size={20} strokeWidth={2} />;
   } else if (role === 'OWNER') {
-    TopLogo = <Globe className="w-5 h-5 text-slate-800" />;
+    TopLogo = <Globe02Icon className="text-slate-800" size={20} strokeWidth={2} />;
   } else {
     if (currentBranch?.logoUrl) {
       TopLogo = <img src={currentBranch.logoUrl} alt="Logo" className="w-full h-full object-cover" />;
     } else {
-      TopLogo = <Store className="w-5 h-5 text-slate-800" />;
+      TopLogo = <Store01Icon className="text-slate-800" size={20} strokeWidth={2} />;
     }
   }
 
@@ -261,11 +279,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <nav className="flex flex-col gap-2 w-full px-2 flex-1 items-center">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
+              const Icon = item.icon;
               return (
                 <Tooltip key={item.href}>
                   <TooltipTrigger asChild>
                     <Link href={item.href} className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${isActive ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-white hover:shadow-sm hover:text-slate-900'}`}>
-                      <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                      <Icon size={isActive ? 20 : 18} strokeWidth={2} />
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
@@ -283,7 +302,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link href="/dashboard/pos" className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors shadow-sm ${pathname === '/dashboard/pos' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white'}`}>
-                    <ShoppingBag className="w-4 h-4" />
+                    <ShoppingBag01Icon size={16} strokeWidth={2} />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
@@ -296,7 +315,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button onClick={() => setShowNotifs(!showNotifs)} className="relative flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-white hover:shadow-sm hover:text-slate-900 transition-all outline-none">
-                    <Bell className="w-5 h-5" />
+                    <Notification01Icon size={20} strokeWidth={2} />
                     {unreadCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full shadow-sm ring-2 ring-slate-100" />}
                   </button>
                 </TooltipTrigger>
@@ -316,9 +335,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
                       {loadingNotifs ? (
-                        <div className="p-6 text-center text-xs text-slate-400"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" /> Cargando...</div>
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          <Loading02Icon className="animate-spin mx-auto mb-2" size={20} strokeWidth={2} /> Cargando...
+                        </div>
                       ) : notifications?.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-slate-400"><Bell className="w-6 h-6 text-slate-300 mx-auto mb-2" /> Sin notificaciones</div>
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          <Notification01Icon className="text-slate-300 mx-auto mb-2" size={24} strokeWidth={2} /> Sin notificaciones
+                        </div>
                       ) : (
                         notifications?.map(n => (
                           <button key={n.id} onClick={() => handleNotificationClick(n)} className={`w-full p-3 rounded-xl border text-left flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.read ? 'bg-white border-slate-300 shadow-sm hover:border-slate-400' : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-100'}`}>
@@ -341,8 +364,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Perfil */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={() => setIsProfileModalOpen(true)} className="relative w-9 h-9 rounded-full overflow-hidden ring-2 ring-transparent hover:ring-slate-300 transition-all shadow-sm">
-                  {image ? <img src={image} className="w-full h-full object-cover" alt="User" /> : <UserCircle className="w-full h-full text-slate-400 bg-white" />}
+                <button onClick={() => setIsProfileModalOpen(true)} className="relative w-9 h-9 rounded-full overflow-hidden ring-2 ring-transparent hover:ring-slate-300 transition-all shadow-sm bg-white flex items-center justify-center">
+                  {image ? <img src={image} className="w-full h-full object-cover" alt="User" /> : <UserCircleIcon className="text-slate-400" size={32} strokeWidth={2} />}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
@@ -354,7 +377,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={handleLogout} className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:bg-white hover:shadow-sm hover:text-red-500 transition-colors">
-                  <LogOut className="w-5 h-5" />
+                  <Logout01Icon size={20} strokeWidth={2} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
@@ -380,7 +403,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
                 <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                   <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
-                  <button onClick={() => setShowNotifs(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setShowNotifs(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full">
+                    <Cancel01Icon size={16} strokeWidth={2} />
+                  </button>
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5">
                   {loadingNotifs ? <div className="p-6 text-center text-xs text-slate-400">Cargando...</div> : notifications?.length === 0 ? <div className="p-6 text-center text-xs text-slate-400">Sin notificaciones</div> : notifications?.map(n => (

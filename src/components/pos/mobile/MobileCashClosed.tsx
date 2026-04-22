@@ -1,10 +1,17 @@
 'use client';
 
 import { memo, useState } from 'react';
-import { Wallet, MapPin, ChevronRight, Loader2, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { 
+  Wallet03Icon, 
+  ArrowRight01Icon, 
+  ArrowLeft01Icon, 
+  Location01Icon, 
+  Home01Icon, 
+  Loading02Icon 
+} from 'hugeicons-react';
 import type { BranchBasic } from '../hooks/usePOSData';
 
 interface MobileCashClosedProps {
@@ -48,7 +55,7 @@ function MobileCashClosedComponent({
         <div className="flex flex-col items-center justify-center flex-1 gap-6 p-6 pb-24">
           {/* Ícono con gradiente mejorado */}
           <div className="w-24 h-24 bg-gradient-to-br from-slate-100 via-slate-50 to-white rounded-3xl flex items-center justify-center border border-slate-200 shadow-sm">
-            <Wallet className="w-12 h-12 text-slate-600" strokeWidth={2} />
+            <Wallet03Icon className="w-12 h-12 text-slate-600" />
           </div>
           
           <div className="text-center space-y-3">
@@ -62,9 +69,8 @@ function MobileCashClosedComponent({
             onClick={() => setShowForm(true)} 
             className="mt-4 h-12 px-8 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center gap-2"
           >
-            <Wallet className="w-5 h-5" />
             Abrir Caja
-            <ChevronRight className="w-4 h-4" />
+            <ArrowRight01Icon className="w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -82,7 +88,7 @@ function MobileCashClosedComponent({
             disabled={isOpening}
             className="flex items-center justify-center w-9 h-9 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-30 active:scale-95 shrink-0"
           >
-            <ChevronRight className="w-5 h-5 rotate-180" />
+            <ArrowLeft01Icon className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-black text-slate-900 leading-tight">Apertura de Caja</h1>
@@ -98,7 +104,7 @@ function MobileCashClosedComponent({
         {/* Ícono y mensaje reducido */}
         <div className="text-center mb-5 pt-6">
           <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2.5 border border-slate-200 shadow-sm">
-            <Wallet className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
+            <Wallet03Icon className="w-7 h-7 text-slate-700" />
           </div>
           <h2 className="text-base font-black text-slate-900 mb-0.5">¡Comencemos el turno!</h2>
           <p className="text-xs text-slate-500 leading-relaxed">
@@ -111,7 +117,7 @@ function MobileCashClosedComponent({
           {isGlobalUser && (
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-500" /> Selecciona tu sucursal
+                <Location01Icon className="w-3.5 h-3.5" /> Selecciona tu sucursal
               </Label>
               <div className="grid grid-cols-2 gap-2.5">
                 {branches?.map(b => {
@@ -134,7 +140,7 @@ function MobileCashClosedComponent({
                         {logoUrl ? (
                           <img src={logoUrl} alt={b.name} className="w-full h-full object-cover" />
                         ) : (
-                          <Store className={`w-6 h-6 ${selectedBranch === b.id ? 'text-white' : 'text-slate-400'}`} />
+                          <Home01Icon className={`w-6 h-6 ${selectedBranch === b.id ? 'text-white' : 'text-slate-400'}`} />
                         )}
                       </div>
                       <span className="text-xs font-bold text-center leading-tight">{b.name}</span>
@@ -148,7 +154,7 @@ function MobileCashClosedComponent({
           {/* Campo de monto compacto */}
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-slate-500" /> Monto Inicial
+              <Wallet03Icon className="w-3.5 h-3.5" /> Monto Inicial
             </Label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -181,14 +187,14 @@ function MobileCashClosedComponent({
             >
               {isOpening ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loading02Icon className="w-4 h-4 animate-spin" />
                   <span>Abriendo caja...</span>
                 </>
               ) : (
                 <>
-                  <Wallet className="w-4 h-4" />
+                  <Wallet03Icon className="w-4 h-4" />
                   <span>Iniciar Turno</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <ArrowRight01Icon className="w-4 h-4" />
                 </>
               )}
             </Button>

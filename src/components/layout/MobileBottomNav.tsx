@@ -3,29 +3,47 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  Menu,
-  Store,
-  Warehouse,
-  ShoppingCart,
-  ContactRound,
-  Building2,
-  Users,
-  ShieldCheck,
-  X,
-  Settings,
-  FileText,
-  Calculator
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { 
+  Cancel01Icon,
+  Home01Icon,
+  Building01Icon,
+  Store01Icon,
+  Menu01Icon,
+  PackageIcon,
+  ShoppingBag01Icon,
+  UserMultipleIcon,
+  SecurityCheckIcon,
+  PackageDeliveredIcon,
+  UserAccountIcon,
+  ShoppingCart01Icon,
+  CalculatorIcon,
+  File01Icon,
+  Settings01Icon
+} from 'hugeicons-react';
+
+// Mapeo de iconos
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  'hgi-home-01': Home01Icon,
+  'hgi-building-01': Building01Icon,
+  'hgi-store-01': Store01Icon,
+  'hgi-menu-01': Menu01Icon,
+  'hgi-package': PackageIcon,
+  'hgi-shopping-bag-01': ShoppingBag01Icon,
+  'hgi-user-multiple': UserMultipleIcon,
+  'hgi-security-check': SecurityCheckIcon,
+  'hgi-package-delivered': PackageDeliveredIcon,
+  'hgi-user-account': UserAccountIcon,
+  'hgi-shopping-cart-01': ShoppingCart01Icon,
+  'hgi-calculator': CalculatorIcon,
+  'hgi-file-01': File01Icon,
+  'hgi-settings-01': Settings01Icon,
+};
 
 interface BottomNavItem {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string; // Cambio a string para usar clases de Hugeicons
   isActive: boolean;
 }
 
@@ -36,7 +54,7 @@ interface MobileBottomNavProps {
 interface DrawerItem {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string; // Cambio a string para usar clases de Hugeicons
   isActive: boolean;
   category?: string;
 }
@@ -52,25 +70,25 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '/dashboard', 
           label: 'Inicio', 
-          icon: LayoutDashboard, 
+          icon: 'hgi-home-01', 
           isActive: pathname === '/dashboard' 
         },
         { 
           href: '/dashboard/businesses', 
           label: 'Clientes', 
-          icon: Building2, 
+          icon: 'hgi-building-01', 
           isActive: pathname === '/dashboard/businesses' 
         },
         { 
           href: '/dashboard/branches', 
           label: 'Sucursales', 
-          icon: Store, 
+          icon: 'hgi-store-01', 
           isActive: pathname === '/dashboard/branches' 
         },
         { 
           href: '#', 
           label: 'Más', 
-          icon: Menu, 
+          icon: 'hgi-menu-01', 
           isActive: false 
         }
       ];
@@ -79,25 +97,25 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '/dashboard', 
           label: 'Inicio', 
-          icon: LayoutDashboard, 
+          icon: 'hgi-home-01', 
           isActive: pathname === '/dashboard' 
         },
         { 
           href: '/dashboard/products', 
           label: 'Catálogo', 
-          icon: Package, 
+          icon: 'hgi-package', 
           isActive: pathname === '/dashboard/products' || pathname === '/dashboard/inventory' 
         },
         { 
           href: '/dashboard/pos', 
           label: 'Ventas', 
-          icon: ShoppingBag, 
+          icon: 'hgi-shopping-bag-01', 
           isActive: pathname === '/dashboard/pos' || pathname === '/dashboard/cash-sessions' 
         },
         { 
           href: '#', 
           label: 'Más', 
-          icon: Menu, 
+          icon: 'hgi-menu-01', 
           isActive: false 
         }
       ];
@@ -111,14 +129,14 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '/dashboard/users', 
           label: 'Usuarios', 
-          icon: Users, 
+          icon: 'hgi-user-multiple', 
           isActive: pathname === '/dashboard/users',
           category: 'Gestión'
         },
         { 
           href: '/dashboard/audit', 
           label: 'Auditoría', 
-          icon: ShieldCheck, 
+          icon: 'hgi-security-check', 
           isActive: pathname === '/dashboard/audit',
           category: 'Gestión'
         }
@@ -129,7 +147,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '/dashboard/inventory', 
           label: 'Inventario', 
-          icon: Warehouse, 
+          icon: 'hgi-package-delivered', 
           isActive: pathname === '/dashboard/inventory',
           category: 'Inventario'
         },
@@ -137,7 +155,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '/dashboard/cash-sessions', 
           label: 'Corte de Turnos', 
-          icon: ContactRound, 
+          icon: 'hgi-user-account', 
           isActive: pathname === '/dashboard/cash-sessions',
           category: 'Ventas'
         },
@@ -145,7 +163,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '/dashboard/purchases', 
           label: 'Compras', 
-          icon: ShoppingCart, 
+          icon: 'hgi-shopping-cart-01', 
           isActive: pathname === '/dashboard/purchases',
           category: 'Compras'
         },
@@ -153,21 +171,21 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
         { 
           href: '#', 
           label: 'Contabilidad', 
-          icon: Calculator, 
+          icon: 'hgi-calculator', 
           isActive: false,
           category: 'Próximamente'
         },
         { 
           href: '#', 
           label: 'Reportes', 
-          icon: FileText, 
+          icon: 'hgi-file-01', 
           isActive: false,
           category: 'Próximamente'
         },
         { 
           href: '#', 
           label: 'Configuración', 
-          icon: Settings, 
+          icon: 'hgi-settings-01', 
           isActive: false,
           category: 'Próximamente'
         }
@@ -206,6 +224,8 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}>
         <div className="flex items-center justify-around px-2 py-2 safe-area-pb">
           {bottomNavItems.map((item, index) => {
+            const IconComponent = iconMap[item.icon];
+            
             if (item.label === 'Más') {
               return (
                 <button
@@ -218,7 +238,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                       ? 'bg-slate-900 text-white scale-105' 
                       : 'text-slate-500'
                   }`} style={{ willChange: 'transform, background-color' }}>
-                    <item.icon className="w-5 h-5" />
+                    {IconComponent && <IconComponent className="w-5 h-5" />}
                   </div>
                   <span className={`text-xs font-medium mt-1 transition-colors duration-150 ${
                     item.isActive ? 'text-slate-900' : 'text-slate-500'
@@ -240,7 +260,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                     ? 'bg-slate-900 text-white scale-105' 
                     : 'text-slate-500'
                 }`} style={{ willChange: 'transform, background-color' }}>
-                  <item.icon className="w-5 h-5" />
+                  {IconComponent && <IconComponent className="w-5 h-5" />}
                 </div>
                 <span className={`text-xs font-medium mt-1 transition-colors duration-150 ${
                   item.isActive ? 'text-slate-900' : 'text-slate-500'
@@ -274,7 +294,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                   onClick={() => setIsDrawerOpen(false)}
                   className="p-2 h-auto"
                 >
-                  <X className="w-5 h-5" />
+                  <Cancel01Icon className="w-5 h-5" />
                 </Button>
               </div>
             </div>
@@ -290,6 +310,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                   <div className="grid grid-cols-2 gap-3">
                     {items.map((item) => {
                       const isDisabled = item.href === '#';
+                      const IconComponent = iconMap[item.icon];
                       
                       if (isDisabled) {
                         return (
@@ -298,7 +319,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                             className="flex flex-col items-center p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 opacity-60"
                           >
                             <div className="p-3 rounded-xl mb-3 bg-slate-200 text-slate-400">
-                              <item.icon className="w-6 h-6" />
+                              {IconComponent && <IconComponent className="w-6 h-6" />}
                             </div>
                             <span className="text-sm font-medium text-center text-slate-400">
                               {item.label}
@@ -326,7 +347,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                               ? 'bg-slate-900 text-white'
                               : 'bg-slate-100 text-slate-600'
                           }`}>
-                            <item.icon className="w-6 h-6" />
+                            {IconComponent && <IconComponent className="w-6 h-6" />}
                           </div>
                           <span className={`text-sm font-medium text-center ${
                             item.isActive ? 'text-slate-900' : 'text-slate-600'

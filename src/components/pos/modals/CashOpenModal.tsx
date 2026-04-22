@@ -1,11 +1,11 @@
 'use client';
 
 import { memo } from 'react';
-import { Wallet, MapPin, ChevronRight, Loader2, Store } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Wallet03Icon, Location01Icon, Home01Icon, Loading02Icon, ArrowRight01Icon } from 'hugeicons-react';
 import type { BranchBasic } from '../hooks/usePOSData';
 
 interface CashOpenModalProps {
@@ -45,7 +45,7 @@ function CashOpenModalComponent({
         <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-md">
-              <Wallet className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
+              <Wallet03Icon className="w-7 h-7 text-slate-700" />
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">Apertura de Caja</h2>
@@ -63,7 +63,7 @@ function CashOpenModalComponent({
             {isGlobalUser && (
               <div className="space-y-3">
                 <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-slate-500" /> Selecciona tu sucursal
+                  <Location01Icon className="w-4 h-4" /> Selecciona tu sucursal
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   {branches?.map(b => {
@@ -86,7 +86,7 @@ function CashOpenModalComponent({
                           {logoUrl ? (
                             <img src={logoUrl} alt={b.name} className="w-full h-full object-cover" />
                           ) : (
-                            <Store className={`w-7 h-7 ${selectedBranch === b.id ? 'text-white' : 'text-slate-400'}`} />
+                            <Home01Icon className={`w-7 h-7 ${selectedBranch === b.id ? 'text-white' : 'text-slate-400'}`} />
                           )}
                         </div>
                         <span className="text-sm font-bold text-center leading-tight">{b.name}</span>
@@ -99,7 +99,7 @@ function CashOpenModalComponent({
 
             <div className="space-y-3">
               <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-slate-500" /> Monto Inicial
+                <Wallet03Icon className="w-4 h-4" /> Monto Inicial
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -113,7 +113,7 @@ function CashOpenModalComponent({
                   placeholder="0.00"
                   value={initialCash}
                   onChange={(e) => setInitialCash(e.target.value)}
-                  className="pl-12 h-16 !text-xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-2xl tabular-nums text-center"
+                  className="pl-12 h-16 !text-3xl font-black text-slate-900 bg-slate-50 border-slate-200 focus-visible:ring-slate-400 transition-all rounded-2xl tabular-nums text-center"
                   disabled={isOpening}
                   required
                 />
@@ -140,13 +140,13 @@ function CashOpenModalComponent({
               >
                 {isOpening ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loading02Icon className="w-5 h-5 animate-spin" />
                     <span>Abriendo...</span>
                   </>
                 ) : (
                   <>
                     <span>Iniciar Turno</span>
-                    <ChevronRight className="w-5 h-5" />
+                    <ArrowRight01Icon className="w-5 h-5" />
                   </>
                 )}
               </Button>

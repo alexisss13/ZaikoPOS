@@ -24,6 +24,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="https://cdn.hugeicons.com/font/hgi-stroke-rounded.css" />
+      </head>
       {/* 2. Inyectamos la variable y clases utilitarias globales */}
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <AuthProvider>

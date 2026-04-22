@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Package, Tag, ArrowRightLeft } from 'lucide-react';
+import { PackageIcon, ArrowDataTransferDiagonalIcon, Tag01Icon } from 'hugeicons-react';
 
 interface ProductVariant {
   id: string;
@@ -98,7 +98,7 @@ function MobileProductGridComponent({
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-300">
-                  <Package className="w-8 h-8" />
+                  <PackageIcon className="w-8 h-8" />
                 </div>
               )}
 
@@ -128,7 +128,7 @@ function MobileProductGridComponent({
               <div className="mt-auto">
                 {isOutOfStock && externalStock > 0 ? (
                   <p className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-1.5 rounded-lg border border-amber-200 flex items-center gap-1 hover:bg-amber-100 transition-colors">
-                    <ArrowRightLeft className="w-3 h-3" /> Pedir Traslado
+                    <ArrowDataTransferDiagonalIcon className="w-3 h-3" /> Pedir Traslado
                   </p>
                 ) : isOutOfStock ? (
                   <p className="text-[10px] font-semibold text-red-500">Agotado Totalmente</p>
@@ -149,7 +149,7 @@ function MobileProductGridComponent({
                         className="text-[9px] font-medium text-slate-500 mt-1 leading-none flex items-center gap-1"
                         title={`Precio por mayor a partir de ${product.wholesaleMinCount} unidades`}
                       >
-                        <Tag className="w-3 h-3 text-blue-500" />
+                        <Tag01Icon className="w-3 h-3 text-blue-500" />
                         Mayor S/{Number(product.wholesalePrice).toFixed(2)}
                         <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md text-[9px] font-semibold ml-auto">
                           ≥{product.wholesaleMinCount}u

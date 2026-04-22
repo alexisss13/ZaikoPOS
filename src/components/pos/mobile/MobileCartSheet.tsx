@@ -3,7 +3,17 @@
 import { memo, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Trash2, ShoppingBag, ChevronRight, User, Tag, X, UserPlus } from 'lucide-react';
+import { 
+  User02Icon, 
+  ShoppingBag01Icon, 
+  Cancel01Icon, 
+  UserAdd01Icon, 
+  Tag01Icon, 
+  Delete02Icon, 
+  MinusSignIcon, 
+  Add01Icon, 
+  ArrowRight01Icon 
+} from 'hugeicons-react';
 
 interface CartItem {
   variantId: string;
@@ -90,7 +100,7 @@ function MobileCartSheetComponent({
             {foundCustomer ? (
               <>
                 <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4 text-emerald-600" />
+                  <User02Icon className="w-4 h-4 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm text-slate-900 truncate">{foundCustomer.name}</p>
@@ -104,7 +114,7 @@ function MobileCartSheetComponent({
               </>
             ) : (
               <>
-                <ShoppingBag className="w-5 h-5 text-slate-600 shrink-0" />
+                <ShoppingBag01Icon className="w-5 h-5 text-slate-600 shrink-0" />
                 <span className="font-bold text-sm text-slate-900">Carrito ({cart.length})</span>
               </>
             )}
@@ -118,7 +128,7 @@ function MobileCartSheetComponent({
                 className={`p-2 rounded-lg transition-colors disabled:opacity-30 ${foundCustomer ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-blue-50 hover:text-blue-600'}`}
                 title={foundCustomer ? 'Desvincular cliente' : 'Vincular cliente'}
               >
-                {foundCustomer ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                {foundCustomer ? <Cancel01Icon className="w-4 h-4" /> : <UserAdd01Icon className="w-4 h-4" />}
               </button>
               <button 
                 onClick={() => { haptic(8); onDiscountAction(); }} 
@@ -126,7 +136,7 @@ function MobileCartSheetComponent({
                 className={`p-2 rounded-lg transition-colors disabled:opacity-30 ${globalDiscountValue && parseFloat(globalDiscountValue) > 0 ? 'text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:bg-amber-50 hover:text-amber-600'}`}
                 title="Aplicar descuento"
               >
-                <Tag className="w-4 h-4" />
+                <Tag01Icon className="w-4 h-4" />
               </button>
               <button 
                 onClick={() => { haptic(15); onClearCart(); }} 
@@ -134,7 +144,7 @@ function MobileCartSheetComponent({
                 className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-30 p-2 rounded-lg hover:bg-red-50"
                 title="Vaciar carrito"
               >
-                <Trash2 className="w-4 h-4" />
+                <Delete02Icon className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -144,7 +154,7 @@ function MobileCartSheetComponent({
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-80 gap-3 py-12">
-              <ShoppingBag className="w-12 h-12" />
+              <ShoppingBag01Icon className="w-12 h-12" />
               <span className="text-sm font-medium">Carrito vacío</span>
             </div>
           ) : (
@@ -201,7 +211,7 @@ function MobileCartSheetComponent({
                           onClick={() => { haptic(5); onUpdateQuantity(item.variantId, -1); }} 
                           className="w-8 flex items-center justify-center text-slate-500 hover:text-slate-900 active:scale-90 transition-transform"
                         >
-                          <Minus className="w-4 h-4" />
+                          <MinusSignIcon className="w-4 h-4" />
                         </button>
                         <span className="text-sm font-semibold text-slate-800 w-8 text-center tabular-nums">
                           {item.cartQuantity}
@@ -210,7 +220,7 @@ function MobileCartSheetComponent({
                           onClick={() => { haptic(5); onUpdateQuantity(item.variantId, 1); }} 
                           className="w-8 flex items-center justify-center text-slate-500 hover:text-slate-900 active:scale-90 transition-transform"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Add01Icon className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
@@ -225,7 +235,7 @@ function MobileCartSheetComponent({
                       onClick={() => { haptic(10); onRemoveItem(item.variantId); }} 
                       className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Delete02Icon className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -264,7 +274,7 @@ function MobileCartSheetComponent({
                 disabled={cart.length === 0} 
                 className="w-full h-12 text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md transition-all active:scale-[0.98]"
               >
-                Amortizar (Pagar) <ChevronRight className="w-4 h-4 ml-1.5" />
+                Amortizar (Pagar) <ArrowRight01Icon className="w-4 h-4 ml-1.5" />
               </Button>
             )}
           </div>

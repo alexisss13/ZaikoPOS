@@ -3,12 +3,6 @@
 
 import useSWR from 'swr';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { 
-  Search, Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, 
-  Package, Tag, ChevronRight, ChevronLeft, CheckCircle2, 
-  User, Receipt, Unlock, RotateCcw, UserPlus, X, Store, Globe, 
-  ArrowRightLeft, Send, LayoutGrid, Loader2, Wallet, LogOut, Calculator, MapPin, History as HistoryIcon, Printer, XCircle
-} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +12,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { toast } from 'sonner';
+
+import {
+  Loading02Icon,
+  ShoppingBag01Icon,
+  Search01Icon,
+  UserAdd01Icon,
+  Time02Icon,
+  ArrowDataTransferHorizontalIcon,
+  Logout01Icon,
+  DashboardSquare01Icon,
+  Home01Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  PackageIcon,
+  ArrowDataTransferDiagonalIcon,
+  Tag01Icon,
+  CheckmarkCircle02Icon,
+  User02Icon,
+  Cancel01Icon,
+  Delete02Icon,
+  MinusSignIcon,
+  PlusSignIcon,
+  Rocket01Icon,
+  Clock01Icon,
+  RotateClockwiseIcon,
+  Wallet03Icon,
+  SentIcon
+} from 'hugeicons-react';
 
 // Hooks optimizados
 import { usePOSData, type ProductVariant, type Product } from '@/components/pos/hooks/usePOSData';
@@ -582,7 +604,7 @@ export default function PosPage() {
   if (loadingCash) {
     return (
       <div className="flex flex-col h-full w-full items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+        <Loading02Icon className="animate-spin text-slate-300" size={32} />
         <p className="font-semibold text-sm text-slate-400">Validando sesión...</p>
       </div>
     );
@@ -715,12 +737,12 @@ export default function PosPage() {
           <div className="flex items-center justify-between gap-4 w-full">
             <div className="flex items-center gap-2.5 shrink-0">
               <h1 className="text-[26px] font-black text-slate-900 tracking-tight">POS</h1>
-              <ShoppingBag className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+              <ShoppingBag01Icon className="w-6 h-6 text-slate-500" strokeWidth={2.5}/>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
                 <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-                  <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+                  <Search01Icon className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
                 </div>
                 <Input 
                   autoFocus={hasCashOpen}
@@ -738,27 +760,27 @@ export default function PosPage() {
                     variant="ghost"
                     className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
                   >
-                    <UserPlus className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Nuevo Cliente</span>
+                    <UserAdd01Icon size={16} /> <span className="font-bold ml-1.5">Nuevo Cliente</span>
                   </Button>
               <Button 
                 onClick={() => setShowSalesHistory(true)}
                 variant="ghost"
                 className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
               >
-                <HistoryIcon className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Historial</span>
+                <Time02Icon size={16} /> <span className="font-bold ml-1.5">Historial</span>
               </Button>
               <Button 
                 onClick={() => setShowCashTransaction(true)}
                 variant="ghost"
                 className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
               >
-                <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Ingresos/Egresos</span>
+                <ArrowDataTransferHorizontalIcon size={16} /> <span className="font-bold ml-1.5">Ingresos/Egresos</span>
               </Button>
               <Button 
                 onClick={() => cashHook.setShowCloseCash(true)} 
                 className="h-9 px-4 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm transition-all shrink-0"
               >
-                <LogOut className="w-3.5 h-3.5 mr-1.5" /> Cerrar Caja
+                <Logout01Icon size={16} /> <span className="ml-1.5">Cerrar Caja</span>
               </Button>
             </>
           )}
@@ -782,7 +804,7 @@ export default function PosPage() {
                 onClick={() => {setCodeFilter('ALL'); setSelectedCategory('ALL');}} 
                 className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${codeFilter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'}`}
               >
-                <LayoutGrid className="w-4 h-4" />
+                <DashboardSquare01Icon size={18} />
               </button>
               
               <button 
@@ -790,7 +812,7 @@ export default function PosPage() {
                 onClick={() => {setCodeFilter('GENERAL'); setSelectedCategory('ALL');}} 
                 className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${codeFilter === 'GENERAL' ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'}`}
               >
-                <Globe className="w-4 h-4" />
+                <ArrowDataTransferHorizontalIcon size={18} />
               </button>
 
               {visibleCodes.map(code => {
@@ -803,7 +825,7 @@ export default function PosPage() {
                     onClick={() => {setCodeFilter(code); setSelectedCategory('ALL');}} 
                     className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all overflow-hidden ${codeFilter === code ? 'ring-2 ring-slate-200 ring-offset-1 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200'}`}
                   >
-                    {logoUrl ? <img src={logoUrl} className="w-full h-full object-cover bg-white" alt="" /> : <Store className="w-4 h-4 text-slate-500" />}
+                    {logoUrl ? <img src={logoUrl} className="w-full h-full object-cover bg-white" alt="" /> : <Home01Icon className="text-slate-500" size={18} />}
                   </button>
                 )
               })}
@@ -841,10 +863,10 @@ export default function PosPage() {
           {/* 3. FLECHAS FIJAS A LA DERECHA */}
           <div className="flex items-center gap-1.5 px-3 shrink-0 h-full border-l border-slate-100 bg-slate-50/50">
             <button onClick={() => scroll('left')} className="p-1.5 text-slate-300 hover:text-slate-900 transition-colors active:scale-90">
-              <ChevronLeft className="w-5 h-5" strokeWidth={3} />
+              <ArrowLeft01Icon size={20} />
             </button>
             <button onClick={() => scroll('right')} className="p-1.5 text-slate-300 hover:text-slate-900 transition-colors active:scale-90">
-              <ChevronRight className="w-5 h-5" strokeWidth={3} />
+              <ArrowRight01Icon size={20} />
             </button>
           </div>
 
@@ -883,7 +905,7 @@ export default function PosPage() {
                     {displayImages?.[0] ? (
                       <img src={displayImages[0]} alt={product.title} className="w-full h-full object-cover mix-blend-multiply" draggable={false} />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300"><Package className="w-6 h-6" /></div>
+                      <div className="w-full h-full flex items-center justify-center text-slate-300"><PackageIcon size={24} /></div>
                     )}
                     <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shadow-sm leading-none backdrop-blur-md ${isOutOfStock ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-700'}`}>
@@ -897,7 +919,7 @@ export default function PosPage() {
                     <div className="mt-1.5">
                       {isOutOfStock && externalStock > 0 ? (
                         <p className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-1 rounded-md border border-amber-200 flex items-center gap-1 mt-1 hover:bg-amber-100 transition-colors">
-                          <ArrowRightLeft className="w-3 h-3" /> Pedir Traslado
+                          <ArrowDataTransferDiagonalIcon size={12} /> Pedir Traslado
                         </p>
                       ) : isOutOfStock ? (
                         <p className="text-[10px] font-semibold text-red-500 mt-1">Agotado Totalmente</p>
@@ -909,7 +931,7 @@ export default function PosPage() {
                           </div>
                           {hasWholesale && (
                             <p className="text-[9px] font-medium text-slate-500 mt-1 leading-none flex items-center gap-1" title={`Precio por mayor a partir de ${product.wholesaleMinCount} unidades`}>
-                              <Tag className="w-3 h-3 text-blue-500" /> 
+                              <Tag01Icon size={12} /> 
                               Mayor S/{Number(product.wholesalePrice).toFixed(2)}
                               <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md text-[9px] font-semibold ml-auto">
                                 ≥{product.wholesaleMinCount}u
@@ -933,7 +955,7 @@ export default function PosPage() {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {saleState === 'PAID' ? (
               <>
-                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <CheckmarkCircle02Icon size={20} />
                 <span className="font-semibold text-sm">VENTA PAGADA</span>
               </>
             ) : (
@@ -941,7 +963,7 @@ export default function PosPage() {
                 {foundCustomer ? (
                   <>
                     <div className="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                      <User className="w-4 h-4 text-emerald-600" />
+                      <User02Icon size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-xs text-slate-900 truncate">{foundCustomer.name}</p>
@@ -955,7 +977,7 @@ export default function PosPage() {
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-5 h-5 shrink-0" />
+                    <ShoppingBag01Icon size={20} />
                     <span className="font-semibold text-sm">Resumen de Venta</span>
                   </>
                 )}
@@ -971,7 +993,7 @@ export default function PosPage() {
                   className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 ${foundCustomer ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
                   title={foundCustomer ? 'Desvincular cliente' : 'Vincular cliente'}
                 >
-                  {foundCustomer ? <X className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                  {foundCustomer ? <Cancel01Icon size={16} /> : <UserAdd01Icon size={16} />}
                 </button>
                 <button 
                   onClick={() => setShowDiscountModal(true)} 
@@ -979,7 +1001,7 @@ export default function PosPage() {
                   className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 ${globalDiscountValue && parseFloat(globalDiscountValue) > 0 ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}
                   title="Aplicar descuento"
                 >
-                  <Tag className="w-4 h-4" />
+                  <Tag01Icon size={16} />
                 </button>
                 <button 
                   onClick={() => setCart([])} 
@@ -987,7 +1009,7 @@ export default function PosPage() {
                   className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-30 p-1.5 rounded-lg hover:bg-red-50"
                   title="Vaciar carrito"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Delete02Icon size={16} />
                 </button>
               </>
             )}
@@ -996,8 +1018,8 @@ export default function PosPage() {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-80 gap-3">
-              <ShoppingBag className="w-10 h-10" />
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-80 gap-3">
+              <ShoppingBag01Icon size={40} />
               <span className="text-sm font-medium">Bandeja vacía</span>
             </div>
           ) : (
@@ -1029,9 +1051,9 @@ export default function PosPage() {
 
                     {saleState === 'IDLE' ? (
                       <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm h-7">
-                        <button onClick={() => updateQuantity(item.variantId, -1)} className="w-7 flex items-center justify-center text-slate-500 hover:text-slate-900"><Minus className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => updateQuantity(item.variantId, -1)} className="w-7 flex items-center justify-center text-slate-500 hover:text-slate-900"><MinusSignIcon size={14} /></button>
                         <span className="text-xs font-semibold text-slate-800 w-6 text-center tabular-nums">{item.cartQuantity}</span>
-                        <button onClick={() => updateQuantity(item.variantId, 1)} className="w-7 flex items-center justify-center text-slate-500 hover:text-slate-900"><Plus className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => updateQuantity(item.variantId, 1)} className="w-7 flex items-center justify-center text-slate-500 hover:text-slate-900"><PlusSignIcon size={14} /></button>
                       </div>
                     ) : (
                       <span className="text-xs font-semibold text-emerald-700 px-2.5 py-1 bg-emerald-100/50 rounded-lg tabular-nums">{item.cartQuantity} un.</span>
@@ -1040,7 +1062,7 @@ export default function PosPage() {
 
                   {saleState === 'IDLE' && (
                     <button onClick={() => removeFromCart(item.variantId)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 className="w-4 h-4" />
+                      <Delete02Icon size={16} />
                     </button>
                   )}
                 </div>
@@ -1071,20 +1093,20 @@ export default function PosPage() {
 
           {saleState === 'IDLE' ? (
             <Button onClick={openPaymentModal} disabled={cart.length === 0} className="w-full h-12 text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md transition-all active:scale-[0.98]">
-              Amortizar (Pagar) <ChevronRight className="w-4 h-4 ml-1.5" />
+              Amortizar (Pagar) <ArrowRight01Icon className="ml-1.5" size={16} />
             </Button>
           ) : (
             <div className="flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-300">
               <div className="flex gap-2">
                 <Button onClick={handleBoletear} variant="outline" className="flex-1 h-10 text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 rounded-xl">
-                  <Receipt className="w-4 h-4 mr-1.5" /> Boletear
+                  <Rocket01Icon size={16} /> <span className="ml-1.5">Boletear</span>
                 </Button>
                 <Button onClick={handleLiberar} className="flex-1 h-10 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-sm">
-                  <Unlock className="w-4 h-4 mr-1.5" /> Liberar
+                  <Clock01Icon size={16} /> <span className="ml-1.5">Liberar</span>
                 </Button>
               </div>
               <Button onClick={handleAnular} variant="ghost" className="h-9 text-[11px] font-semibold text-red-500 hover:bg-red-50 hover:text-red-600 w-full rounded-lg">
-                <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Anular Venta
+                <RotateClockwiseIcon size={14} /> <span className="ml-1.5">Anular Venta</span>
               </Button>
             </div>
           )}
@@ -1124,7 +1146,7 @@ export default function PosPage() {
                         onClick={() => removePaymentMethod(index)}
                         className="h-6 w-6 p-0 text-slate-400 hover:text-red-600"
                       >
-                        <X className="w-4 h-4" />
+                        <Cancel01Icon size={16} />
                       </Button>
                     )}
                   </div>
@@ -1225,7 +1247,7 @@ export default function PosPage() {
                   onClick={addPaymentMethod}
                   className="w-full h-9 text-xs font-bold border-dashed"
                 >
-                  <Plus className="w-4 h-4 mr-1.5" /> Agregar Método de Pago
+                  <PlusSignIcon size={16} /> <span className="ml-1.5">Agregar Método de Pago</span>
                 </Button>
               )}
             </div>
@@ -1261,7 +1283,7 @@ export default function PosPage() {
               disabled={!isValidPayment || isSubmitting}
               className="flex-1 h-10 text-sm font-bold bg-slate-900 hover:bg-slate-800"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Pago'}
+              {isSubmitting ? <Loading02Icon className="animate-spin" size={16} /> : 'Confirmar Pago'}
             </Button>
           </div>
         </DialogContent>
@@ -1272,7 +1294,7 @@ export default function PosPage() {
         <DialogContent className="sm:max-w-md font-sans p-0 overflow-hidden bg-white border border-slate-200 shadow-xl rounded-2xl">
           <DialogHeader className="p-5 border-b border-slate-100 bg-slate-50 flex flex-col items-start justify-center m-0">
             <DialogTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <ArrowRightLeft className="w-4 h-4 text-amber-600" /> Solicitar Traslado de Stock
+              <ArrowDataTransferDiagonalIcon className="text-amber-600" size={16} /> Solicitar Traslado de Stock
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-1">
               Este producto está agotado. Pide stock a otra tienda para poder venderlo.
@@ -1285,7 +1307,7 @@ export default function PosPage() {
                 {transferVariant?.images?.[0] || transferProduct?.images?.[0] ? (
                   <img src={transferVariant?.images?.[0] || transferProduct?.images?.[0]} alt="" className="w-full h-full object-cover mix-blend-multiply" />
                 ) : (
-                  <Package className="w-5 h-5 text-slate-300" />
+                  <PackageIcon className="text-slate-300" size={20} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -1339,7 +1361,7 @@ export default function PosPage() {
               disabled={!transferFromBranch || !transferQty || isSubmittingTransfer}
               onClick={handleSubmitTransfer}
             >
-              <Send className="w-4 h-4 mr-1.5" /> Enviar Solicitud
+              <SentIcon size={16} /> <span className="ml-1.5">Enviar Solicitud</span>
             </Button>
           </div>
         </DialogContent>
@@ -1350,14 +1372,14 @@ export default function PosPage() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-500">
           <div className="bg-white border-2 border-slate-200 rounded-2xl shadow-xl p-5 flex items-center gap-4 min-w-[500px]">
             <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 shadow-sm shrink-0">
-              <Wallet className="w-6 h-6 text-slate-700" strokeWidth={2.5} />
+              <Wallet03Icon className="text-slate-700" size={24} />
             </div>
             <div className="flex-1">
               <p className="text-base font-black text-slate-900 tracking-tight">Caja Cerrada</p>
               <p className="text-xs text-slate-500 font-medium mt-0.5">Apertura tu caja para comenzar a vender</p>
             </div>
             <Button onClick={() => cashHook.setShowOpenCash(true)} className="h-11 px-5 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95">
-              <Wallet className="w-4 h-4 mr-2" /> Abrir Caja
+              Abrir Caja
             </Button>
           </div>
         </div>

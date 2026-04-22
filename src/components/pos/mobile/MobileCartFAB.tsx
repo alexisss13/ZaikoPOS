@@ -1,7 +1,7 @@
 'use client';
 
-import { ShoppingBag } from 'lucide-react';
 import { memo } from 'react';
+import { ShoppingBag01Icon } from 'hugeicons-react';
 
 interface MobileCartFABProps {
   itemCount: number;
@@ -21,7 +21,7 @@ function MobileCartFABComponent({ itemCount, total, onClick, disabled }: MobileC
     >
       {/* Botón principal */}
       <div className="relative bg-slate-900 text-white rounded-2xl shadow-2xl p-4 border-2 border-white">
-        <ShoppingBag className="w-6 h-6" strokeWidth={2.5} />
+        <ShoppingBag01Icon className="w-6 h-6" />
         
         {/* Badge con contador */}
         {itemCount > 0 && (

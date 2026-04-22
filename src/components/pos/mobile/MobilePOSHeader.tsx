@@ -1,8 +1,15 @@
 'use client';
 
 import { memo } from 'react';
-import { Search, UserPlus, HistoryIcon, ArrowRightLeft, SlidersHorizontal, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { 
+  SlidersHorizontalIcon, 
+  UserAdd01Icon, 
+  Time02Icon, 
+  ArrowDataTransferHorizontalIcon, 
+  Logout01Icon, 
+  Search01Icon 
+} from 'hugeicons-react';
 
 interface Branch {
   id: string;
@@ -51,7 +58,7 @@ function MobilePOSHeaderComponent({
             className="relative h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-30"
             title="Filtros"
           >
-            <SlidersHorizontal className="w-4 h-4" />
+            <SlidersHorizontalIcon className="w-4 h-4" />
             {hasActiveFilters && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                 •
@@ -66,7 +73,7 @@ function MobilePOSHeaderComponent({
             className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-30"
             title="Registrar cliente"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserAdd01Icon className="w-4 h-4" />
           </button>
           <button
             onClick={onHistory}
@@ -74,7 +81,7 @@ function MobilePOSHeaderComponent({
             className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-30"
             title="Historial"
           >
-            <HistoryIcon className="w-4 h-4" />
+            <Time02Icon className="w-4 h-4" />
           </button>
           <button
             onClick={onCashTransaction}
@@ -82,7 +89,7 @@ function MobilePOSHeaderComponent({
             className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-30"
             title="Ingresos/Egresos"
           >
-            <ArrowRightLeft className="w-4 h-4" />
+            <ArrowDataTransferHorizontalIcon className="w-4 h-4" />
           </button>
           <button
             onClick={onCloseCash}
@@ -90,14 +97,14 @@ function MobilePOSHeaderComponent({
             className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-30"
             title="Cerrar caja"
           >
-            <LogOut className="w-4 h-4" />
+            <Logout01Icon className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Barra de búsqueda */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <Search01Icon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
         <Input
           placeholder="Buscar producto, SKU..."
           value={searchTerm}
