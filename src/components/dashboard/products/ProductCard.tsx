@@ -62,7 +62,7 @@ function ProductCardComponent({
   }, [onKardex, product]);
 
   return (
-    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ transition: 'transform 0.1s ease-out' }}>
+    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ transition: 'transform 0.1s ease-out', contentVisibility: 'auto', containIntrinsicSize: '0 100px' }}>
       {/* Header */}
       <div className="p-4 cursor-pointer select-none" onClick={handleToggle}>
         <div className="flex items-center gap-3">
@@ -105,13 +105,13 @@ function ProductCardComponent({
             </div>
           </div>
 
-          <ChevronDown className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.12s ease-out', willChange: 'transform' }} />
+          <ChevronDown className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.1s ease-out', willChange: 'transform' }} />
         </div>
       </div>
 
       {/* Expandible - Solo renderizar cuando está expandido */}
       {isExpanded && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/50" style={{ animation: 'slideDown 0.12s ease-out' }}>
+        <div className="border-t border-slate-100 p-4 bg-slate-50/50" style={{ animation: 'slideDown 0.1s ease-out' }}>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {/* Catálogo */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
@@ -200,14 +200,28 @@ function ProductCardComponent({
 
 // Comparación personalizada para memo
 const areEqual = (prevProps: ProductCardProps, nextProps: ProductCardProps) => {
-  return (
-    prevProps.product.id === nextProps.product.id &&
-    prevProps.isExpanded === nextProps.isExpanded &&
-    prevProps.canEdit === nextProps.canEdit &&
-    prevProps.product.basePrice === nextProps.product.basePrice &&
-    prevProps.product.active === nextProps.product.active &&
-    JSON.stringify(prevProps.product.branchStocks) === JSON.stringify(nextProps.product.branchStocks)
-  );
+  // Comparaciones rápidas primero
+  if (prevProps.product.id !== nextProps.product.id) return false;
+  if (prevProps.isExpanded !== nextProps.isExpanded) return false;
+  if (prevProps.canEdit !== nextProps.canEdit) return false;
+  if (prevProps.product.basePrice !== nextProps.product.basePrice) return false;
+  if (prevProps.product.active !== nextProps.product.active) return false;
+  
+  // Comparación de branchStocks (más eficiente que JSON.stringify)
+  const prevStocks = prevProps.product.branchStocks || [];
+  const nextStocks = nextProps.product.branchStocks || [];
+  
+  if (prevStocks.length !== nextStocks.length) return false;
+  
+  // Solo comparar si realmente hay stocks
+  if (prevStocks.length > 0) {
+    for (let i = 0; i < prevStocks.length; i++) {
+      if (prevStocks[i].quantity !== nextStocks[i].quantity) return false;
+      if (prevStocks[i].branchId !== nextStocks[i].branchId) return false;
+    }
+  }
+  
+  return true;
 };
 
 export const ProductCard = memo(ProductCardComponent, areEqual);

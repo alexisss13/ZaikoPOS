@@ -46,10 +46,26 @@ export default function ProductsPage() {
   const canEdit = isSuperOrOwner || !!permissions.canEditProducts || canManageGlobal;
   const canViewOthers = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
 
-  const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher);
-  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
-  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher);
-  const { data: suppliers } = useSWR('/api/suppliers', fetcher);
+  const { data: products, isLoading, mutate } = useSWR<Product[]>('/api/products', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 5000,
+  });
+  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
+  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
+  const { data: suppliers } = useSWR('/api/suppliers', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
 
   // Memoizar cálculos de branches
   const { myBranch, myCode, uniqueCodes, visibleCodes } = useMemo(() => {
@@ -128,7 +144,15 @@ export default function ProductsPage() {
 
   const toggleCard = useCallback((id: string) => {
     haptic(8);
-    setExpandedCards(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   }, []);
 
   const openKardexModal = useCallback(async (product: Product) => {
