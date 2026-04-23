@@ -8,9 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { 
-  Loader2, UserPlus, Store, LayoutDashboard, Globe, X, Camera
-} from 'lucide-react';
+import { Loading02Icon, Camera01Icon, UserAdd01Icon, Store01Icon, LayoutGridIcon, GlobalIcon, Cancel01Icon } from 'hugeicons-react';
 import { useAuth } from '@/context/auth-context';
 import { useBasicUserForm } from './hooks/useBasicUserForm';
 import { BasicUserData, SimpleBusiness, Branch, UserModalProps } from './types/user-management.types';
@@ -123,7 +121,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
         {/* Header */}
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <UserPlus className="w-5 h-5 text-slate-700" />
+            <UserAdd01Icon className="w-5 h-5 text-slate-700" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col items-start text-left">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -141,7 +139,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
             {/* Profile Photo */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 mb-4 uppercase tracking-wide">
-                <LayoutDashboard className="w-4 h-4 text-slate-400" /> Foto de Perfil
+                <LayoutGridIcon className="w-4 h-4 text-slate-400" strokeWidth={1.5} /> Foto de Perfil
               </h3>
               
               <div className="flex items-center gap-4">
@@ -153,7 +151,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
                       onClick={removeImage} 
                       className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-5 h-5" />
+                      <Cancel01Icon className="w-5 h-5" strokeWidth={1.5} />
                     </button>
                   </div>
                 ) : (
@@ -166,9 +164,9 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                     />
                     {isUploadingImage ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                      <Loading02Icon className="w-5 h-5 animate-spin text-slate-400" />
                     ) : (
-                      <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+                      <Camera01Icon className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                     )}
                   </div>
                 )}
@@ -182,7 +180,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
             {/* Basic Information */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <LayoutDashboard className="w-4 h-4 text-slate-400" /> Información Personal
+                <LayoutGridIcon className="w-4 h-4 text-slate-400" strokeWidth={1.5} /> Información Personal
               </h3>
 
               <div className="space-y-4">
@@ -240,7 +238,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
             {/* Work Assignment */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Store className="w-4 h-4 text-slate-400" /> Asignación de Trabajo
+                <Store01Icon className="w-4 h-4 text-slate-400" strokeWidth={1.5} /> Asignación de Trabajo
               </h3>
               
               {currentUserRole === 'SUPER_ADMIN' && formData.role !== 'SUPER_ADMIN' && (
@@ -308,7 +306,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
                       {formData.role === 'SUPER_ADMIN' && (
                         <SelectItem value="NONE" className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-slate-500" />
+                            <GlobalIcon className="w-4 h-4 text-slate-500" strokeWidth={1.5} />
                             <span className="font-bold text-slate-700">Red Global</span>
                           </div>
                         </SelectItem>
@@ -323,7 +321,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
                                 className="w-4 h-4 rounded-sm object-cover border border-slate-200 bg-white" 
                               />
                             ) : (
-                              <Store className="w-3.5 h-3.5 text-slate-400" />
+                              <Store01Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                             )}
                             <span>{branch.name}</span>
                           </div>
@@ -339,7 +337,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
               <div className="flex items-start gap-3">
                 <div className="bg-blue-100 p-2 rounded-lg shrink-0">
-                  <LayoutDashboard className="w-4 h-4 text-blue-600" />
+                  <LayoutGridIcon className="w-4 h-4 text-blue-600" strokeWidth={1.5} />
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-blue-900 mb-1">Permisos Automáticos</h4>
@@ -371,7 +369,7 @@ export function BasicUserModal({ isOpen, onClose, onSuccess, userToEdit }: UserM
             disabled={isLoading || isUploadingImage} 
             className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 shadow-md rounded-xl transition-all"
           >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {isLoading && <Loading02Icon className="w-4 h-4 animate-spin mr-2" />}
             {userToEdit ? 'Guardar Cambios' : 'Registrar Empleado'}
           </Button>
         </div>

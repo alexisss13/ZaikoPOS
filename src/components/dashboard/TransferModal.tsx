@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, ArrowRightLeft, Search, Plus, Trash2 } from 'lucide-react';
+import { Loading02Icon, ArrowDataTransferHorizontalIcon, Search01Icon, PlusSignIcon, Delete02Icon } from 'hugeicons-react';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -235,7 +235,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
         
         <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <ArrowRightLeft className="w-5 h-5 text-slate-700" />
+            <ArrowDataTransferHorizontalIcon className="w-5 h-5 text-slate-700" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col items-start text-left flex-1">
             <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
@@ -305,7 +305,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-700">Buscar Producto <span className="text-red-500">*</span></Label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -434,7 +434,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
                 disabled={!selectedProduct || !formData.variantId || !formData.quantity}
                 className="h-11 px-4 bg-slate-900 hover:bg-slate-800"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <PlusSignIcon className="w-4 h-4 mr-2" strokeWidth={1.5} />
                 Agregar
               </Button>
             </div>
@@ -460,7 +460,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
                         onClick={() => removeTransferItem(item.id)}
                         className="p-1 hover:bg-red-100 rounded text-red-600"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Delete02Icon className="w-4 h-4" strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
@@ -499,7 +499,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
             disabled={isLoading || transferItems.length === 0}
             className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
           >
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isLoading && <Loading02Icon className="w-4 h-4 mr-2 animate-spin" />}
             Registrar Traslado de {transferItems.length} Producto(s)
           </Button>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Package, SlidersHorizontal, MoreHorizontal, Search } from 'lucide-react';
+import { PackageIcon, SlidersHorizontalIcon, MoreHorizontalIcon, Search01Icon } from 'hugeicons-react';
 
 // Shimmer base reutilizable
 const Shimmer = memo(({ className }: { className?: string }) => {
@@ -46,25 +46,25 @@ export const ProductsLoadingSkeleton = memo(() => {
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <Package className="w-5 h-5 text-slate-300" />
+              <PackageIcon className="w-5 h-5 text-slate-300" strokeWidth={1.5} />
               <Shimmer className="h-6 w-28" />
             </div>
             <Shimmer className="h-3 w-20" />
           </div>
           {/* Botones top bar */}
           <div className="h-10 px-3 rounded-xl border border-slate-200 bg-white flex items-center gap-1.5 opacity-50">
-            <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+            <SlidersHorizontalIcon className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
             <span className="text-xs text-slate-400 font-semibold">Filtros</span>
           </div>
           <div className="h-10 w-10 rounded-xl bg-slate-200 opacity-50 shrink-0" />
           <div className="h-10 w-10 rounded-xl border border-slate-200 bg-white opacity-50 shrink-0 flex items-center justify-center">
-            <MoreHorizontal className="w-4 h-4 text-slate-300" />
+            <MoreHorizontalIcon className="w-4 h-4 text-slate-300" strokeWidth={1.5} />
           </div>
         </div>
 
         {/* Buscador */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+          <Search01Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" strokeWidth={1.5} />
           <div className="h-10 bg-white border border-slate-200 rounded-xl w-full opacity-60" />
         </div>
       </div>

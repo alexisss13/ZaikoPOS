@@ -4,9 +4,9 @@ import useSWR from 'swr';
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
-  Warehouse, Search, ChevronLeft, ChevronRight, Download, 
-  ArrowUpCircle, ArrowDownCircle, Settings, Filter, Package, Store, User, Calendar, ArrowRightLeft, Check, X, XCircle, Plus, SlidersHorizontal, ChevronDown
-} from 'lucide-react';
+  WarehouseIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, Download01Icon, 
+  CircleArrowUp02Icon, CircleArrowDown02Icon, Settings01Icon, FilterIcon, PackageIcon, Store01Icon, UserIcon, Calendar03Icon, ArrowDataTransferHorizontalIcon, CheckmarkCircle02Icon, Cancel01Icon, CancelCircleIcon, PlusSignIcon, ArrowDown01Icon
+} from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,13 +65,13 @@ interface StockTransfer {
 const ITEMS_PER_PAGE = 8;
 
 const movementTypeConfig = {
-  INPUT: { label: 'Entrada', color: 'bg-emerald-100 text-emerald-700 border-emerald-300', icon: ArrowUpCircle },
-  OUTPUT: { label: 'Salida', color: 'bg-red-100 text-red-700 border-red-300', icon: ArrowDownCircle },
-  ADJUSTMENT: { label: 'Ajuste', color: 'bg-amber-100 text-amber-700 border-amber-300', icon: Settings },
-  SALE_POS: { label: 'Venta POS', color: 'bg-blue-100 text-blue-700 border-blue-300', icon: Package },
-  SALE_ECOMMERCE: { label: 'Venta Online', color: 'bg-indigo-100 text-indigo-700 border-indigo-300', icon: Package },
-  PURCHASE: { label: 'Compra', color: 'bg-purple-100 text-purple-700 border-purple-300', icon: Package },
-  TRANSFER: { label: 'Traslado', color: 'bg-cyan-100 text-cyan-700 border-cyan-300', icon: ArrowUpCircle },
+  INPUT: { label: "Entrada", color: "bg-emerald-100 text-emerald-700 border-emerald-300", icon: CircleArrowUp02Icon },
+  OUTPUT: { label: "Salida", color: "bg-red-100 text-red-700 border-red-300", icon: CircleArrowDown02Icon },
+  ADJUSTMENT: { label: "Ajuste", color: "bg-amber-100 text-amber-700 border-amber-300", icon: Settings01Icon },
+  SALE_POS: { label: "Venta POS", color: "bg-blue-100 text-blue-700 border-blue-300", icon: PackageIcon },
+  SALE_ECOMMERCE: { label: "Venta Online", color: "bg-indigo-100 text-indigo-700 border-indigo-300", icon: PackageIcon },
+  PURCHASE: { label: "Compra", color: "bg-purple-100 text-purple-700 border-purple-300", icon: PackageIcon },
+  TRANSFER: { label: "Traslado", color: "bg-cyan-100 text-cyan-700 border-cyan-300", icon: CircleArrowUp02Icon },
 };
 
 function InventoryPageContent() {
@@ -261,7 +261,7 @@ function InventoryPageContent() {
       mobileProminent: true,
       render: (movement) => (
         <div className="flex items-center gap-2 text-slate-600">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
           <div className="flex flex-col">
             <span className="font-bold text-slate-700 text-[11px]">
               {new Date(movement.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
@@ -357,7 +357,7 @@ function InventoryPageContent() {
       header: 'Sucursal',
       render: (movement) => (
         <div className="flex items-center gap-1.5 text-slate-600">
-          <Store className="w-3 h-3 text-slate-400" />
+          <Store01Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
           <span className="text-xs font-medium">{movement.branch.name}</span>
         </div>
       ),
@@ -367,7 +367,7 @@ function InventoryPageContent() {
       header: 'Usuario',
       render: (movement) => (
         <div className="flex items-center gap-1.5 text-slate-600">
-          <User className="w-3 h-3 text-slate-400" />
+          <UserIcon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
           <span className="text-xs font-medium truncate max-w-[120px]">{movement.user.name}</span>
         </div>
       ),
@@ -399,9 +399,9 @@ function InventoryPageContent() {
       mobileProminent: true,
       render: (transfer) => (
         <div className="flex items-center gap-2">
-          <Store className="w-3.5 h-3.5 text-slate-400" />
+          <Store01Icon className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-slate-700 text-xs">{transfer.fromBranch.name}</span>
-          <ArrowRightLeft className="w-3 h-3 text-slate-400" />
+          <ArrowDataTransferHorizontalIcon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
           <span className="text-slate-700 text-xs">{transfer.toBranch.name}</span>
         </div>
       ),
@@ -413,7 +413,7 @@ function InventoryPageContent() {
       render: (transfer) => (
         <div>
           <div className="flex items-center gap-2">
-            <Package className="w-3.5 h-3.5 text-slate-400" />
+            <PackageIcon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
             <span className="text-slate-700 text-xs">{transfer.items.length} producto(s)</span>
           </div>
           <details className="mt-1">
@@ -436,7 +436,7 @@ function InventoryPageContent() {
       header: 'Solicitante',
       render: (transfer) => (
         <div className="flex items-center gap-2">
-          <User className="w-3.5 h-3.5 text-slate-400" />
+          <UserIcon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
           <span className="text-slate-700 text-xs">{transfer.requestedBy.name}</span>
         </div>
       ),
@@ -447,7 +447,7 @@ function InventoryPageContent() {
       mobileVisible: true,
       render: (transfer) => (
         <div className="flex items-center gap-2 text-slate-600">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
           <div className="flex flex-col">
             <span className="text-slate-700 text-[11px]">
               {new Date(transfer.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
@@ -560,7 +560,7 @@ function InventoryPageContent() {
                 onClick={() => setIsMovementModalOpen(true)}
                 className="h-12 w-12 p-0 bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white shadow-lg rounded-2xl"
               >
-                <Plus className="w-6 h-6" />
+                <PlusSignIcon className="w-6 h-6" strokeWidth={1.5} />
               </Button>
             )}
           </div>
@@ -568,7 +568,7 @@ function InventoryPageContent() {
           {/* Buscador mejorado */}
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-              <Search className="w-5 h-5 text-slate-400" />
+              <Search01Icon className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
             </div>
             <Input
               placeholder="Buscar producto, motivo o usuario..."
@@ -581,7 +581,7 @@ function InventoryPageContent() {
                 onClick={() => setSearchTerm('')} 
                 className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full hover:bg-slate-100 transition-colors"
               >
-                <X className="w-4 h-4 text-slate-400" />
+                <Cancel01Icon className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
               </button>
             )}
           </div>
@@ -596,7 +596,7 @@ function InventoryPageContent() {
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
               }`}
             >
-              <Package className="w-4 h-4" /> Movimientos
+              <PackageIcon className="w-4 h-4" strokeWidth={1.5} /> Movimientos
             </button>
             <button 
               onClick={() => setActiveTab('transfers')} 
@@ -606,7 +606,7 @@ function InventoryPageContent() {
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
               }`}
             >
-              <ArrowRightLeft className="w-4 h-4" /> Traslados
+              <ArrowDataTransferHorizontalIcon className="w-4 h-4" strokeWidth={1.5} /> Traslados
             </button>
           </div>
 
@@ -664,21 +664,21 @@ function InventoryPageContent() {
                 onClick={() => setIsMovementModalOpen(true)} 
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
               >
-                <ArrowUpCircle className="w-5 h-5 text-slate-600" />
+                <CircleArrowUp02Icon className="w-5 h-5 text-slate-600" strokeWidth={1.5} />
                 <span className="text-xs font-medium text-slate-600">Movimiento</span>
               </button>
               <button 
                 onClick={() => {setActiveTab('transfers'); setIsTransferModalOpen(true);}} 
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
               >
-                <ArrowRightLeft className="w-5 h-5 text-slate-600" />
+                <ArrowDataTransferHorizontalIcon className="w-5 h-5 text-slate-600" strokeWidth={1.5} />
                 <span className="text-xs font-medium text-slate-600">Traslado</span>
               </button>
               <button 
                 onClick={exportToExcel} 
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors"
               >
-                <Download className="w-5 h-5 text-slate-600" />
+                <Download01Icon className="w-5 h-5 text-slate-600" strokeWidth={1.5} />
                 <span className="text-xs font-medium text-slate-600">Exportar</span>
               </button>
             </div>
@@ -689,13 +689,13 @@ function InventoryPageContent() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         <div className="flex items-center gap-2.5 shrink-0">
           <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Kardex de Inventario</h1>
-          <Warehouse className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+          <WarehouseIcon className="w-6 h-6 text-slate-500" strokeWidth={2} />
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+              <Search01Icon className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={2} />
             </div>
             <Input 
               placeholder="Buscar producto, motivo..." 
@@ -713,7 +713,7 @@ function InventoryPageContent() {
                   variant="ghost"
                   className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
                 >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Exportar</span>
+                  <Download01Icon className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} /> <span className="font-bold">Exportar</span>
                 </Button>
                 
                 {showExportMenu && (
@@ -724,14 +724,14 @@ function InventoryPageContent() {
                         onClick={exportToExcel}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download01Icon className="w-3.5 h-3.5" />
                         Excel
                       </button>
                       <button
                         onClick={exportToPDF}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download01Icon className="w-3.5 h-3.5" />
                         PDF
                       </button>
                     </div>
@@ -746,13 +746,13 @@ function InventoryPageContent() {
                 variant="ghost"
                 className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
               >
-                <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Nuevo traslado</span>
+                <ArrowDataTransferHorizontalIcon className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Nuevo traslado</span>
               </Button>
               <Button 
                 onClick={() => setIsMovementModalOpen(true)}
                 className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0"
               >
-                <ArrowUpCircle className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Movimiento</span>
+                <CircleArrowUp02Icon className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Movimiento</span>
               </Button>
             </>
           )}
@@ -781,7 +781,7 @@ function InventoryPageContent() {
                       disabled={kardexPage === 1}
                       className="h-8 w-8 p-0 rounded-xl border-slate-200"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
                     <Button 
                       variant="outline" 
@@ -790,7 +790,7 @@ function InventoryPageContent() {
                       disabled={kardexPage === Math.ceil(filteredMovements.length / ITEMS_PER_PAGE)}
                       className="h-8 w-8 p-0 rounded-xl border-slate-200"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
                   </div>
                 </div>
@@ -802,14 +802,14 @@ function InventoryPageContent() {
                   .slice((kardexPage - 1) * ITEMS_PER_PAGE, kardexPage * ITEMS_PER_PAGE)
                   .map((movement) => {
                     const typeConfig = {
-                      INPUT: { label: 'Entrada', color: 'emerald', icon: ArrowUpCircle },
-                      OUTPUT: { label: 'Salida', color: 'red', icon: ArrowDownCircle },
-                      ADJUSTMENT: { label: 'Ajuste', color: 'amber', icon: Settings },
-                      SALE_POS: { label: 'Venta POS', color: 'blue', icon: Package },
-                      SALE_ECOMMERCE: { label: 'Venta Online', color: 'indigo', icon: Package },
-                      PURCHASE: { label: 'Compra', color: 'purple', icon: ArrowUpCircle },
-                      TRANSFER: { label: 'Traslado', color: 'cyan', icon: ArrowRightLeft },
-                    }[movement.type] || { label: movement.type, color: 'slate', icon: Package };
+                      INPUT: { label: 'Entrada', color: 'emerald', icon: CircleArrowUp02Icon },
+                      OUTPUT: { label: 'Salida', color: 'red', icon: CircleArrowDown02Icon },
+                      ADJUSTMENT: { label: 'Ajuste', color: 'amber', icon: Settings01Icon },
+                      SALE_POS: { label: 'Venta POS', color: 'blue', icon: PackageIcon },
+                      SALE_ECOMMERCE: { label: 'Venta Online', color: 'indigo', icon: PackageIcon },
+                      PURCHASE: { label: 'Compra', color: 'purple', icon: CircleArrowUp02Icon },
+                      TRANSFER: { label: 'Traslado', color: 'cyan', icon: ArrowDataTransferHorizontalIcon },
+                    }[movement.type] || { label: movement.type, color: 'slate', icon: PackageIcon };
 
                     const Icon = typeConfig.icon;
                     const isPositive = movement.type === 'INPUT' || movement.type === 'PURCHASE' || 
@@ -836,11 +836,11 @@ function InventoryPageContent() {
                             
                             <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
                               <span className="flex items-center gap-1">
-                                <Store className="w-3.5 h-3.5" />
+                                <Store01Icon className="w-3.5 h-3.5" />
                                 {movement.branch.name}
                               </span>
                               <span className="flex items-center gap-1">
-                                <User className="w-3.5 h-3.5" />
+                                <UserIcon className="w-3.5 h-3.5" />
                                 {movement.user.name}
                               </span>
                             </div>
@@ -865,7 +865,7 @@ function InventoryPageContent() {
                             </div>
 
                             <div className="flex items-center gap-1 mt-2">
-                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                               <span className="text-xs text-slate-400">
                                 {new Date(movement.createdAt).toLocaleDateString('es-PE', {
                                   day: '2-digit',
@@ -900,7 +900,7 @@ function InventoryPageContent() {
                       disabled={transfersPage === 1}
                       className="h-8 w-8 p-0 rounded-xl border-slate-200"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
                     <Button 
                       variant="outline" 
@@ -909,7 +909,7 @@ function InventoryPageContent() {
                       disabled={transfersPage === Math.ceil(filteredTransfers.length / ITEMS_PER_PAGE)}
                       className="h-8 w-8 p-0 rounded-xl border-slate-200"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
                   </div>
                 </div>
@@ -945,7 +945,7 @@ function InventoryPageContent() {
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-12 h-12 rounded-2xl ${statusConfig.bg} flex items-center justify-center shrink-0`}>
-                              <ArrowRightLeft className={`w-6 h-6 ${statusConfig.text}`} />
+                              <ArrowDataTransferHorizontalIcon className={`w-6 h-6 ${statusConfig.text}`} />
                             </div>
 
                             <div className="flex-1 min-w-0">
@@ -959,12 +959,12 @@ function InventoryPageContent() {
                               </div>
                               
                               <div className="flex items-center gap-1 text-xs text-slate-400">
-                                <User className="w-3.5 h-3.5" />
+                                <UserIcon className="w-3.5 h-3.5" />
                                 <span>Solicitado por {transfer.requestedBy.name}</span>
                               </div>
 
                               <div className="flex items-center gap-1 mt-1">
-                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                                 <span className="text-xs text-slate-400">
                                   {new Date(transfer.createdAt).toLocaleDateString('es-PE', {
                                     day: '2-digit',
@@ -977,7 +977,7 @@ function InventoryPageContent() {
                               </div>
                             </div>
 
-                            <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
+                            <ArrowDown01Icon className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
                               isExpanded ? 'rotate-180' : ''
                             }`} />
                           </div>
@@ -997,7 +997,7 @@ function InventoryPageContent() {
                                   disabled={processingTransferId === transfer.id}
                                   className="flex-1 h-11 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white rounded-2xl font-semibold"
                                 >
-                                  <Check className="w-4 h-4 mr-2" />
+                                  <CheckmarkCircle02Icon className="w-4 h-4 mr-2" />
                                   Aprobar
                                 </Button>
                                 <Button
@@ -1009,7 +1009,7 @@ function InventoryPageContent() {
                                   variant="outline"
                                   className="flex-1 h-11 border-red-200 text-red-600 hover:bg-red-50 rounded-2xl font-semibold"
                                 >
-                                  <X className="w-4 h-4 mr-2" />
+                                  <Cancel01Icon className="w-4 h-4 mr-2" />
                                   Rechazar
                                 </Button>
                               </div>
@@ -1038,7 +1038,7 @@ function InventoryPageContent() {
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <Warehouse className="w-3.5 h-3.5 inline-block mr-2" />
+              <WarehouseIcon className="w-3.5 h-3.5 inline-block mr-2" />
               Kardex
             </button>
             <button
@@ -1049,7 +1049,7 @@ function InventoryPageContent() {
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <ArrowRightLeft className="w-3.5 h-3.5 inline-block mr-2" />
+              <ArrowDataTransferHorizontalIcon className="w-3.5 h-3.5 inline-block mr-2" />
               Traslados
               {transfers && transfers.filter(t => t.status === 'PENDING').length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
@@ -1087,7 +1087,7 @@ function InventoryPageContent() {
                     }}
                     className="h-8 text-xs font-bold text-slate-600 hover:text-slate-900 px-2"
                   >
-                    <XCircle className="w-3.5 h-3.5" />
+                    <CancelCircleIcon className="w-3.5 h-3.5" />
                   </Button>
                 )}
               </div>
@@ -1099,10 +1099,10 @@ function InventoryPageContent() {
                   </span>
                   <div className="flex gap-1.5">
                     <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setTransfersPage(p => Math.max(1, p - 1))} disabled={transfersPage === 1}>
-                      <ChevronLeft className="w-4 h-4" />
+                      <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
                     <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setTransfersPage(p => Math.min(transfersTotalPages, p + 1))} disabled={transfersPage === transfersTotalPages}>
-                      <ChevronRight className="w-4 h-4" />
+                      <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
                   </div>
                 </div>
@@ -1116,10 +1116,10 @@ function InventoryPageContent() {
                 </span>
                 <div className="flex gap-1.5">
                   <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setKardexPage(p => Math.max(1, p - 1))} disabled={kardexPage === 1}>
-                    <ChevronLeft className="w-4 h-4" />
+                    <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                   </Button>
                   <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setKardexPage(p => Math.min(kardexTotalPages, p + 1))} disabled={kardexPage === kardexTotalPages}>
-                    <ChevronRight className="w-4 h-4" />
+                    <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                   </Button>
                 </div>
               </div>
@@ -1143,7 +1143,7 @@ function InventoryPageContent() {
                       }`}
                     >
                       <span>Tipo: {typeFilter === 'ALL' ? 'Todos' : movementTypeConfig[typeFilter].label}</span>
-                      <Filter className="w-3.5 h-3.5" />
+                      <FilterIcon className="w-3.5 h-3.5" />
                     </button>
                     
                     {showTypeFilter && (
@@ -1186,7 +1186,7 @@ function InventoryPageContent() {
                       }`}
                     >
                       <span className="truncate">{branchFilter === 'ALL' ? 'Todas' : branchFilter}</span>
-                      <Filter className="w-3.5 h-3.5 flex-shrink-0" />
+                      <FilterIcon className="w-3.5 h-3.5 flex-shrink-0" />
                     </button>
                     
                     {showBranchFilter && (
@@ -1224,7 +1224,7 @@ function InventoryPageContent() {
                   </div>
                 ) : paginatedMovements.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-slate-400 space-y-2 py-8">
-                    <Warehouse className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                    <WarehouseIcon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                     <p className="font-medium text-sm text-slate-500">No se encontraron movimientos</p>
                     <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setTypeFilter('ALL'); setBranchFilter('ALL'); setDateFrom(''); setDateTo(''); setKardexPage(1); }}>
                       Limpiar filtros
@@ -1249,7 +1249,7 @@ function InventoryPageContent() {
                         className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${typeFilter !== 'ALL' || showTypeFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                         onClick={() => setShowTypeFilter(!showTypeFilter)}
                       >
-                        Tipo <Filter className={`w-3.5 h-3.5 ${typeFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                        Tipo <FilterIcon className={`w-3.5 h-3.5 ${typeFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
                       </div>
                       
                       {showTypeFilter && (
@@ -1291,7 +1291,7 @@ function InventoryPageContent() {
                         className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${branchFilter !== 'ALL' || showBranchFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                         onClick={() => setShowBranchFilter(!showBranchFilter)}
                       >
-                        Sucursal <Filter className={`w-3.5 h-3.5 ${branchFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                        Sucursal <FilterIcon className={`w-3.5 h-3.5 ${branchFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
                       </div>
                       
                       {showBranchFilter && (
@@ -1327,7 +1327,7 @@ function InventoryPageContent() {
                 <tr>
                   <td colSpan={9} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
-                      <Warehouse className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                      <WarehouseIcon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                       <p className="font-medium text-sm text-slate-500">No se encontraron movimientos</p>
                       <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setTypeFilter('ALL'); setBranchFilter('ALL'); setDateFrom(''); setDateTo(''); setKardexPage(1); }}>
                         Limpiar filtros
@@ -1344,7 +1344,7 @@ function InventoryPageContent() {
                     <tr key={movement.id} className="hover:bg-slate-50 transition-colors group text-xs">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2 text-slate-600">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-700 text-[11px]">
                               {new Date(movement.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
@@ -1406,13 +1406,13 @@ function InventoryPageContent() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-1.5 text-slate-600">
-                          <Store className="w-3 h-3 text-slate-400" />
+                          <Store01Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
                           <span className="text-xs font-medium">{movement.branch.name}</span>
                         </div>
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-1.5 text-slate-600">
-                          <User className="w-3 h-3 text-slate-400" />
+                          <UserIcon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
                           <span className="text-xs font-medium truncate max-w-[120px]">{movement.user.name}</span>
                         </div>
                       </td>
@@ -1440,7 +1440,7 @@ function InventoryPageContent() {
                     }`}
                   >
                     <span>Estado: {transferStatusFilter === 'ALL' ? 'Todos' : transferStatusFilter === 'PENDING' ? 'Pendientes' : transferStatusFilter === 'APPROVED' ? 'Aprobados' : 'Rechazados'}</span>
-                    <Filter className="w-3.5 h-3.5" />
+                    <FilterIcon className="w-3.5 h-3.5" />
                   </button>
                   
                   {showTransferStatusFilter && (
@@ -1480,7 +1480,7 @@ function InventoryPageContent() {
                   </div>
                 ) : filteredTransfers.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-slate-400 space-y-2 py-8">
-                    <ArrowRightLeft className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                    <ArrowDataTransferHorizontalIcon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                     <p className="font-medium text-sm text-slate-500">No hay traslados</p>
                   </div>
                 ) : (
@@ -1519,16 +1519,16 @@ function InventoryPageContent() {
 
                         {/* Branches */}
                         <div className="flex items-center gap-2">
-                          <Store className="w-4 h-4 text-slate-400" />
+                          <Store01Icon className="w-4 h-4 text-slate-400" />
                           <span className="text-sm font-medium text-slate-700">{transfer.fromBranch.name}</span>
-                          <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400" />
+                          <ArrowDataTransferHorizontalIcon className="w-3.5 h-3.5 text-slate-400" />
                           <span className="text-sm font-medium text-slate-700">{transfer.toBranch.name}</span>
                         </div>
 
                         {/* Products */}
                         <div>
                           <div className="flex items-center gap-2 text-slate-600">
-                            <Package className="w-4 h-4 text-slate-400" />
+                            <PackageIcon className="w-4 h-4 text-slate-400" />
                             <span className="text-sm">{transfer.items.length} producto(s)</span>
                           </div>
                           {isExpanded && (
@@ -1544,7 +1544,7 @@ function InventoryPageContent() {
 
                         {/* Requestor */}
                         <div className="flex items-center gap-2 text-slate-600">
-                          <User className="w-4 h-4 text-slate-400" />
+                          <UserIcon className="w-4 h-4 text-slate-400" />
                           <span className="text-sm">{transfer.requestedBy.name}</span>
                         </div>
 
@@ -1583,7 +1583,7 @@ function InventoryPageContent() {
                               disabled={processingTransferId === transfer.id}
                               className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
                             >
-                              <Check className="w-4 h-4 mr-1.5" />
+                              <CheckmarkCircle02Icon className="w-4 h-4 mr-1.5" />
                               Aprobar
                             </Button>
                             <Button
@@ -1618,7 +1618,7 @@ function InventoryPageContent() {
                               disabled={processingTransferId === transfer.id}
                               className="flex-1 h-10 border-red-300 text-red-600 hover:bg-red-50 text-sm"
                             >
-                              <X className="w-4 h-4 mr-1.5" />
+                              <Cancel01Icon className="w-4 h-4 mr-1.5" />
                               Rechazar
                             </Button>
                           </div>
@@ -1647,7 +1647,7 @@ function InventoryPageContent() {
                         className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${transferStatusFilter !== 'ALL' || showTransferStatusFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                         onClick={() => setShowTransferStatusFilter(!showTransferStatusFilter)}
                       >
-                        Estado <Filter className={`w-3.5 h-3.5 ${transferStatusFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                        Estado <FilterIcon className={`w-3.5 h-3.5 ${transferStatusFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
                       </div>
                       
                       {showTransferStatusFilter && (
@@ -1690,7 +1690,7 @@ function InventoryPageContent() {
                     <tr>
                       <td colSpan={canManage ? 6 : 5} className="py-20 text-center">
                         <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
-                          <ArrowRightLeft className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                          <ArrowDataTransferHorizontalIcon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                           <p className="font-medium text-sm text-slate-500">No hay traslados</p>
                         </div>
                       </td>
@@ -1712,15 +1712,15 @@ function InventoryPageContent() {
                             </td>
                             <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <Store className="w-3.5 h-3.5 text-slate-400" />
+                                <Store01Icon className="w-3.5 h-3.5 text-slate-400" />
                                 <span className="text-slate-700 text-xs">{transfer.fromBranch.name}</span>
-                                <ArrowRightLeft className="w-3 h-3 text-slate-400" />
+                                <ArrowDataTransferHorizontalIcon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
                                 <span className="text-slate-700 text-xs">{transfer.toBranch.name}</span>
                               </div>
                             </td>
                             <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <Package className="w-3.5 h-3.5 text-slate-400" />
+                                <PackageIcon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                                 <span className="text-slate-700 text-xs">{transfer.items.length} producto(s)</span>
                               </div>
                               <details className="mt-1">
@@ -1738,13 +1738,13 @@ function InventoryPageContent() {
                             </td>
                             <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <User className="w-3.5 h-3.5 text-slate-400" />
+                                <UserIcon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                                 <span className="text-slate-700 text-xs">{transfer.requestedBy.name}</span>
                               </div>
                             </td>
                             <td className="px-5 py-3">
                               <div className="flex items-center gap-2 text-slate-600">
-                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                                 <div className="flex flex-col">
                                   <span className="text-slate-700 text-[11px]">
                                     {new Date(transfer.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
@@ -1790,7 +1790,7 @@ function InventoryPageContent() {
                                       disabled={processingTransferId === transfer.id}
                                       className="h-7 px-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
                                     >
-                                      <Check className="w-3 h-3" />
+                                      <CheckmarkCircle02Icon className="w-3 h-3" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -1823,7 +1823,7 @@ function InventoryPageContent() {
                                       disabled={processingTransferId === transfer.id}
                                       className="h-7 px-2 border-red-300 text-red-600 hover:bg-red-50 text-xs"
                                     >
-                                      <X className="w-3 h-3" />
+                                      <Cancel01Icon className="w-3 h-3" />
                                     </Button>
                                   </div>
                                 ) : (

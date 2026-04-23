@@ -4,9 +4,9 @@ import useSWR from 'swr';
 import { useState, useMemo } from 'react';
 import React from 'react';
 import { 
-  Plus, Search, ChevronLeft, ChevronRight, LayoutGrid, 
-  Package, Calendar, User, CheckCircle, Clock, XCircle, Users, Download, Filter, ShoppingCart
-} from 'lucide-react';
+  PlusSignIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, LayoutGridIcon, 
+  PackageIcon, Calendar03Icon, UserIcon, CheckmarkCircle02Icon, Clock01Icon, CancelCircleIcon, UserMultiple02Icon, DownloadCircle02Icon, FilterIcon, ShoppingCart01Icon
+} from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,9 +53,9 @@ interface PurchaseOrder {
 const ITEMS_PER_PAGE = 6;
 
 const statusConfig = {
-  PENDING: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: Clock },
-  RECEIVED: { label: 'Recibida', color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle },
-  CANCELLED: { label: 'Cancelada', color: 'bg-red-100 text-red-700 border-red-300', icon: XCircle },
+  PENDING: { label: "Pendiente", color: "bg-yellow-100 text-yellow-700 border-yellow-300", icon: Clock01Icon },
+  RECEIVED: { label: "Recibida", color: "bg-green-100 text-green-700 border-green-300", icon: CheckmarkCircle02Icon },
+  CANCELLED: { label: "Cancelada", color: "bg-red-100 text-red-700 border-red-300", icon: CancelCircleIcon },
 };
 
 export default function PurchasesPage() {
@@ -386,14 +386,14 @@ export default function PurchasesPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         <div className="flex items-center gap-2.5 shrink-0">
           <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Órdenes de Compra</h1>
-          <ShoppingCart className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+          <ShoppingCart01Icon className="w-6 h-6 text-slate-500" strokeWidth={2} />
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           {/* BUSCADOR ANIMADO */}
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+              <Search01Icon className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={2} />
             </div>
             <Input 
               placeholder="Buscar proveedor, producto..." 
@@ -410,7 +410,7 @@ export default function PurchasesPage() {
                 variant="ghost"
                 className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
               >
-                <Users className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Proveedores</span>
+                <UserMultiple02Icon className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} /> <span className="font-bold">Proveedores</span>
               </Button>
               <div className="relative">
                 <Button 
@@ -418,7 +418,7 @@ export default function PurchasesPage() {
                   variant="ghost"
                   className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"
                 >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> <span className="font-bold">Exportar</span>
+                  <DownloadCircle02Icon className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} /> <span className="font-bold">Exportar</span>
                 </Button>
                 
                 {showExportMenu && (
@@ -429,14 +429,14 @@ export default function PurchasesPage() {
                         onClick={exportToExcel}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <DownloadCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
                         Excel
                       </button>
                       <button
                         onClick={exportToPDF}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <DownloadCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
                         PDF
                       </button>
                     </div>
@@ -447,7 +447,7 @@ export default function PurchasesPage() {
                 onClick={() => setIsModalOpen(true)}
                 className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0"
               >
-                <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nueva Orden</span>
+                <PlusSignIcon className="w-4 h-4 mr-1.5" strokeWidth={1.5} /> <span className="font-bold">Nueva Orden</span>
               </Button>
             </>
           )}
@@ -471,10 +471,10 @@ export default function PurchasesPage() {
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                {status === 'ALL' && <><LayoutGrid className="w-3.5 h-3.5" /> Todas</>}
-                {status === 'PENDING' && <><Clock className="w-3.5 h-3.5" /> Pendientes</>}
-                {status === 'RECEIVED' && <><CheckCircle className="w-3.5 h-3.5" /> Recibidas</>}
-                {status === 'CANCELLED' && <><XCircle className="w-3.5 h-3.5" /> Canceladas</>}
+                {status === 'ALL' && <><LayoutGridIcon className="w-3.5 h-3.5" strokeWidth={1.5} /> Todas</>}
+                {status === 'PENDING' && <><Clock01Icon className="w-3.5 h-3.5" strokeWidth={1.5} /> Pendientes</>}
+                {status === 'RECEIVED' && <><CheckmarkCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} /> Recibidas</>}
+                {status === 'CANCELLED' && <><CancelCircleIcon className="w-3.5 h-3.5" strokeWidth={1.5} /> Canceladas</>}
               </button>
             ))}
           </div>
@@ -487,10 +487,10 @@ export default function PurchasesPage() {
               </span>
               <div className="flex gap-1.5">
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft className="w-4 h-4" />
+                  <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                  <ChevronRight className="w-4 h-4" />
+                  <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>
@@ -508,7 +508,7 @@ export default function PurchasesPage() {
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${statusFilter !== 'ALL' || showStatusFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => setShowStatusFilter(!showStatusFilter)}
                   >
-                    Estado <Filter className={`w-3.5 h-3.5 ${statusFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                    Estado <FilterIcon className={`w-3.5 h-3.5 ${statusFilter !== "ALL" ? "text-slate-900" : ""}`} strokeWidth={1.5} />
                   </div>
                   
                   {showStatusFilter && (
@@ -536,7 +536,7 @@ export default function PurchasesPage() {
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${supplierFilter !== 'ALL' || showSupplierFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => setShowSupplierFilter(!showSupplierFilter)}
                   >
-                    Proveedor <Filter className={`w-3.5 h-3.5 ${supplierFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                    Proveedor <FilterIcon className={`w-3.5 h-3.5 ${supplierFilter !== "ALL" ? "text-slate-900" : ""}`} strokeWidth={1.5} />
                   </div>
                   
                   {showSupplierFilter && (
@@ -576,7 +576,7 @@ export default function PurchasesPage() {
                 <tr>
                   <td colSpan={7} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
-                      <ShoppingCart className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                      <ShoppingCart01Icon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                       <p className="font-medium text-sm text-slate-500">No se encontraron órdenes de compra</p>
                       <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setStatusFilter('ALL'); setSupplierFilter('ALL'); setDateFrom(''); setDateTo(''); setCurrentPage(1); }}>
                         Limpiar filtros
@@ -604,7 +604,7 @@ export default function PurchasesPage() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2 text-slate-600">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <Calendar03Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-700 text-[11px]">
                               {new Date(purchase.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
@@ -617,7 +617,7 @@ export default function PurchasesPage() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-slate-400" />
+                          <PackageIcon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                           <span className="text-slate-700 text-xs">{purchase.items.length} producto(s)</span>
                         </div>
                       </td>
@@ -626,7 +626,7 @@ export default function PurchasesPage() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <UserIcon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                           <span className="text-slate-700 text-xs truncate max-w-[120px]">{purchase.createdBy?.name || '-'}</span>
                         </div>
                       </td>
@@ -792,14 +792,14 @@ export default function PurchasesPage() {
                     onClick={() => handleCancel(selectedPurchase.id)}
                     className="h-10 text-xs font-bold text-red-600 hover:bg-red-50 border-red-200"
                   >
-                    <XCircle className="w-4 h-4 mr-1.5" />
+                    <CancelCircleIcon className="w-4 h-4 mr-1.5" />
                     Cancelar Orden
                   </Button>
                   <Button 
                     onClick={openBranchSelectModal}
                     className="h-10 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    <CheckCircle className="w-4 h-4 mr-1.5" />
+                    <CheckmarkCircle02Icon className="w-4 h-4 mr-1.5" />
                     Marcar como Recibida
                   </Button>
                 </div>
@@ -904,12 +904,12 @@ export default function PurchasesPage() {
                         </div>
                         {isValid ? (
                           <Badge className="text-[9px] font-black px-2 py-0.5 h-5 bg-green-100 text-green-700 border-green-300">
-                            <CheckCircle className="w-2.5 h-2.5 mr-1" />
+                            <CheckmarkCircle02Icon className="w-2.5 h-2.5 mr-1" />
                             Completo
                           </Badge>
                         ) : (
                           <Badge className="text-[9px] font-black px-2 py-0.5 h-5 bg-red-100 text-red-700 border-red-300">
-                            <XCircle className="w-2.5 h-2.5 mr-1" />
+                            <CancelCircleIcon className="w-2.5 h-2.5 mr-1" />
                             Incompleto
                           </Badge>
                         )}
@@ -935,7 +935,7 @@ export default function PurchasesPage() {
                 onClick={handleReceive}
                 className="h-10 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                <CheckCircle className="w-4 h-4 mr-1.5" />
+                <CheckmarkCircle02Icon className="w-4 h-4 mr-1.5" />
                 Confirmar Recepción
               </Button>
             </div>

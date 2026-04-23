@@ -3,8 +3,8 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  Plus, MoreVertical, Search, ChevronLeft, ChevronRight, UserCog, PowerOff, Trash2, Building, Store, Filter, Check, Edit, Shield
-} from 'lucide-react';
+  PlusSignIcon, MoreVerticalIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, UserSetting01Icon, PowerOffIcon, Delete02Icon, Building02Icon, Store01Icon, FilterIcon, CheckmarkCircle02Icon, Edit02Icon, Shield01Icon
+} from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -186,7 +186,7 @@ export default function UsersPage() {
           {/* BUSCADOR ANIMADO EXPANDIBLE */}
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+              <Search01Icon className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={2} />
             </div>
             <Input 
               placeholder="Buscar por nombre o correo..." 
@@ -197,7 +197,7 @@ export default function UsersPage() {
           </div>
 
           <Button onClick={handleOpenNew} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
-            <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Nuevo Usuario</span>
+            <PlusSignIcon className="w-4 h-4 mr-1.5" strokeWidth={1.5} /> <span className="font-bold">Nuevo Usuario</span>
           </Button>
         </div>
       </div>
@@ -248,10 +248,10 @@ export default function UsersPage() {
               </span>
               <div className="flex gap-1.5">
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft className="w-4 h-4" />
+                  <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                  <ChevronRight className="w-4 h-4" />
+                  <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>
@@ -279,19 +279,19 @@ export default function UsersPage() {
                     className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${statusFilter !== 'ALL' || showStatusFilter ? 'text-slate-900 bg-slate-100' : ''}`}
                     onClick={() => setShowStatusFilter(!showStatusFilter)}
                   >
-                    Estado <Filter className={`w-3.5 h-3.5 ${statusFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
+                    Estado <FilterIcon className={`w-3.5 h-3.5 ${statusFilter !== "ALL" ? "text-slate-900" : ""}`} strokeWidth={1.5} />
                   </div>
 
                   {showStatusFilter && (
                     <div className="absolute top-10 left-3 w-[160px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
                       <button onClick={() => {setStatusFilter('ALL'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${statusFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>
-                        Todos {statusFilter === 'ALL' && <Check className="w-3.5 h-3.5" />}
+                        Todos {statusFilter === "ALL" && <CheckmarkCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} />}
                       </button>
                       <button onClick={() => {setStatusFilter('ACTIVE'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${statusFilter === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' : 'text-emerald-600 hover:bg-emerald-50/50'}`}>
-                        Activos {statusFilter === 'ACTIVE' && <Check className="w-3.5 h-3.5" />}
+                        Activos {statusFilter === "ACTIVE" && <CheckmarkCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} />}
                       </button>
                       <button onClick={() => {setStatusFilter('INACTIVE'); setShowStatusFilter(false); setCurrentPage(1);}} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${statusFilter === 'INACTIVE' ? 'bg-red-50 text-red-700' : 'text-red-600 hover:bg-red-50/50'}`}>
-                        Suspendidos {statusFilter === 'INACTIVE' && <Check className="w-3.5 h-3.5" />}
+                        Suspendidos {statusFilter === "INACTIVE" && <CheckmarkCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} />}
                       </button>
                     </div>
                   )}
@@ -304,7 +304,7 @@ export default function UsersPage() {
                 <tr>
                   <td colSpan={5} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
-                      <UserCog className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                      <UserSetting01Icon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                       <p className="font-medium text-sm text-slate-500">No se encontraron usuarios.</p>
                       <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setRoleFilter('ALL'); setStatusFilter('ALL'); }}>Limpiar filtros</Button>
                     </div>
@@ -350,13 +350,13 @@ export default function UsersPage() {
                             {userBranchData.logoUrl ? (
                               <img src={userBranchData.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover bg-white" alt=""/>
                             ) : (
-                              <Store className="w-3 h-3 text-slate-500" />
+                              <Store01Icon className="w-3 h-3 text-slate-500" strokeWidth={1.5} />
                             )}
                             {userBranchData.name}
                           </span>
                         ) : u.business ? (
                           <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">
-                            <Building className="w-3 h-3 text-slate-400" /> {u.business.name}
+                            <Building02Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} /> {u.business.name}
                           </span>
                         ) : (
                           <span className="text-[10px] italic text-slate-400">Sin Asignar</span>
@@ -379,7 +379,7 @@ export default function UsersPage() {
                             onClick={(e) => handleOpenBasicEdit(u, e)}
                             title="Editar Datos Básicos"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit02Icon className="w-4 h-4" strokeWidth={1.5} />
                           </Button>
                           
                           <Button 
@@ -389,7 +389,7 @@ export default function UsersPage() {
                             onClick={(e) => handleOpenPermissions(u, e)}
                             title="Gestionar Permisos"
                           >
-                            <Shield className="w-4 h-4" />
+                            <Shield01Icon className="w-4 h-4" strokeWidth={1.5} />
                           </Button>
 
                           {/* Legacy edit button for compatibility */}
@@ -400,11 +400,11 @@ export default function UsersPage() {
                             onClick={(e) => handleOpenEdit(u, e)}
                             title="Editar (Completo)"
                           >
-                            <UserCog className="w-4 h-4" />
+                            <UserSetting01Icon className="w-4 h-4" strokeWidth={1.5} />
                           </Button>
                           
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(isDropdownOpen ? null : u.id); }}>
-                            <MoreVertical className="w-4 h-4" />
+                            <MoreVerticalIcon className="w-4 h-4" strokeWidth={1.5} />
                           </Button>
 
                           {/* Menú de Opciones Flotante */}
@@ -413,11 +413,11 @@ export default function UsersPage() {
                               <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(null); }} />
                               <div className="absolute right-8 top-10 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95">
                                 <button onClick={(e) => handleToggleStatus(u, e)} className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-bold transition-colors">
-                                  <PowerOff className={`w-4 h-4 shrink-0 ${u.isActive ? 'text-amber-500' : 'text-emerald-500'}`} /> {u.isActive ? 'Suspender Acceso' : 'Restaurar Acceso'}
+                                  <PowerOffIcon className={`w-4 h-4 shrink-0 ${u.isActive ? "text-amber-500" : "text-emerald-500"}`} strokeWidth={1.5} /> {u.isActive ? 'Suspender Acceso' : 'Restaurar Acceso'}
                                 </button>
                                 <div className="h-px bg-slate-100 my-1 mx-2" />
                                 <button onClick={(e) => handleDelete(u.id, e)} className="w-full text-left px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold transition-colors">
-                                  <Trash2 className="w-4 h-4 shrink-0" /> Eliminar Usuario
+                                  <Delete02Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} /> Eliminar Usuario
                                 </button>
                               </div>
                             </>

@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
+import { Upload02Icon, DownloadCircle02Icon, File02Icon, Loading02Icon, CheckmarkCircle02Icon, CancelCircleIcon, AlertCircleIcon } from 'hugeicons-react';
 import * as XLSX from 'xlsx';
 
 interface ImportProductsModalProps {
@@ -292,7 +292,7 @@ export function ImportProductsModal({ isOpen, onClose, onSuccess, categories, su
         
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-emerald-600 p-2.5 rounded-xl shadow-sm shrink-0">
-            <FileText className="w-5 h-5 text-white" />
+            <File02Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col items-start text-left flex-1">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -309,7 +309,7 @@ export function ImportProductsModal({ isOpen, onClose, onSuccess, categories, su
           {/* Descargar Plantilla */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <AlertCircleIcon className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" strokeWidth={1.5} />
               <div className="flex-1">
                 <h3 className="text-sm font-bold text-blue-900 mb-1">Paso 1: Descarga la plantilla</h3>
                 <p className="text-xs text-blue-700 mb-3">
@@ -320,7 +320,7 @@ export function ImportProductsModal({ isOpen, onClose, onSuccess, categories, su
                   variant="outline"
                   className="h-9 text-xs font-bold bg-white hover:bg-blue-50 text-blue-700 border-blue-300"
                 >
-                  <Download className="w-4 h-4 mr-2" />
+                  <DownloadCircle02Icon className="w-4 h-4 mr-2" strokeWidth={1.5} />
                   Descargar Plantilla
                 </Button>
               </div>
@@ -351,13 +351,13 @@ export function ImportProductsModal({ isOpen, onClose, onSuccess, categories, su
               <div className="flex flex-col items-center justify-center text-center">
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-12 h-12 text-emerald-600 animate-spin mb-3" />
+                    <Loading02Icon className="w-12 h-12 text-emerald-600 animate-spin mb-3" />
                     <p className="text-sm font-bold text-slate-700">Procesando archivo...</p>
                     <p className="text-xs text-slate-500 mt-1">Esto puede tomar unos momentos</p>
                   </>
                 ) : (
                   <>
-                    <Upload className="w-12 h-12 text-slate-400 mb-3" />
+                    <Upload02Icon className="w-12 h-12 text-slate-400 mb-3" strokeWidth={1.5} />
                     <p className="text-sm font-bold text-slate-700 mb-1">
                       Arrastra tu archivo aquí o haz clic para seleccionar
                     </p>
@@ -377,7 +377,7 @@ export function ImportProductsModal({ isOpen, onClose, onSuccess, categories, su
               
               {result.success > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 shrink-0 mt-0.5" strokeWidth={1.5} />
                   <div>
                     <p className="text-sm font-bold text-green-900">
                       {result.success} producto(s) importado(s) correctamente
@@ -389,7 +389,7 @@ export function ImportProductsModal({ isOpen, onClose, onSuccess, categories, su
               {result.errors.length > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                   <div className="flex items-start gap-3 mb-3">
-                    <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <CancelCircleIcon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" strokeWidth={1.5} />
                     <div>
                       <p className="text-sm font-bold text-red-900 mb-1">
                         {result.errors.length} error(es) encontrado(s)

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Users, Trash2, Edit, PowerOff } from 'lucide-react';
+import { Loading02Icon, UserMultiple02Icon, Delete02Icon, Edit02Icon, ToggleOffIcon } from 'hugeicons-react';
 
 interface Supplier {
   id: string;
@@ -166,7 +166,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
         
         <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <Users className="w-5 h-5 text-slate-700" />
+            <UserMultiple02Icon size={20} strokeWidth={2} className="text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left flex-1">
             <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
@@ -304,7 +304,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                   disabled={isLoading}
                   className="flex-1 h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
                 >
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {isLoading && <Loading02Icon size={16} strokeWidth={2} className="mr-2 animate-spin" />}
                   {editingSupplier ? 'Actualizar' : 'Crear'}
                 </Button>
               </div>
@@ -361,7 +361,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                       }`}
                     >
                       <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center shrink-0">
-                        <Users className="w-5 h-5 text-slate-400" />
+                        <UserMultiple02Icon size={20} strokeWidth={2} className="text-slate-400" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
@@ -389,7 +389,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                               onClick={() => setEditingSupplier(supplier)}
                               className="h-8 w-8 p-0 hover:bg-slate-200"
                             >
-                              <Edit className="w-3.5 h-3.5" />
+                              <Edit02Icon size={14} strokeWidth={2} />
                             </Button>
                             <Button
                               variant="ghost"
@@ -398,7 +398,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                               className={`h-8 w-8 p-0 ${hasRelations ? 'hover:bg-amber-100 text-amber-600' : 'hover:bg-red-100 text-red-600'}`}
                               title={hasRelations ? 'Desactivar proveedor' : 'Eliminar proveedor'}
                             >
-                              {hasRelations ? <PowerOff className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              {hasRelations ? <ToggleOffIcon size={14} strokeWidth={2} /> : <Delete02Icon size={14} strokeWidth={2} />}
                             </Button>
                           </>
                         ) : (

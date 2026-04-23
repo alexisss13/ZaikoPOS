@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { DollarSign, Lock, AlertCircle } from 'lucide-react';
+import { DollarCircleIcon, LockedIcon, AlertCircleIcon } from 'hugeicons-react';
 
 // Interfaz estricta para los datos que vienen del backend
 interface SessionData {
@@ -91,13 +91,13 @@ export function CashManager({ branchId, currentSession }: CashManagerProps) {
       <Card className="w-full max-w-md mx-auto mt-10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" /> Apertura de Caja
+            <DollarCircleIcon size={20} strokeWidth={2} /> Apertura de Caja
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircleIcon size={16} strokeWidth={2} />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -134,7 +134,7 @@ export function CashManager({ branchId, currentSession }: CashManagerProps) {
       <CardContent className="space-y-6">
         {error && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircleIcon size={16} strokeWidth={2} />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -153,7 +153,7 @@ export function CashManager({ branchId, currentSession }: CashManagerProps) {
 
         <div className="border-t pt-4">
           <h3 className="font-medium mb-3 flex items-center gap-2">
-            <Lock className="w-4 h-4" /> Arqueo de Cierre
+            <LockedIcon size={16} strokeWidth={2} /> Arqueo de Cierre
           </h3>
           <div className="space-y-2">
             <label className="text-sm">Efectivo en Cajón (Contado)</label>

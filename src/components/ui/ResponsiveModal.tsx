@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { XIcon } from 'lucide-react';
+import { Cancel01Icon } from 'hugeicons-react';
 import { cn } from '@/lib/utils';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -146,7 +146,7 @@ export function ResponsiveModal({
                     !title && 'ml-auto' // Right-align if no title
                   )}
                 >
-                  <XIcon className="h-5 w-5" />
+                  <Cancel01Icon size={20} strokeWidth={2} />
                   <span className="sr-only">Cerrar</span>
                 </DialogPrimitive.Close>
               )}

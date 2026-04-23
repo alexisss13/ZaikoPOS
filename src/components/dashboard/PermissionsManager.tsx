@@ -8,9 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
-  Loader2, ShieldCheck, PackageOpen, Tag, ShieldAlert, 
-  Search, Info, ChevronDown, Eye, Save, X, AlertTriangle
-} from 'lucide-react';
+  Loading02Icon, SecurityCheckIcon, PackageOpenIcon, Tag01Icon, Shield01Icon, 
+  Search01Icon, InformationCircleIcon, ArrowDown01Icon, EyeIcon, FloppyDiskIcon, Cancel01Icon, Alert01Icon
+} from 'hugeicons-react';
 import { 
   BasicUserData, 
   PermissionConfig, 
@@ -133,7 +133,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
               className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-slate-200 text-slate-800' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'}`}
               title="Ver más información"
             >
-              <Info className="w-3.5 h-3.5" />
+              <InformationCircleIcon className="w-3.5 h-3.5" strokeWidth={1.5} />
             </button>
             <div className="flex-1">
               <Label className={`text-xs sm:text-sm font-semibold cursor-pointer ${textColors[type]} flex items-center gap-2 leading-tight`}>
@@ -142,7 +142,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" title="Modificado" />
                 )}
                 {type === 'critical' && (
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                  <Alert01Icon className="w-3.5 h-3.5 text-red-500" strokeWidth={1.5} />
                 )}
               </Label>
             </div>
@@ -167,9 +167,9 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
     permissions: PermissionConfig[] 
   }) => {
     const icons = {
-      inventory: PackageOpen,
-      pos: Tag,
-      privacy: ShieldAlert
+      inventory: PackageOpenIcon,
+      pos: Tag01Icon,
+      privacy: Shield01Icon
     };
     const Icon = icons[category];
     
@@ -184,7 +184,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
             <Icon className={`w-4 h-4 ${openSection === category ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} />
             {PERMISSION_CATEGORIES[category]}
           </div>
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${openSection === category ? 'rotate-180' : ''}`} />
+          <ArrowDown01Icon className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${openSection === category ? 'rotate-180' : ''}`} strokeWidth={1.5} />
         </button>
         <div className={`grid transition-all duration-300 ease-in-out ${openSection === category ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
           <div className="overflow-hidden">
@@ -211,7 +211,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
         <DialogContent className="w-[95vw] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5" />
+              <EyeIcon className="w-5 h-5" strokeWidth={1.5} />
               Vista Previa de Cambios
             </DialogTitle>
             <DialogDescription>
@@ -260,7 +260,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
           {/* Header */}
           <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
             <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-              <ShieldCheck className="w-5 h-5 text-slate-700" />
+              <SecurityCheckIcon className="w-5 h-5 text-slate-700" strokeWidth={1.5} />
             </div>
             <div className="flex flex-col items-start text-left flex-1">
               <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -277,7 +277,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
             {/* Search and Controls */}
             <div className="mb-6 space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search01Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
                 <Input
                   placeholder="Buscar permisos..."
                   value={searchTerm}
@@ -305,7 +305,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
                     onClick={() => setShowPreview(true)}
                     className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
                   >
-                    <Eye className="w-3 h-3 mr-1" />
+                  <EyeIcon className="w-3 h-3 mr-1" strokeWidth={1.5} />
                     Vista Previa ({changes.length})
                   </Button>
                 )}
@@ -324,7 +324,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
               
               {filteredPermissions.length === 0 && searchTerm && (
                 <div className="text-center py-12">
-                  <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <Search01Icon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                   <p className="text-slate-500 font-medium">No se encontraron permisos</p>
                   <p className="text-xs text-slate-400 mt-1">Intenta con otros términos de búsqueda</p>
                 </div>
@@ -335,7 +335,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
             {userToEdit.role === 'SUPER_ADMIN' && (
               <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <Alert01Icon className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" strokeWidth={1.5} />
                   <div>
                     <h4 className="text-sm font-bold text-amber-900 mb-1">Privilegios Absolutos</h4>
                     <p className="text-xs text-amber-700 leading-relaxed">
@@ -376,8 +376,8 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
                 disabled={isLoading || !hasChanges}
                 className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 shadow-md rounded-xl transition-all"
               >
-                {isLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                <Save className="w-4 h-4 mr-2" />
+                {isLoading && <Loading02Icon className="w-4 h-4 animate-spin mr-2" />}
+                <FloppyDiskIcon className="w-4 h-4 mr-2" strokeWidth={1.5} />
                 Guardar Cambios
               </Button>
             </div>

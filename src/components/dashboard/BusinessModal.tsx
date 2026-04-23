@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Building2, Users, Store, ReceiptText, ChevronDown } from 'lucide-react';
+import { Loading02Icon, Building02Icon, UserMultiple02Icon, Store01Icon, Note01Icon, ArrowDown01Icon } from 'hugeicons-react';
 
 export interface BusinessData {
   id?: string;
@@ -130,7 +130,7 @@ export function BusinessModal({ isOpen, onClose, onSuccess, businessToEdit }: Bu
         {/* HEADER PLANO */}
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <Building2 className="w-5 h-5 text-slate-700" />
+            <Building02Icon size={20} strokeWidth={2} className="text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -150,7 +150,7 @@ export function BusinessModal({ isOpen, onClose, onSuccess, businessToEdit }: Bu
             {/* INFORMACIÓN GENERAL */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Building2 className="w-4 h-4 text-slate-400" /> Información del Negocio
+                <Building02Icon size={16} strokeWidth={2} className="text-slate-400" /> Información del Negocio
               </h3>
               
               <div className="space-y-4">
@@ -203,9 +203,9 @@ export function BusinessModal({ isOpen, onClose, onSuccess, businessToEdit }: Bu
                   className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${showOwnerSection ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}
                 >
                   <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide">
-                    <Users className={`w-4 h-4 ${showOwnerSection ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> Credenciales del Dueño
+                    <UserMultiple02Icon size={16} strokeWidth={2.5} className={`${showOwnerSection ? 'text-slate-900' : 'text-slate-400'}`} /> Credenciales del Dueño
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showOwnerSection ? 'rotate-180' : ''}`} />
+                  <ArrowDown01Icon size={16} strokeWidth={2} className={`text-slate-400 transition-transform duration-300 ${showOwnerSection ? 'rotate-180' : ''}`} />
                 </button>
                 
                 <div className={`grid transition-all duration-300 ease-in-out ${showOwnerSection ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
@@ -259,7 +259,7 @@ export function BusinessModal({ isOpen, onClose, onSuccess, businessToEdit }: Bu
             {/* LÍMITES DE LICENCIA */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Store className="w-4 h-4 text-slate-400" /> Límites de Licencia SaaS
+                <Store01Icon size={16} strokeWidth={2} className="text-slate-400" /> Límites de Licencia SaaS
               </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -327,7 +327,7 @@ export function BusinessModal({ isOpen, onClose, onSuccess, businessToEdit }: Bu
             disabled={isLoading} 
             className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all"
           >
-            {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            {isLoading && <Loading02Icon size={14} strokeWidth={2} className="mr-1.5 animate-spin" />}
             {businessToEdit ? 'Guardar Cambios' : 'Crear Negocio'}
           </Button>
         </div>

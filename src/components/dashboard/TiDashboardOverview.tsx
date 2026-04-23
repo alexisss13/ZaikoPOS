@@ -2,8 +2,8 @@
 
 import useSWR from 'swr';
 import { 
-  Building2, Store, Users, Package, AlertTriangle, XCircle, ShieldCheck, Activity 
-} from 'lucide-react';
+  Building02Icon, Store01Icon, UserMultiple02Icon, PackageIcon, Alert01Icon, CancelCircleIcon, SecurityCheckIcon, Activity01Icon
+} from 'hugeicons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -42,9 +42,9 @@ interface TiDashboardData {
 }
 
 const SEVERITY_CONFIG: Record<string, { color: string; bg: string; icon: React.ElementType; label: string }> = {
-  SYSTEM_ERROR: { color: 'text-red-600', bg: 'bg-red-50', icon: XCircle, label: 'Error de Sistema' },
-  DELETE_USER: { color: 'text-red-600', bg: 'bg-red-50', icon: XCircle, label: 'Usuario Borrado' },
-  VOID_SALE: { color: 'text-orange-600', bg: 'bg-orange-50', icon: AlertTriangle, label: 'Venta Anulada' },
+  SYSTEM_ERROR: { color: 'text-red-600', bg: 'bg-red-50', icon: CancelCircleIcon, label: 'Error de Sistema' },
+  DELETE_USER: { color: 'text-red-600', bg: 'bg-red-50', icon: CancelCircleIcon, label: 'Usuario Borrado' },
+  VOID_SALE: { color: 'text-orange-600', bg: 'bg-orange-50', icon: Alert01Icon, label: 'Venta Anulada' },
 };
 
 export default function TiDashboardOverview() {
@@ -81,7 +81,7 @@ export default function TiDashboardOverview() {
                 <h3 className="text-3xl font-bold text-slate-900">{data?.metrics.totalBusinesses || 0}</h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                <Building2 className="w-6 h-6" />
+              <Building02Icon className="w-6 h-6" strokeWidth={1.5} />
               </div>
             </div>
           </CardContent>
@@ -95,7 +95,7 @@ export default function TiDashboardOverview() {
                 <h3 className="text-3xl font-bold text-slate-900">{data?.metrics.totalBranches || 0}</h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <Store className="w-6 h-6" />
+                <Store01Icon className="w-6 h-6" strokeWidth={1.5} />
               </div>
             </div>
           </CardContent>
@@ -109,7 +109,7 @@ export default function TiDashboardOverview() {
                 <h3 className="text-3xl font-bold text-slate-900">{data?.metrics.totalUsers || 0}</h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                <Users className="w-6 h-6" />
+                <UserMultiple02Icon className="w-6 h-6" strokeWidth={1.5} />
               </div>
             </div>
           </CardContent>
@@ -123,7 +123,7 @@ export default function TiDashboardOverview() {
                 <h3 className="text-3xl font-bold text-slate-900">{data?.metrics.totalProducts || 0}</h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600">
-                <Package className="w-6 h-6" />
+                <PackageIcon className="w-6 h-6" strokeWidth={1.5} />
               </div>
             </div>
           </CardContent>
@@ -137,7 +137,7 @@ export default function TiDashboardOverview() {
         <Card className="border-none shadow-sm">
           <CardHeader className="border-b pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800">
-              <Activity className="w-5 h-5 text-indigo-500" /> Últimos Inquilinos (SaaS)
+              <Activity01Icon className="w-5 h-5 text-indigo-500" strokeWidth={1.5} /> Últimos Inquilinos (SaaS)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -170,20 +170,20 @@ export default function TiDashboardOverview() {
         <Card className="border-none shadow-sm">
           <CardHeader className="border-b pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800">
-              <ShieldCheck className="w-5 h-5 text-red-500" /> Radar de Alertas (Últimas)
+              <SecurityCheckIcon className="w-5 h-5 text-red-500" strokeWidth={1.5} /> Radar de Alertas (Últimas)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
               {data?.recentLogs.length === 0 ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center">
-                  <ShieldCheck className="w-10 h-10 text-emerald-400 mb-2" />
+                  <SecurityCheckIcon className="w-10 h-10 text-emerald-400 mb-2" strokeWidth={1.5} />
                   <p className="text-slate-500 text-sm font-medium">El sistema está limpio.</p>
                   <p className="text-xs text-slate-400">No hay alertas críticas ni advertencias recientes.</p>
                 </div>
               ) : (
                 data?.recentLogs.map((log: RecentLog) => {
-                  const config = SEVERITY_CONFIG[log.action] || { color: 'text-slate-500', bg: 'bg-slate-100', icon: ShieldCheck, label: 'Alerta' };
+                  const config = SEVERITY_CONFIG[log.action] || { color: 'text-slate-500', bg: 'bg-slate-100', icon: SecurityCheckIcon, label: 'Alerta' };
                   const Icon = config.icon;
                   return (
                     <div key={log.id} className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">

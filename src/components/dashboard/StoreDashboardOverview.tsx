@@ -3,10 +3,10 @@
 import useSWR from 'swr';
 import { useState, useMemo } from 'react';
 import { 
-  Store, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, 
-  Users, AlertTriangle, Loader2, Calendar, ArrowUpRight, ArrowDownRight,
-  Banknote, CreditCard, Wallet, BarChart3, Filter, ChevronDown
-} from 'lucide-react';
+  Store01Icon, ChartUpIcon, MoneyExchange03Icon, ChartDownIcon, DollarCircleIcon, ShoppingCart01Icon, PackageIcon, 
+  Alert01Icon, ArrowUpRight01Icon,BarChartIcon,
+  Money01Icon, CreditCardIcon, Wallet02Icon, ArrowDown01Icon
+} from 'hugeicons-react';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -95,11 +95,11 @@ export default function StoreDashboardOverview() {
   }
 
   const paymentMethodIcons: Record<string, any> = {
-    CASH: Banknote,
-    CARD: CreditCard,
-    YAPE: Wallet,
-    PLIN: Wallet,
-    TRANSFER: ArrowUpRight,
+    CASH: Money01Icon,
+    CARD: CreditCardIcon,
+    YAPE: Wallet02Icon,
+    PLIN: MoneyExchange03Icon,
+    TRANSFER: ArrowUpRight01Icon,
   };
 
   return (
@@ -109,7 +109,7 @@ export default function StoreDashboardOverview() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Dashboard</h1>
-          <BarChart3 className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+          <BarChartIcon className="w-6 h-6 text-slate-500" strokeWidth={2} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -154,11 +154,11 @@ export default function StoreDashboardOverview() {
                 onClick={() => setShowBranchFilter(!showBranchFilter)}
                 className="h-9 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-2"
               >
-                <Store className="w-3.5 h-3.5 text-slate-400" />
+                <Store01Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                 <span className="text-slate-700">
                   {selectedBranch === 'ALL' ? 'Todas las sucursales' : branches.find((b: any) => b.id === selectedBranch)?.name}
                 </span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ArrowDown01Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} />
               </button>
               
               {showBranchFilter && (
@@ -199,7 +199,7 @@ export default function StoreDashboardOverview() {
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
+              <DollarCircleIcon className="w-5 h-5 text-emerald-600" strokeWidth={1.5} />
             </div>
             {stats.todayVsYesterday && (
               <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full ${
@@ -208,9 +208,9 @@ export default function StoreDashboardOverview() {
                   : 'bg-red-50 text-red-700'
               }`}>
                 {stats.todayVsYesterday.revenueChange >= 0 ? (
-                  <TrendingUp className="w-3 h-3" />
+                  <ChartUpIcon className="w-3 h-3" strokeWidth={1.5} />
                 ) : (
-                  <TrendingDown className="w-3 h-3" />
+                  <ChartDownIcon className="w-3 h-3" strokeWidth={1.5} />
                 )}
                 {Math.abs(stats.todayVsYesterday.revenueChange).toFixed(1)}%
               </div>
@@ -225,7 +225,7 @@ export default function StoreDashboardOverview() {
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-blue-600" />
+              <ShoppingCart01Icon className="w-5 h-5 text-blue-600" strokeWidth={1.5} />
             </div>
             {stats.todayVsYesterday && (
               <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full ${
@@ -234,9 +234,9 @@ export default function StoreDashboardOverview() {
                   : 'bg-red-50 text-red-700'
               }`}>
                 {stats.todayVsYesterday.ordersChange >= 0 ? (
-                  <TrendingUp className="w-3 h-3" />
+                  <ChartUpIcon className="w-3 h-3" strokeWidth={1.5} />
                 ) : (
-                  <TrendingDown className="w-3 h-3" />
+                  <ChartDownIcon className="w-3 h-3" strokeWidth={1.5} />
                 )}
                 {Math.abs(stats.todayVsYesterday.ordersChange).toFixed(1)}%
               </div>
@@ -251,7 +251,7 @@ export default function StoreDashboardOverview() {
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-purple-600" />
+              <BarChartIcon className="w-5 h-5 text-purple-600" strokeWidth={1.5} />
             </div>
           </div>
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ticket Promedio</p>
@@ -263,7 +263,7 @@ export default function StoreDashboardOverview() {
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-orange-600" />
+              <PackageIcon className="w-5 h-5 text-orange-600" strokeWidth={1.5} />
             </div>
           </div>
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Productos Vendidos</p>
@@ -286,7 +286,7 @@ export default function StoreDashboardOverview() {
                   <div key={branch.branchId} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center">
-                        <Store className="w-4 h-4 text-slate-600" />
+                        <Store01Icon className="w-4 h-4 text-slate-600" strokeWidth={1.5} />
                       </div>
                       <div>
                         <p className="text-xs font-medium text-slate-900">{branch.branchName}</p>
@@ -339,7 +339,7 @@ export default function StoreDashboardOverview() {
             <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Métodos de Pago</h3>
             <div className="space-y-2">
               {stats.salesByPaymentMethod && Object.entries(stats.salesByPaymentMethod).map(([method, amount]) => {
-                const Icon = paymentMethodIcons[method] || Wallet;
+                const Icon = paymentMethodIcons[method] || MoneyExchange03Icon;
                 const percentage = (amount / stats.totalRevenue) * 100;
                 return (
                   <div key={method} className="space-y-1.5">
@@ -376,7 +376,7 @@ export default function StoreDashboardOverview() {
               {stats.lowStockProducts && stats.lowStockProducts.length > 0 ? (
                 stats.lowStockProducts.map((product) => (
                   <div key={product.id} className="flex items-start gap-2 p-2 bg-red-50 border border-red-100 rounded-lg">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
+                    <Alert01Icon className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" strokeWidth={1.5} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-slate-900 truncate">{product.name}</p>
                       <p className="text-[10px] text-slate-600">
@@ -390,7 +390,7 @@ export default function StoreDashboardOverview() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                  <Package className="w-8 h-8 mb-2 opacity-50" />
+                  <PackageIcon className="w-8 h-8 mb-2 opacity-50" strokeWidth={1.5} />
                   <p className="text-xs">Stock en buen estado</p>
                 </div>
               )}

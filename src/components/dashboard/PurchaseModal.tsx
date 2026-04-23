@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, ShoppingCart, Plus, Trash2, Search, Package, DollarSign } from 'lucide-react';
+import { Loading02Icon, ShoppingCart01Icon, PlusSignIcon, Delete02Icon, Search01Icon, PackageIcon, DollarCircleIcon } from 'hugeicons-react';
 import { Input } from '@/components/ui/input';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -210,7 +210,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
         
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <ShoppingCart className="w-5 h-5 text-slate-700" />
+            <ShoppingCart01Icon className="w-5 h-5 text-slate-700" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col items-start text-left">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -228,7 +228,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
             {/* DATOS GENERALES */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <ShoppingCart className="w-4 h-4 text-slate-400" /> Información de la Orden
+                <ShoppingCart01Icon className="w-4 h-4 text-slate-400" strokeWidth={1.5} /> Información de la Orden
               </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -275,13 +275,13 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
             {/* AGREGAR PRODUCTOS */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Package className="w-4 h-4 text-slate-400" /> Agregar Productos
+                <PackageIcon className="w-4 h-4 text-slate-400" strokeWidth={1.5} /> Agregar Productos
               </h3>
 
               {/* Buscador de productos */}
               <div className="space-y-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
                   <Input 
                     placeholder="Buscar producto..." 
                     value={searchTerm}
@@ -386,7 +386,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
                         onClick={addItem}
                         className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
                       >
-                        <Plus className="w-4 h-4 mr-1" /> Agregar
+                        <PlusSignIcon className="w-4 h-4 mr-1" strokeWidth={1.5} /> Agregar
                       </Button>
                     </div>
                   </div>
@@ -399,7 +399,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
               <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-3">
                 <h3 className="text-xs font-bold text-slate-800 flex items-center justify-between border-b border-slate-100 pb-2.5 uppercase tracking-wide">
                   <span className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-slate-400" /> Productos en la Orden ({items.length})
+                    <PackageIcon className="w-4 h-4 text-slate-400" strokeWidth={1.5} /> Productos en la Orden ({items.length})
                   </span>
                   
                 </h3>
@@ -426,7 +426,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
                           onClick={() => removeItem(index)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Delete02Icon className="w-4 h-4" strokeWidth={1.5} />
                         </Button>
                       </div>
                     </div>
@@ -460,7 +460,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
               disabled={isLoading || items.length === 0} 
               className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all"
             >
-              {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              {isLoading && <Loading02Icon className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               Crear Orden de Compra
             </Button>
           </div>

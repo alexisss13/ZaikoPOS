@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Tags, Upload, X, Trash2, PowerOff } from 'lucide-react';
+import { Loading02Icon, Tag01Icon, Upload02Icon, Cancel01Icon, Delete02Icon, UnavailableIcon } from 'hugeicons-react';
 
 interface CategoryData {
   id: string;
@@ -188,7 +188,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
         
         <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <Tags className="w-5 h-5 text-slate-700" />
+            <Tag01Icon size={20} strokeWidth={2} className="text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left flex-1">
             <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
@@ -255,7 +255,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
                       onClick={() => setImageUrl('')}
                       className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-3 h-3" />
+                      <Cancel01Icon size={12} strokeWidth={2} />
                     </button>
                   </div>
                 ) : (
@@ -277,10 +277,10 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
                       }`}
                     >
                       {isUploadingImage ? (
-                        <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                        <Loading02Icon size={24} className="text-slate-400 animate-spin" />
                       ) : (
                         <>
-                          <Upload className="w-6 h-6 text-slate-400" />
+                          <Upload02Icon size={24} strokeWidth={2} className="text-slate-400" />
                           <span className="text-xs font-bold text-slate-400">Subir imagen</span>
                         </>
                       )}
@@ -311,7 +311,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
                   disabled={isLoading}
                   className="flex-1 h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
                 >
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {isLoading && <Loading02Icon size={16} strokeWidth={2} className="mr-2 animate-spin" />}
                   {editingCategory ? 'Actualizar' : 'Crear'}
                 </Button>
               </div>
@@ -372,7 +372,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
                         />
                       ) : (
                         <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center shrink-0">
-                          <Tags className="w-5 h-5 text-slate-400" />
+                          <Tag01Icon size={20} strokeWidth={2} className="text-slate-400" />
                         </div>
                       )}
                       
@@ -393,7 +393,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
                           onClick={() => setEditingCategory(category)}
                           className="h-8 w-8 p-0 hover:bg-slate-200"
                         >
-                          <Tags className="w-3.5 h-3.5" />
+                          <Tag01Icon size={14} strokeWidth={2} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -402,7 +402,7 @@ export function CategoryModal({ isOpen, onClose, onSuccess, categories, branches
                           className={`h-8 w-8 p-0 ${hasProducts ? 'hover:bg-amber-100 text-amber-600' : 'hover:bg-red-100 text-red-600'}`}
                           title={hasProducts ? 'Desactivar productos' : 'Eliminar categoría'}
                         >
-                          {hasProducts ? <PowerOff className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          {hasProducts ? <UnavailableIcon size={14} strokeWidth={2} /> : <Delete02Icon size={14} strokeWidth={2} />}
                         </Button>
                       </div>
                     </div>

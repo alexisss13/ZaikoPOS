@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useState, useMemo } from 'react';
-import { ContactRound, Download, Loader2, Filter, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ContactIcon, Download01Icon, Loading03Icon, FilterIcon, CancelCircleIcon, ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -387,7 +387,7 @@ export default function CashSessionsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         <div className="flex items-center gap-2.5 shrink-0">
           <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Corte de Turnos</h1>
-          <ContactRound className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+          <ContactIcon className="w-6 h-6 text-slate-500" strokeWidth={2} />
         </div>
 
         {/* Filtros y paginación */}
@@ -432,11 +432,11 @@ export default function CashSessionsPage() {
               onClick={() => setShowBranchFilter(!showBranchFilter)}
               className={`h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all hover:bg-slate-50 flex items-center gap-2 ${branchFilter !== 'ALL' ? 'border-slate-900 bg-slate-50' : ''}`}
             >
-              <ContactRound className={`w-3.5 h-3.5 ${branchFilter !== 'ALL' ? 'text-slate-900' : 'text-slate-400'}`} />
+              <ContactIcon className={`w-3.5 h-3.5 ${branchFilter !== "ALL" ? "text-slate-900" : "text-slate-400"}`} strokeWidth={1.5} />
               <span className={branchFilter !== 'ALL' ? 'text-slate-900 font-bold' : 'text-slate-600'}>
                 {branchFilter === 'ALL' ? 'Sucursal' : branches?.find((b: any) => b.name === branchFilter)?.name || 'Sucursal'}
               </span>
-              <Filter className={`w-3 h-3 ${branchFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : 'text-slate-400'}`} />
+              <FilterIcon className={`w-3 h-3 ${branchFilter !== "ALL" ? "text-slate-900" : "text-slate-400"}`} strokeWidth={1.5} />
             </button>
             
             {showBranchFilter && (
@@ -487,7 +487,7 @@ export default function CashSessionsPage() {
               }}
               className="h-8 text-xs font-bold text-slate-600 hover:text-slate-900 px-2"
             >
-              <XCircle className="w-3.5 h-3.5" />
+              <CancelCircleIcon className="w-3.5 h-3.5" strokeWidth={1.5} />
             </Button>
           )}
 
@@ -499,10 +499,10 @@ export default function CashSessionsPage() {
               </span>
               <div className="flex gap-1.5">
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft className="w-4 h-4" />
+                  <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                  <ChevronRight className="w-4 h-4" />
+                  <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>
@@ -520,7 +520,7 @@ export default function CashSessionsPage() {
               ))
             ) : paginatedSessions?.length === 0 ? (
               <div className="text-center py-12">
-                <ContactRound className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <ContactIcon className="w-10 h-10 text-slate-300 mx-auto mb-2" strokeWidth={1.5} />
                 <p className="text-xs text-slate-500">No hay turnos registrados</p>
               </div>
             ) : (
@@ -577,7 +577,7 @@ export default function CashSessionsPage() {
         {!selectedSession ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <ContactRound className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <ContactIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5} />
               <p className="text-sm text-slate-500">Selecciona un turno para ver los detalles</p>
             </div>
           </div>
@@ -694,7 +694,7 @@ export default function CashSessionsPage() {
                             disabled={!declaredCash || isNaN(parseFloat(declaredCash)) || isClosing}
                             className="w-full h-9 mt-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
                           >
-                            {isClosing && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                            {isClosing && <Loading03Icon className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                             Cerrar Turno
                           </Button>
                         </>
@@ -722,9 +722,9 @@ export default function CashSessionsPage() {
                             className="w-full h-9 mt-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
                           >
                             {isGeneratingPDF ? (
-                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              <Loading03Icon className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                             ) : (
-                              <Download className="w-3.5 h-3.5 mr-1.5" />
+                              <Download01Icon className="w-3.5 h-3.5 mr-1.5" />
                             )}
                             Generar PDF del Corte
                           </Button>

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Loader2, Store, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Loading02Icon, Store01Icon, ArrowRight01Icon, SecurityCheckIcon } from 'hugeicons-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,7 +99,7 @@ export default function LoginPage() {
         {/* Logo / Marca */}
         <div className="relative z-10 flex items-center gap-3 text-xl font-black tracking-tight">
           <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/10 shadow-xl">
-            <Store className="w-6 h-6 text-white" />
+            <Store01Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
           </div>
           Festamas & FiestasYa
         </div>
@@ -120,7 +120,7 @@ export default function LoginPage() {
         {/* Footer del panel izquierdo */}
         <div className="relative z-10 flex items-center justify-between text-xs font-medium text-slate-500 uppercase tracking-widest">
           <span>© {new Date().getFullYear()} FiestasYa Group.</span>
-          <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4"/> Entorno Seguro</span>
+          <span className="flex items-center gap-1.5"><SecurityCheckIcon className="w-4 h-4" strokeWidth={1.5}/> Entorno Seguro</span>
         </div>
       </div>
 
@@ -132,7 +132,7 @@ export default function LoginPage() {
           <div className="space-y-2 text-center lg:text-left">
             <div className="lg:hidden flex justify-center mb-6">
               <div className="bg-slate-900 p-3.5 rounded-2xl shadow-lg">
-                <Store className="w-8 h-8 text-white" />
+                <Store01Icon className="w-8 h-8 text-white" strokeWidth={1.5} />
               </div>
             </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">Iniciar Sesión</h1>
@@ -190,11 +190,11 @@ export default function LoginPage() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loading02Icon className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <div className="flex items-center justify-center gap-2">
                   Ingresar al Sistema
-                  <ArrowRight className="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight01Icon className="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
                 </div>
               )}
             </Button>

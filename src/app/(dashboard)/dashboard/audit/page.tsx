@@ -3,8 +3,8 @@
 import useSWR from 'swr';
 import { useState } from 'react';
 import { 
-  ShieldCheck, AlertTriangle, Info, XCircle, ChevronLeft, ChevronRight, Filter, Building, Clock, Calendar, Bug, Search, RefreshCw
-} from 'lucide-react';
+  SecurityCheckIcon, Alert01Icon, InformationCircleIcon, CancelCircleIcon, ArrowLeft01Icon, ArrowRight01Icon, FilterIcon, Building02Icon, Clock01Icon, Calendar03Icon, Bug01Icon, Search01Icon, RefreshIcon
+} from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,12 +40,12 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_CONFIG: Record<string, { color: string; icon: React.ElementType; bg: string; badge: string }> = {
-  SYSTEM_ERROR: { color: 'text-red-600', bg: 'bg-red-50', badge: 'border-red-200 bg-red-100/50', icon: XCircle },
-  DELETE_USER: { color: 'text-red-600', bg: 'bg-red-50', badge: 'border-red-200 bg-red-100/50', icon: XCircle },
-  VOID_SALE: { color: 'text-orange-600', bg: 'bg-orange-50', badge: 'border-orange-200 bg-orange-100/50', icon: AlertTriangle },
-  LOGIN: { color: 'text-blue-600', bg: 'bg-blue-50', badge: 'border-blue-200 bg-blue-100/50', icon: Info },
-  LOGOUT: { color: 'text-slate-500', bg: 'bg-slate-100', badge: 'border-slate-200 bg-slate-100/50', icon: Clock },
-  CREATE_USER: { color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'border-emerald-200 bg-emerald-100/50', icon: ShieldCheck },
+  SYSTEM_ERROR: { color: 'text-red-600', bg: 'bg-red-50', badge: 'border-red-200 bg-red-100/50', icon: CancelCircleIcon },
+  DELETE_USER: { color: 'text-red-600', bg: 'bg-red-50', badge: 'border-red-200 bg-red-100/50', icon: CancelCircleIcon },
+  VOID_SALE: { color: 'text-orange-600', bg: 'bg-orange-50', badge: 'border-orange-200 bg-orange-100/50', icon: Alert01Icon },
+  LOGIN: { color: 'text-blue-600', bg: 'bg-blue-50', badge: 'border-blue-200 bg-blue-100/50', icon: InformationCircleIcon },
+  LOGOUT: { color: 'text-slate-500', bg: 'bg-slate-100', badge: 'border-slate-200 bg-slate-100/50', icon: Clock01Icon },
+  CREATE_USER: { color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'border-emerald-200 bg-emerald-100/50', icon: SecurityCheckIcon },
 };
 
 export default function AuditLogsPage() {
@@ -115,17 +115,17 @@ export default function AuditLogsPage() {
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-primary" /> Auditoría de Seguridad
+            <SecurityCheckIcon className="w-6 h-6 text-primary" strokeWidth={1.5} /> Auditoría de Seguridad
           </h1>
           <p className="text-slate-500 text-sm mt-1">Registro centralizado de eventos y acciones críticas del sistema.</p>
         </div>
         
         <div className="flex items-center gap-2">
           <Button onClick={handleRefresh} variant="outline" className="w-10 px-0 shrink-0 text-slate-600 bg-white" title="Actualizar datos">
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
+            <RefreshIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} strokeWidth={1.5} />
           </Button>
           <Button onClick={handleGenerateTestLogs} variant="outline" className="gap-2 text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 flex-1 md:flex-none">
-            <Bug className="w-4 h-4" /> Simular Evento
+            <Bug01Icon className="w-4 h-4" strokeWidth={1.5} /> Simular Evento
           </Button>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function AuditLogsPage() {
         
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
             <Input 
               placeholder="Buscar en el detalle o usuario..." 
               value={searchQuery} 
@@ -145,7 +145,7 @@ export default function AuditLogsPage() {
           </div>
           <Select value={businessFilter} onValueChange={(v) => { setBusinessFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-full lg:w-[280px] bg-slate-50 shrink-0">
-              <Building className="w-4 h-4 mr-2 text-slate-400" />
+              <Building02Icon className="w-4 h-4 mr-2 text-slate-400" strokeWidth={1.5} />
               <SelectValue placeholder="Negocio" />
             </SelectTrigger>
             <SelectContent>
@@ -160,12 +160,12 @@ export default function AuditLogsPage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 items-center w-full lg:w-auto">
             <div className="relative w-full lg:w-[160px]">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Calendar03Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
               <Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }} className="pl-9 bg-slate-50 text-sm w-full" title="Desde"/>
             </div>
             <span className="hidden sm:block text-slate-400 text-sm font-medium">a</span>
             <div className="relative w-full lg:w-[160px]">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Calendar03Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
               <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }} className="pl-9 bg-slate-50 text-sm w-full" title="Hasta"/>
             </div>
           </div>
@@ -198,13 +198,13 @@ export default function AuditLogsPage() {
             ))
           ) : displayedLogs.length === 0 ? (
             <div className="text-center py-20 px-4">
-              <ShieldCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <SecurityCheckIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5} />
               <p className="text-slate-500 font-medium">No se encontraron eventos.</p>
               <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">Limpiar todos los filtros</Button>
             </div>
           ) : (
             displayedLogs.map((log) => {
-              const config = SEVERITY_CONFIG[log.action] || { color: 'text-slate-500', bg: 'bg-slate-100', badge: 'border-slate-200', icon: Info };
+              const config = SEVERITY_CONFIG[log.action] || { color: 'text-slate-500', bg: 'bg-slate-100', badge: 'border-slate-200', icon: InformationCircleIcon };
               const Icon = config.icon;
               const { date, time } = formatDate(log.createdAt);
 
@@ -270,8 +270,8 @@ export default function AuditLogsPage() {
         <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border shadow-sm">
           <p className="text-sm text-slate-500">Página <span className="font-bold text-slate-900">{auditRes.pagination.page}</span> de <span className="font-bold text-slate-900">{auditRes.pagination.totalPages}</span></p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={auditRes.pagination.page === 1}><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(auditRes.pagination.totalPages, p + 1))} disabled={auditRes.pagination.page === auditRes.pagination.totalPages}><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={auditRes.pagination.page === 1}><ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} /></Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(auditRes.pagination.totalPages, p + 1))} disabled={auditRes.pagination.page === auditRes.pagination.totalPages}><ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} /></Button>
           </div>
         </div>
       )}

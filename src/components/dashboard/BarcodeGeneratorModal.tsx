@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Barcode as BarcodeIcon, Download, Search, X, Printer } from 'lucide-react';
+import { BarCode02Icon, DownloadCircle02Icon, Search01Icon, Cancel01Icon, PrinterIcon } from 'hugeicons-react';
 import Barcode from 'react-barcode';
 
 interface Product {
@@ -235,7 +235,7 @@ export function BarcodeGeneratorModal({ isOpen, onClose, products }: BarcodeGene
         
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0">
           <div className="bg-slate-900 p-2.5 rounded-xl shadow-sm shrink-0">
-            <BarcodeIcon className="w-5 h-5 text-white" />
+            <BarCode02Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col items-start text-left flex-1">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -253,7 +253,7 @@ export function BarcodeGeneratorModal({ isOpen, onClose, products }: BarcodeGene
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-700">Buscar Productos</Label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
               <Input 
                 placeholder="Buscar por nombre, código de barras o SKU..." 
                 value={searchTerm}
@@ -290,7 +290,7 @@ export function BarcodeGeneratorModal({ isOpen, onClose, products }: BarcodeGene
                       onClick={() => toggleProduct(product)}
                       className="text-blue-600 hover:text-blue-800"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Cancel01Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
                     </button>
                   </div>
                 ))}
@@ -411,7 +411,7 @@ export function BarcodeGeneratorModal({ isOpen, onClose, products }: BarcodeGene
               disabled={selectedProducts.length === 0}
               className="h-10 text-xs font-bold text-slate-700 hover:bg-slate-50"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <DownloadCircle02Icon className="w-4 h-4 mr-2" strokeWidth={1.5} />
               Descargar PNG
             </Button>
             <Button 
@@ -419,7 +419,7 @@ export function BarcodeGeneratorModal({ isOpen, onClose, products }: BarcodeGene
               disabled={selectedProducts.length === 0}
               className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white"
             >
-              <Printer className="w-4 h-4 mr-2" />
+              <PrinterIcon className="w-4 h-4 mr-2" strokeWidth={1.5} />
               Imprimir
             </Button>
           </div>

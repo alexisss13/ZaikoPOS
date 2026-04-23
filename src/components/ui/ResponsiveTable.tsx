@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft01Icon, ArrowRight01Icon, ArrowLeft02Icon, ArrowRight02Icon, ArrowDown01Icon, ArrowUp01Icon } from 'hugeicons-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -248,11 +248,11 @@ export function ResponsiveTable<T>({
                     >
                       {isExpanded ? (
                         <>
-                          Show less <ChevronUp className="h-4 w-4" />
+                          Show less <ArrowUp01Icon size={16} strokeWidth={2} />
                         </>
                       ) : (
                         <>
-                          Show more <ChevronDown className="h-4 w-4" />
+                          Show more <ArrowDown01Icon size={16} strokeWidth={2} />
                         </>
                       )}
                     </button>
@@ -274,7 +274,7 @@ export function ResponsiveTable<T>({
               className="min-w-[44px] min-h-[44px]"
               aria-label="First page"
             >
-              <ChevronsLeft className="h-4 w-4" />
+              <ArrowLeft02Icon size={16} strokeWidth={2} />
             </Button>
             <Button
               variant="outline"
@@ -284,7 +284,7 @@ export function ResponsiveTable<T>({
               className="min-w-[44px] min-h-[44px]"
               aria-label="Previous page"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ArrowLeft01Icon size={16} strokeWidth={2} />
             </Button>
             <span className="text-sm font-medium px-4">
               {currentPage} / {totalPages}
@@ -297,7 +297,7 @@ export function ResponsiveTable<T>({
               className="min-w-[44px] min-h-[44px]"
               aria-label="Next page"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ArrowRight01Icon size={16} strokeWidth={2} />
             </Button>
             <Button
               variant="outline"
@@ -307,7 +307,7 @@ export function ResponsiveTable<T>({
               className="min-w-[44px] min-h-[44px]"
               aria-label="Last page"
             >
-              <ChevronsRight className="h-4 w-4" />
+              <ArrowRight02Icon size={16} strokeWidth={2} />
             </Button>
           </div>
         )}
@@ -377,7 +377,7 @@ export function ResponsiveTable<T>({
               disabled={currentPage === 1}
               aria-label="First page"
             >
-              <ChevronsLeft className="h-4 w-4" />
+              <ArrowLeft02Icon size={16} strokeWidth={2} />
             </Button>
             <Button
               variant="outline"
@@ -386,7 +386,7 @@ export function ResponsiveTable<T>({
               disabled={currentPage === 1}
               aria-label="Previous page"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ArrowLeft01Icon size={16} strokeWidth={2} />
             </Button>
             <span className="text-sm font-medium px-2">
               Page {currentPage} of {totalPages}
@@ -398,7 +398,7 @@ export function ResponsiveTable<T>({
               disabled={currentPage === totalPages}
               aria-label="Next page"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ArrowRight01Icon size={16} strokeWidth={2} />
             </Button>
             <Button
               variant="outline"
@@ -407,7 +407,7 @@ export function ResponsiveTable<T>({
               disabled={currentPage === totalPages}
               aria-label="Last page"
             >
-              <ChevronsRight className="h-4 w-4" />
+              <ArrowRight02Icon size={16} strokeWidth={2} />
             </Button>
           </div>
         </div>

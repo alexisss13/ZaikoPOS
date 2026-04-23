@@ -3,10 +3,10 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  Plus, MoreVertical, 
-  CheckCircle2, XCircle, Users, Store, PowerOff, Trash2, Mail,
-  Search, ChevronLeft, ChevronRight, LayoutGrid, Building2, Edit
-} from 'lucide-react';
+  PlusSignIcon, MoreVerticalIcon, 
+  CheckmarkCircle02Icon, CancelCircleIcon, UserMultiple02Icon, Store01Icon, UnavailableIcon, Delete02Icon, Mail01Icon,
+  Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, LayoutGridIcon, Building02Icon, Edit02Icon
+} from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -127,7 +127,7 @@ export default function BusinessesPage() {
           {/* BUSCADOR ANIMADO EXPANDIBLE */}
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">
             <div className="absolute right-0 w-8 h-full flex items-center justify-center pointer-events-none z-10">
-              <Search className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={3} />
+              <Search01Icon className="w-5 h-5 text-slate-900 group-hover:text-slate-400 focus-within:text-slate-400 transition-colors" strokeWidth={2} />
             </div>
             <Input 
               placeholder="Buscar por negocio o correo..." 
@@ -138,7 +138,7 @@ export default function BusinessesPage() {
           </div>
 
           <Button onClick={handleOpenNew} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0">
-            <Plus className="w-4 h-4 mr-1.5" /> <span className="font-bold">Registrar Dueño</span>
+            <PlusSignIcon className="w-4 h-4 mr-1.5" strokeWidth={1.5} /> <span className="font-bold">Registrar Dueño</span>
           </Button>
         </div>
       </div>
@@ -160,10 +160,10 @@ export default function BusinessesPage() {
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                {status === 'ALL' && <><LayoutGrid className="w-3.5 h-3.5" /> Todos</>}
-                {status === 'ACTIVE' && <><CheckCircle2 className="w-3.5 h-3.5" /> Activos</>}
-                {status === 'SUSPENDED' && <><XCircle className="w-3.5 h-3.5" /> Suspendidos</>}
-                {status === 'PENDING' && <><Building2 className="w-3.5 h-3.5" /> Pendientes RUC</>}
+                {status === 'ALL' && <><LayoutGridIcon className="w-3.5 h-3.5" strokeWidth={1.5} /> Todos</>}
+                {status === 'ACTIVE' && <><CheckmarkCircle02Icon className="w-3.5 h-3.5" strokeWidth={1.5} /> Activos</>}
+                {status === 'SUSPENDED' && <><CancelCircleIcon className="w-3.5 h-3.5" strokeWidth={1.5} /> Suspendidos</>}
+                {status === 'PENDING' && <><Building02Icon className="w-3.5 h-3.5" strokeWidth={1.5} /> Pendientes RUC</>}
               </button>
             ))}
           </div>
@@ -176,10 +176,10 @@ export default function BusinessesPage() {
               </span>
               <div className="flex gap-1.5">
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft className="w-4 h-4" />
+                  <ArrowLeft01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
                 <Button variant="outline" className="h-7 w-7 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg shadow-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                  <ChevronRight className="w-4 h-4" />
+                  <ArrowRight01Icon className="w-4 h-4" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function BusinessesPage() {
             </div>
           ) : paginatedBusinesses.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl border border-dashed border-slate-200 shadow-sm py-20 mt-4">
-              <Store className="w-12 h-12 text-slate-300 mb-3" />
+              <Store01Icon className="w-12 h-12 text-slate-300 mb-3" strokeWidth={1.5} />
               <p className="font-medium text-sm text-slate-500">No se encontraron negocios.</p>
               <Button variant="link" onClick={() => { setSearchTerm(''); setFilterStatus('ALL'); }} className="text-blue-600 font-bold">Limpiar filtros</Button>
             </div>
@@ -232,11 +232,11 @@ export default function BusinessesPage() {
                             <div className="flex items-center gap-1.5 mt-1">
                               {biz.isActive ? (
                                 <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-300 gap-1 px-1.5 py-0 h-4 text-[9px] font-bold">
-                                  <CheckCircle2 className="w-2.5 h-2.5" /> Activa
+                                  <CheckmarkCircle02Icon className="w-2.5 h-2.5" strokeWidth={1.5} /> Activa
                                 </Badge>
                               ) : (
                                 <Badge variant="destructive" className="gap-1 px-1.5 py-0 h-4 text-[9px] font-bold bg-red-100 text-red-700 border-red-300">
-                                  <XCircle className="w-2.5 h-2.5" /> Suspendida
+                                  <CancelCircleIcon className="w-2.5 h-2.5" strokeWidth={1.5} /> Suspendida
                                 </Badge>
                               )}
                             </div>
@@ -246,7 +246,7 @@ export default function BusinessesPage() {
                         {/* Botón flotante Opciones */}
                         <div className="absolute top-3 right-2">
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(isDropdownOpen ? null : biz.id); }}>
-                            <MoreVertical className="w-4 h-4" />
+                            <MoreVerticalIcon className="w-4 h-4" strokeWidth={1.5} />
                           </Button>
                           
                           {isDropdownOpen && (
@@ -254,18 +254,18 @@ export default function BusinessesPage() {
                               <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(null); }} />
                               <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95">
                                 <button onClick={(e) => handleOpenEdit(biz, e)} className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-bold transition-colors">
-                                  <Edit className="w-4 h-4" /> Editar Límites
+                                  <Edit02Icon className="w-4 h-4" strokeWidth={1.5} /> Editar Límites
                                 </button>
                                 <div className="h-px bg-slate-100 my-1 mx-2" />
                                 <button onClick={(e) => handleToggleStatus(biz, e)} className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-bold transition-colors">
-                                  <PowerOff className={`w-4 h-4 ${biz.isActive ? 'text-orange-500' : 'text-emerald-500'}`} />
+                                  <UnavailableIcon className={`w-4 h-4 ${biz.isActive ? "text-orange-500" : "text-emerald-500"}`} strokeWidth={1.5} />
                                   {biz.isActive ? 'Suspender' : 'Activar'}
                                 </button>
                                 {!biz.isActive && (
                                   <>
                                     <div className="h-px bg-slate-100 my-1 mx-2" />
                                     <button onClick={(e) => handleDelete(biz.id, e)} className="w-full text-left px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold transition-colors">
-                                      <Trash2 className="w-4 h-4" /> Eliminar
+                                      <Delete02Icon className="w-4 h-4" strokeWidth={1.5} /> Eliminar
                                     </button>
                                   </>
                                 )}
@@ -278,14 +278,14 @@ export default function BusinessesPage() {
                       {/* DATA CARD */}
                       <div className="space-y-1.5 text-slate-500 flex-1 mt-2">
                         <div className="flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                          <Mail01Icon className="w-3.5 h-3.5 shrink-0 opacity-70" strokeWidth={1.5} />
                           <span className="truncate leading-tight text-xs font-medium">
                             {owner ? owner.email : 'Sin dueño asignado'}
                           </span>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                          <Building02Icon className="w-3.5 h-3.5 shrink-0 opacity-70" strokeWidth={1.5} />
                           {isPending ? (
                             <span className="text-orange-600 text-xs font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Falta RUC</span>
                           ) : (
@@ -299,19 +299,19 @@ export default function BusinessesPage() {
                         <div className="text-center">
                           <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Sucursales</p>
                           <p className="font-bold text-slate-700 flex items-center justify-center gap-1 text-sm">
-                            <Store className="w-3 h-3 text-slate-400" /> {biz.maxBranches}
+                            <Store01Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} /> {biz.maxBranches}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Jefes/Suc</p>
                           <p className="font-bold text-slate-700 flex items-center justify-center gap-1 text-sm">
-                            <Users className="w-3 h-3 text-slate-400" /> {biz.maxManagers || 1}
+                            <UserMultiple02Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} /> {biz.maxManagers || 1}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Cajeros/Suc</p>
                           <p className="font-bold text-slate-700 flex items-center justify-center gap-1 text-sm">
-                            <Users className="w-3 h-3 text-slate-400" /> {biz.maxEmployees}
+                            <UserMultiple02Icon className="w-3 h-3 text-slate-400" strokeWidth={1.5} /> {biz.maxEmployees}
                           </p>
                         </div>
                       </div>
