@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { LayoutGrid, Globe, Store, PowerOff, X } from 'lucide-react';
+import { DashboardSquare01Icon, Globe02Icon, Store01Icon } from 'hugeicons-react';
 
 interface Branch {
   id: string;
@@ -94,7 +94,7 @@ function MobilePOSFiltersComponent({
                       : 'bg-slate-50 text-slate-600 border-slate-200'
                   }`}
                 >
-                  <LayoutGrid className="w-3 h-3" />
+                  <DashboardSquare01Icon className="w-3 h-3" />
                   Todos
                 </button>
                 
@@ -107,7 +107,7 @@ function MobilePOSFiltersComponent({
                       : 'bg-slate-50 text-slate-600 border-slate-200'
                   }`}
                 >
-                  <Globe className="w-3 h-3" />
+                  <Globe02Icon className="w-3 h-3" />
                   Compartidos
                 </button>
 
@@ -127,7 +127,7 @@ function MobilePOSFiltersComponent({
                       {branch?.logoUrl ? (
                         <img src={branch.logoUrl} className="w-3 h-3 rounded-sm object-cover" alt="" />
                       ) : (
-                        <Store className="w-3 h-3" />
+                        <Store01Icon className="w-3 h-3" />
                       )}
                       {branch?.name || code}
                     </button>

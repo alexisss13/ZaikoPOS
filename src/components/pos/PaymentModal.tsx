@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PaymentMethod } from '@/types/payment-method';
-import { Banknote, CreditCard, Smartphone, Wallet } from 'lucide-react';
+import { Money01Icon, CreditCardIcon, SmartPhone01Icon, Wallet03Icon } from 'hugeicons-react';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -61,7 +61,7 @@ export function PaymentModal({ isOpen, onClose, total, onConfirm }: PaymentModal
       <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden bg-slate-50">
         <DialogHeader className="p-6 pb-4 bg-white border-b">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-primary" /> Procesar Pago
+            <Wallet03Icon className="w-6 h-6 text-primary" /> Procesar Pago
           </DialogTitle>
         </DialogHeader>
 
@@ -78,7 +78,7 @@ export function PaymentModal({ isOpen, onClose, total, onConfirm }: PaymentModal
                   className="h-12"
                   onClick={() => handleMethodChange(PaymentMethod.CASH)}
                 >
-                  <Banknote className="w-4 h-4 mr-2" /> Efectivo
+                  <Money01Icon className="w-4 h-4 mr-2" /> Efectivo
                 </Button>
                 <Button 
                   type="button"
@@ -86,7 +86,7 @@ export function PaymentModal({ isOpen, onClose, total, onConfirm }: PaymentModal
                   className="h-12 bg-[#74085A] hover:bg-[#5a0646] text-white border-none"
                   onClick={() => handleMethodChange(PaymentMethod.YAPE)}
                 >
-                  <Smartphone className="w-4 h-4 mr-2" /> Yape
+                  <SmartPhone01Icon className="w-4 h-4 mr-2" /> Yape
                 </Button>
                 <Button 
                   type="button"
@@ -94,7 +94,7 @@ export function PaymentModal({ isOpen, onClose, total, onConfirm }: PaymentModal
                   className="h-12 bg-[#00E0FF] hover:bg-[#00c5e0] text-slate-900 border-none"
                   onClick={() => handleMethodChange(PaymentMethod.PLIN)}
                 >
-                  <Smartphone className="w-4 h-4 mr-2" /> Plin
+                  <SmartPhone01Icon className="w-4 h-4 mr-2" /> Plin
                 </Button>
                 <Button 
                   type="button"
@@ -102,7 +102,7 @@ export function PaymentModal({ isOpen, onClose, total, onConfirm }: PaymentModal
                   className="h-12"
                   onClick={() => handleMethodChange(PaymentMethod.CARD)}
                 >
-                  <CreditCard className="w-4 h-4 mr-2" /> Tarjeta
+                  <CreditCardIcon className="w-4 h-4 mr-2" /> Tarjeta
                 </Button>
               </div>
             </div>

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, User, Loader2, UserPlus, Tag, ShoppingBag, Calendar } from 'lucide-react';
+import { Search01Icon, User02Icon, Loading02Icon, UserAdd01Icon, Tag01Icon, ShoppingBag01Icon, Calendar01Icon } from 'hugeicons-react';
 import { toast } from 'sonner';
 
 interface Customer {
@@ -91,7 +91,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Search className="w-5 h-5" />
+            <Search01Icon className="w-5 h-5" />
             Buscar Cliente
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
@@ -102,7 +102,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
         <div className="flex flex-col gap-4 flex-1 min-h-0">
           {/* Buscador */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               autoFocus
               placeholder="Escribe para buscar..."
@@ -111,7 +111,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
               className="pl-10 pr-10 h-11 text-sm"
             />
             {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
+              <Loading02Icon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
             )}
           </div>
 
@@ -120,7 +120,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
             {!hasSearched && (
               <div className="flex flex-col items-center justify-center h-full py-12 text-center px-4">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                  <Search className="w-8 h-8 text-slate-400" />
+                  <Search01Icon className="w-8 h-8 text-slate-400" />
                 </div>
                 <p className="text-sm font-semibold text-slate-600">Busca un cliente</p>
                 <p className="text-xs text-slate-400 mt-1">Escribe al menos 3 caracteres</p>
@@ -129,7 +129,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
 
             {hasSearched && isSearching && (
               <div className="flex flex-col items-center justify-center h-full py-12">
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+                <Loading02Icon className="w-8 h-8 text-blue-500 animate-spin mb-3" />
                 <p className="text-sm text-slate-500">Buscando...</p>
               </div>
             )}
@@ -137,7 +137,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
             {hasSearched && !isSearching && customers.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full py-12 text-center px-4">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-3">
-                  <User className="w-8 h-8 text-amber-600" />
+                  <User02Icon className="w-8 h-8 text-amber-600" />
                 </div>
                 <p className="text-sm font-semibold text-slate-700">No se encontraron clientes</p>
                 <p className="text-xs text-slate-500 mt-1 mb-4">
@@ -148,7 +148,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
                   size="sm"
                   className="bg-slate-900 hover:bg-slate-800"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
+                  <UserAdd01Icon className="w-4 h-4 mr-2" />
                   Crear Nuevo Cliente
                 </Button>
               </div>
@@ -163,7 +163,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
                     className="w-full p-4 hover:bg-slate-50 transition-colors text-left flex items-start gap-3 group"
                   >
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center shrink-0 group-hover:from-blue-200 group-hover:to-blue-100 transition-colors">
-                      <User className="w-6 h-6 text-blue-600" />
+                      <User02Icon className="w-6 h-6 text-blue-600" />
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -178,7 +178,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
                         </div>
                         <div className="text-right shrink-0">
                           <div className="flex items-center gap-1 text-amber-600">
-                            <Tag className="w-3.5 h-3.5" />
+                            <Tag01Icon className="w-3.5 h-3.5" />
                             <span className="text-lg font-black">{customer.pointsBalance}</span>
                           </div>
                           <p className="text-[10px] text-slate-400 font-medium">puntos</p>
@@ -187,7 +187,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
 
                       <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
                         <div className="flex items-center gap-1">
-                          <ShoppingBag className="w-3 h-3" />
+                          <ShoppingBag01Icon className="w-3 h-3" />
                           <span>{customer.visits} visita{customer.visits !== 1 ? 's' : ''}</span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -195,7 +195,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
                         </div>
                         {customer.lastPurchase && (
                           <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
+                            <Calendar01Icon className="w-3 h-3" />
                             <span>{new Date(customer.lastPurchase).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
                           </div>
                         )}
@@ -227,7 +227,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
               onClick={handleCreateNew}
               className="flex-1 bg-slate-900 hover:bg-slate-800"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
+              <UserAdd01Icon className="w-4 h-4 mr-2" />
               Crear Nuevo Cliente
             </Button>
           </div>

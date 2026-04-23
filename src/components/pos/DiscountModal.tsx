@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tag, Percent, DollarSign, X } from 'lucide-react';
+import { Tag01Icon, PercentIcon, DollarCircleIcon, Cancel01Icon } from 'hugeicons-react';
 
 interface DiscountModalProps {
   isOpen: boolean;
@@ -57,7 +57,7 @@ export function DiscountModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Tag className="w-5 h-5" />
+            <Tag01Icon className="w-5 h-5" />
             Aplicar Descuento
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
@@ -80,7 +80,7 @@ export function DiscountModal({
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                 }`}
               >
-                <DollarSign className="w-4 h-4" />
+                <DollarCircleIcon className="w-4 h-4" />
                 Monto Fijo
               </button>
               <button
@@ -91,7 +91,7 @@ export function DiscountModal({
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                 }`}
               >
-                <Percent className="w-4 h-4" />
+                <PercentIcon className="w-4 h-4" />
                 Porcentaje
               </button>
             </div>
@@ -164,7 +164,7 @@ export function DiscountModal({
                 onClick={handleClear}
                 className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
               >
-                <X className="w-4 h-4 mr-2" />
+                <Cancel01Icon className="w-4 h-4 mr-2" />
                 Quitar
               </Button>
             )}

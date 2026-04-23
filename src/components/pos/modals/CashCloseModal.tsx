@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { LogOut, Calculator, CheckCircle2, Loader2 } from 'lucide-react';
+import { Logout01Icon, CalculatorIcon, CheckmarkCircle02Icon, Loading02Icon } from 'hugeicons-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,7 @@ function CashCloseModalComponent({
             <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 border rounded-2xl flex items-center justify-center shadow-md ${Math.abs(closeResult.difference) < 0.5 ? 'bg-white border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-700'}`}>
-                  <CheckCircle2 className="w-7 h-7" strokeWidth={2.5} />
+                  <CheckmarkCircle02Icon className="w-7 h-7" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">Turno Cerrado</h2>
@@ -80,7 +80,7 @@ function CashCloseModalComponent({
             <div className="px-6 pt-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-md">
-                  <LogOut className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
+                  <Logout01Icon className="w-7 h-7 text-slate-700" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">Cerrar Turno</h2>
@@ -94,7 +94,7 @@ function CashCloseModalComponent({
             <div className="p-6 bg-white">
               <div className="space-y-3">
                 <Label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <Calculator className="w-4 h-4 text-slate-500" /> Efectivo Físico Total
+                  <CalculatorIcon className="w-4 h-4 text-slate-500" /> Efectivo Físico Total
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
@@ -131,7 +131,7 @@ function CashCloseModalComponent({
                 >
                   {isClosing ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loading02Icon className="w-5 h-5 animate-spin" />
                       <span>Cerrando...</span>
                     </>
                   ) : (

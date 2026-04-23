@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Menu } from 'lucide-react';
+import { Notification01Icon, Menu01Icon } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -79,7 +79,7 @@ export function MobileHeader({
           className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Notifications"
         >
-          <Bell className="w-5 h-5" />
+          <Notification01Icon className="w-5 h-5" />
           {notificationCount > 0 && (
             <span 
               className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"
@@ -96,7 +96,7 @@ export function MobileHeader({
           className="text-slate-600 hover:bg-slate-100 min-w-[44px] min-h-[44px] rounded-full"
           aria-label="Open menu"
         >
-          <Menu className="w-5 h-5" />
+          <Menu01Icon className="w-5 h-5" />
         </Button>
       </div>
     </header>

@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search01Icon, Cancel01Icon } from 'hugeicons-react';
 import { Input } from '@/components/ui/input';
 
 interface SearchBarProps {
@@ -44,7 +44,7 @@ function SearchBarComponent({
     <div className={`relative ${className}`}>
       {/* Solo mostrar ícono si no hay className personalizado (modo normal) */}
       {!className && (
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <Search01Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       )}
       <Input
         placeholder={placeholder}
@@ -57,7 +57,7 @@ function SearchBarComponent({
           onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-slate-100"
         >
-          <X className="w-3.5 h-3.5 text-slate-400" />
+          <Cancel01Icon className="w-3.5 h-3.5 text-slate-400" />
         </button>
       )}
     </div>

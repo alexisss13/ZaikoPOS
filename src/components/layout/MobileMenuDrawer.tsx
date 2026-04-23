@@ -1,9 +1,10 @@
 'use client';
 
-import { X, LucideIcon, ShoppingBag, LogOut, UserCircle } from 'lucide-react';
+import { Cancel01Icon, ShoppingBag01Icon, Logout01Icon, UserCircle02Icon } from 'hugeicons-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
+import type { ComponentType } from 'react';
 
 /**
  * MenuItem Interface
@@ -12,7 +13,7 @@ import { useEffect } from 'react';
 export interface MenuItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   isActive: boolean;
 }
 
@@ -128,7 +129,7 @@ export function MobileMenuDrawer({
               className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Close menu"
             >
-              <X className="w-5 h-5" />
+              <Cancel01Icon className="w-5 h-5" />
             </button>
           </div>
 
@@ -146,7 +147,7 @@ export function MobileMenuDrawer({
                   />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center">
-                    <UserCircle className="w-8 h-8 text-slate-400" />
+                    <UserCircle02Icon className="w-8 h-8 text-slate-400" />
                   </div>
                 )}
 
@@ -195,7 +196,7 @@ export function MobileMenuDrawer({
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                 }`}
               >
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag01Icon className="w-5 h-5" />
                 <span>IR AL POS</span>
               </Link>
             )}
@@ -208,7 +209,7 @@ export function MobileMenuDrawer({
               }}
               className="flex items-center justify-center gap-3 w-full px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 hover:text-red-600 font-bold transition-colors min-h-[44px]"
             >
-              <LogOut className="w-5 h-5" />
+              <Logout01Icon className="w-5 h-5" />
               <span>Cerrar Sesión</span>
             </button>
           </div>

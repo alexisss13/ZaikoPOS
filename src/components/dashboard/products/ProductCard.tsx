@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useMemo, useState } from 'react';
-import { Package, Image as ImageIcon, Store, Globe, Banknote, FileText, ChevronDown } from 'lucide-react';
+import { PackageIcon, Image01Icon, Store01Icon, Globe02Icon, Money01Icon, Note01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import type { Product, Branch } from './types';
 
@@ -74,7 +74,7 @@ function ProductCardComponent({
               <img src={product.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <ImageIcon className="w-5 h-5 text-slate-400" />
+                <Image01Icon className="w-5 h-5 text-slate-400" />
               </div>
             )}
             {!product.active && (
@@ -107,7 +107,7 @@ function ProductCardComponent({
             </div>
           </div>
 
-          <ChevronDown className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.1s ease-out', willChange: 'transform' }} />
+          <ArrowDown01Icon className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.1s ease-out', willChange: 'transform' }} />
         </div>
       </div>
 
@@ -118,23 +118,23 @@ function ProductCardComponent({
             {/* Catálogo */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
               <div className="flex items-center gap-1.5 mb-1.5">
-                <Store className="w-3.5 h-3.5 text-slate-400" />
+                <Store01Icon className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Catálogo</span>
               </div>
               {branchesWithStock.length > 1 ? (
                 <div className="flex items-center gap-1.5">
-                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" loading="lazy" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" loading="lazy" /> : <Store01Icon className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
                   <span className="text-xs font-semibold text-slate-700 truncate">{ownerBranch?.name || 'Sucursal'}</span>
-                  <Globe className="w-3 h-3 text-emerald-500 shrink-0" />
+                  <Globe02Icon className="w-3 h-3 text-emerald-500 shrink-0" />
                 </div>
               ) : product.branchOwnerId ? (
                 <div className="flex items-center gap-1.5">
-                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" loading="lazy" /> : <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                  {ownerBranch?.logoUrl ? <img src={ownerBranch.logoUrl} className="w-4 h-4 rounded object-cover shrink-0" alt="" loading="lazy" /> : <Store01Icon className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
                   <span className="text-xs font-semibold text-slate-700 truncate">{ownerBranch?.name || 'Sucursal'}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <Globe02Icon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span className="text-xs font-semibold text-emerald-600">Compartido</span>
                 </div>
               )}
@@ -143,7 +143,7 @@ function ProductCardComponent({
             {/* Inventario */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
               <div className="flex items-center gap-1.5 mb-1.5">
-                <Package className="w-3.5 h-3.5 text-slate-400" />
+                <PackageIcon className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Inventario</span>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -157,7 +157,7 @@ function ProductCardComponent({
             {/* Precio */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
               <div className="flex items-center gap-1.5 mb-1.5">
-                <Banknote className="w-3.5 h-3.5 text-slate-400" />
+                <Money01Icon className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Precio</span>
               </div>
               <span className="text-base font-bold text-slate-900">S/ {Number(product.basePrice).toFixed(2)}</span>
@@ -191,7 +191,7 @@ function ProductCardComponent({
               className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 transition-transform duration-100 active:scale-95"
               style={{ willChange: 'transform' }}
             >
-              <FileText className="w-4 h-4" /> Kardex
+              <Note01Icon className="w-4 h-4" /> Kardex
             </Button>
           </div>
         </div>

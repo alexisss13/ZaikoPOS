@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { X } from 'lucide-react';
+import { Cancel01Icon } from 'hugeicons-react';
 
 interface Branch {
   id: string;
@@ -51,7 +51,7 @@ function MobilePOSActiveFiltersComponent({
             onClick={() => { haptic(8); onClearCodeFilter(); }}
             className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
           >
-            <X className="w-3 h-3" />
+            <Cancel01Icon className="w-3 h-3" />
           </button>
         </span>
       )}
@@ -63,7 +63,7 @@ function MobilePOSActiveFiltersComponent({
             onClick={() => { haptic(8); onClearCategoryFilter(); }}
             className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
           >
-            <X className="w-3 h-3" />
+            <Cancel01Icon className="w-3 h-3" />
           </button>
         </span>
       )}
