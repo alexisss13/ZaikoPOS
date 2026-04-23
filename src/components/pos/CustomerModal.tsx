@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Loader2, Mail, Phone, FileText, User } from 'lucide-react';
+import { UserAdd01Icon, Loading02Icon, Mail01Icon, SmartPhone01Icon, Note01Icon, User02Icon } from 'hugeicons-react';
 import { toast } from 'sonner';
 
 interface CustomerModalProps {
@@ -90,7 +90,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
+            <UserAdd01Icon size={20} strokeWidth={2} />
             Registrar Cliente
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
@@ -102,7 +102,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
           {/* Nombre */}
           <div>
             <Label htmlFor="name" className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-              <User className="w-3 h-3" />
+              <User02Icon size={12} strokeWidth={2} />
               Nombre completo
             </Label>
             <Input
@@ -136,7 +136,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
             </div>
             <div className="col-span-2">
               <Label htmlFor="docNumber" className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-                <FileText className="w-3 h-3" />
+                <Note01Icon size={12} strokeWidth={2} />
                 Número
               </Label>
               <Input
@@ -155,7 +155,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
           {/* Email (opcional) */}
           <div>
             <Label htmlFor="email" className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-              <Mail className="w-3 h-3" />
+              <Mail01Icon size={12} strokeWidth={2} />
               Email <span className="text-slate-400 font-normal">(opcional)</span>
             </Label>
             <Input
@@ -174,7 +174,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
           {/* Teléfono (opcional) */}
           <div>
             <Label htmlFor="phone" className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-              <Phone className="w-3 h-3" />
+              <SmartPhone01Icon size={12} strokeWidth={2} />
               Teléfono <span className="text-slate-400 font-normal">(opcional)</span>
             </Label>
             <Input
@@ -203,7 +203,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
               disabled={isSubmitting}
               className="flex-1 bg-slate-900 hover:bg-slate-800"
             >
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSubmitting && <Loading02Icon size={16} className="mr-2 animate-spin" />}
               Registrar Cliente
             </Button>
           </div>

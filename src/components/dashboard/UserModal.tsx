@@ -10,9 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
-  Loader2, UserPlus, ShieldAlert, Store, PackageOpen, LayoutDashboard, Tag, 
-  Globe, ChevronDown, Info, Plus, X, Camera
-} from 'lucide-react';
+  Loading02Icon, UserAdd01Icon, Shield01Icon, Store01Icon, PackageIcon, DashboardSquare01Icon, Tag01Icon, 
+  Globe02Icon, ArrowDown01Icon, InformationCircleIcon, PlusSignIcon, Cancel01Icon, Camera01Icon
+} from 'hugeicons-react';
 import { useAuth } from '@/context/auth-context';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -229,7 +229,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
         <div className="flex items-center justify-between p-3 sm:px-4 sm:py-3.5">
           <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={toggleInfo} title="Ver más información">
             <div className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-slate-200 text-slate-800' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'}`}>
-              <Info className="w-3.5 h-3.5" />
+              <InformationCircleIcon size={14} strokeWidth={2} />
             </div>
             <Label className={`text-xs sm:text-sm font-semibold cursor-pointer ${textColors[type]} flex-1 leading-tight`}>
               {label}
@@ -257,7 +257,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
         {/* 🚀 HEADER PLANO */}
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <UserPlus className="w-5 h-5 text-slate-700" />
+            <UserAdd01Icon size={20} strokeWidth={2} className="text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -281,7 +281,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                 {/* TARJETA CREDENCIALES */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
                   <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                    <LayoutDashboard className="w-4 h-4 text-slate-400" /> Credenciales
+                    <DashboardSquare01Icon size={16} strokeWidth={2} className="text-slate-400" /> Credenciales
                   </h3>
 
                   {/* Foto Flat Design */}
@@ -290,13 +290,13 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                       <div className="relative w-16 h-16 rounded-2xl border border-slate-200 overflow-hidden shadow-sm group">
                         <img src={formData.image} alt="Perfil" className="w-full h-full object-cover" />
                         <button type="button" onClick={removeImage} className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X className="w-5 h-5" />
+                          <Cancel01Icon size={20} strokeWidth={2} />
                         </button>
                       </div>
                     ) : (
                       <div className="relative w-16 h-16 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group shadow-sm">
                         <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                        {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                        {isUploadingImage ? <Loading02Icon size={20} className="animate-spin text-slate-400" /> : <Camera01Icon size={20} strokeWidth={1.5} className="text-slate-400 group-hover:scale-110 transition-transform" />}
                       </div>
                     )}
                     <div className="flex-1">
@@ -322,7 +322,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                 {/* TARJETA PUESTO */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
                   <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                    <Store className="w-4 h-4 text-slate-400" /> Puesto de Trabajo
+                    <Store01Icon size={16} strokeWidth={2} className="text-slate-400" /> Puesto de Trabajo
                   </h3>
                   
                   {currentUserRole === 'SUPER_ADMIN' && formData.role !== 'SUPER_ADMIN' && (
@@ -360,13 +360,13 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                         <SelectContent className="rounded-xl border-none shadow-xl">
                           {formData.role === 'SUPER_ADMIN' && (
                             <SelectItem value="NONE" className="py-2.5 px-3">
-                              <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-slate-500" /><span className="font-bold text-slate-700">Red Global</span></div>
+                              <div className="flex items-center gap-2"><Globe02Icon size={16} strokeWidth={2} className="text-slate-500" /><span className="font-bold text-slate-700">Red Global</span></div>
                             </SelectItem>
                           )}
                           {branches?.map((branch) => (
                             <SelectItem key={branch.id} value={branch.id} className="py-2.5 px-3 font-medium text-slate-700">
                               <div className="flex items-center gap-2.5">
-                                {branch.logoUrl ? <img src={branch.logoUrl} alt={branch.name} className="w-4 h-4 rounded-sm object-cover border border-slate-200 bg-white" /> : <Store className="w-3.5 h-3.5 text-slate-400" />}
+                                {branch.logoUrl ? <img src={branch.logoUrl} alt={branch.name} className="w-4 h-4 rounded-sm object-cover border border-slate-200 bg-white" /> : <Store01Icon size={14} strokeWidth={2} className="text-slate-400" />}
                                 <span>{branch.name}</span>
                               </div>
                             </SelectItem>
@@ -388,8 +388,8 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     {/* INVENTARIO */}
                     <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
                       <button type="button" onClick={() => toggleSection('inventory')} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${openSection === 'inventory' ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
-                        <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide"><PackageOpen className={`w-4 h-4 ${openSection === 'inventory' ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> Inventario y Logística</div>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${openSection === 'inventory' ? 'rotate-180' : ''}`} />
+                        <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide"><PackageIcon size={16} strokeWidth={2.5} className={`${openSection === 'inventory' ? 'text-slate-900' : 'text-slate-400'}`} /> Inventario y Logística</div>
+                        <ArrowDown01Icon size={16} strokeWidth={2} className={`text-slate-400 transition-transform duration-300 ${openSection === 'inventory' ? 'rotate-180' : ''}`} />
                       </button>
                       <div className={`grid transition-all duration-300 ease-in-out ${openSection === 'inventory' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                         <div className="overflow-hidden">
@@ -406,8 +406,8 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     {/* CAJA Y VENTAS */}
                     <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
                       <button type="button" onClick={() => toggleSection('pos')} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${openSection === 'pos' ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
-                        <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide"><Tag className={`w-4 h-4 ${openSection === 'pos' ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> Operaciones de Caja</div>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${openSection === 'pos' ? 'rotate-180' : ''}`} />
+                        <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide"><Tag01Icon size={16} strokeWidth={2.5} className={`${openSection === 'pos' ? 'text-slate-900' : 'text-slate-400'}`} /> Operaciones de Caja</div>
+                        <ArrowDown01Icon size={16} strokeWidth={2} className={`text-slate-400 transition-transform duration-300 ${openSection === 'pos' ? 'rotate-180' : ''}`} />
                       </button>
                       <div className={`grid transition-all duration-300 ease-in-out ${openSection === 'pos' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                         <div className="overflow-hidden">
@@ -422,8 +422,8 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     {/* PRIVACIDAD Y REPORTES */}
                     <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
                       <button type="button" onClick={() => toggleSection('privacy')} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${openSection === 'privacy' ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
-                        <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide"><ShieldAlert className={`w-4 h-4 ${openSection === 'privacy' ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> Privacidad y Reportes</div>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${openSection === 'privacy' ? 'rotate-180' : ''}`} />
+                        <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide"><Shield01Icon size={16} strokeWidth={2.5} className={`${openSection === 'privacy' ? 'text-slate-900' : 'text-slate-400'}`} /> Privacidad y Reportes</div>
+                        <ArrowDown01Icon size={16} strokeWidth={2} className={`text-slate-400 transition-transform duration-300 ${openSection === 'privacy' ? 'rotate-180' : ''}`} />
                       </button>
                       <div className={`grid transition-all duration-300 ease-in-out ${openSection === 'privacy' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                         <div className="overflow-hidden">
@@ -437,7 +437,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                   </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-dashed border-slate-200 shadow-sm mt-2">
-                    <ShieldAlert className="w-12 h-12 text-slate-300 mb-4" strokeWidth={1.5} />
+                    <Shield01Icon size={48} strokeWidth={1.5} className="text-slate-300 mb-4" />
                     <h4 className="text-lg font-black text-slate-900">Privilegios Absolutos</h4>
                     <p className="text-sm text-slate-500 text-center max-w-sm mt-2 font-medium">
                       El rol <span className="font-bold text-slate-700">Ingeniero TI</span> tiene acceso irrestricto a la infraestructura. No aplican restricciones granulares.
@@ -456,7 +456,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
             Cancelar
           </Button>
           <Button type="submit" form="user-form" disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 shadow-md rounded-xl transition-all">
-            {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            {isLoading && <Loading02Icon size={14} strokeWidth={2} className="mr-1.5 animate-spin" />}
             {userToEdit ? 'Guardar Cambios' : 'Registrar Empleado'}
           </Button>
         </div>

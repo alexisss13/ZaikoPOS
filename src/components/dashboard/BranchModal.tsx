@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Store, ReceiptText, Palette, Tags, X, Camera, ChevronDown } from 'lucide-react';
+import { Loading02Icon, Store01Icon, PaintBoardIcon, Tag01Icon, Cancel01Icon, Camera01Icon, ArrowDown01Icon, Note01Icon } from 'hugeicons-react';
 import { useAuth } from '@/context/auth-context';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -215,7 +215,7 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
         
         <DialogHeader className="px-6 py-5 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <Store className="w-5 h-5 text-slate-700" />
+            <Store01Icon size={20} strokeWidth={2} className="text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left">
             <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
@@ -233,7 +233,7 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
             {/* DATOS GENERALES */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                <Store className="w-4 h-4 text-slate-400" /> Información General
+                <Store01Icon size={16} strokeWidth={2} className="text-slate-400" /> Información General
               </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -257,7 +257,7 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
             {currentUserRole === 'SUPER_ADMIN' && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
                 <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
-                  <Tags className="w-4 h-4 text-slate-400" /> Vínculo de Sistema
+                  <Tag01Icon size={16} strokeWidth={2} className="text-slate-400" /> Vínculo de Sistema
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -295,9 +295,9 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
             <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
               <button type="button" onClick={() => setShowBranding(!showBranding)} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${showBranding ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
                 <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide">
-                  <Palette className={`w-4 h-4 ${showBranding ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> Marca y Logo
+                  <PaintBoardIcon size={16} strokeWidth={2.5} className={`${showBranding ? 'text-slate-900' : 'text-slate-400'}`} /> Marca y Logo
                 </div>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showBranding ? 'rotate-180' : ''}`} />
+                <ArrowDown01Icon size={16} strokeWidth={2} className={`text-slate-400 transition-transform duration-300 ${showBranding ? 'rotate-180' : ''}`} />
               </button>
               
               <div className={`grid transition-all duration-300 ease-in-out ${showBranding ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
@@ -318,13 +318,13 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                               <div className="w-full h-16 rounded-lg border border-slate-200 overflow-hidden bg-white relative group">
                                 <img src={formData.logoIsotipo} alt="Isotipo" className="w-full h-full object-contain p-1" />
                                 <button type="button" onClick={() => removeImage('isotipo')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                  <X className="w-4 h-4" />
+                                  <Cancel01Icon size={16} strokeWidth={2} />
                                 </button>
                               </div>
                             ) : (
                               <div className="relative w-full h-16 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'isotipo')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                                {isUploadingImage ? <Loading02Icon size={20} className="animate-spin text-slate-400" /> : <Camera01Icon size={20} strokeWidth={1.5} className="text-slate-400 group-hover:scale-110 transition-transform" />}
                               </div>
                             )}
                           </div>
@@ -338,13 +338,13 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                               <div className="w-full h-16 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 relative group">
                                 <img src={formData.logoIsotipoWhite} alt="Isotipo Blanco" className="w-full h-full object-contain p-1" />
                                 <button type="button" onClick={() => removeImage('isotipoWhite')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                  <X className="w-4 h-4" />
+                                  <Cancel01Icon size={16} strokeWidth={2} />
                                 </button>
                               </div>
                             ) : (
                               <div className="relative w-full h-16 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'isotipoWhite')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                                {isUploadingImage ? <Loading02Icon size={20} className="animate-spin text-slate-400" /> : <Camera01Icon size={20} strokeWidth={1.5} className="text-slate-400 group-hover:scale-110 transition-transform" />}
                               </div>
                             )}
                           </div>
@@ -358,13 +358,13 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                               <div className="w-full h-16 rounded-lg border border-slate-200 overflow-hidden bg-white relative group">
                                 <img src={formData.logoImagotipo} alt="Imagotipo" className="w-full h-full object-contain p-1" />
                                 <button type="button" onClick={() => removeImage('imagotipo')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                  <X className="w-4 h-4" />
+                                  <Cancel01Icon size={16} strokeWidth={2} />
                                 </button>
                               </div>
                             ) : (
                               <div className="relative w-full h-16 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'imagotipo')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                                {isUploadingImage ? <Loading02Icon size={20} className="animate-spin text-slate-400" /> : <Camera01Icon size={20} strokeWidth={1.5} className="text-slate-400 group-hover:scale-110 transition-transform" />}
                               </div>
                             )}
                           </div>
@@ -378,13 +378,13 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                               <div className="w-full h-16 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 relative group">
                                 <img src={formData.logoImagotipoWhite} alt="Imagotipo Blanco" className="w-full h-full object-contain p-1" />
                                 <button type="button" onClick={() => removeImage('imagotipoWhite')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                  <X className="w-4 h-4" />
+                                  <Cancel01Icon size={16} strokeWidth={2} />
                                 </button>
                               </div>
                             ) : (
                               <div className="relative w-full h-16 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'imagotipoWhite')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                                {isUploadingImage ? <Loading02Icon size={20} className="animate-spin text-slate-400" /> : <Camera01Icon size={20} strokeWidth={1.5} className="text-slate-400 group-hover:scale-110 transition-transform" />}
                               </div>
                             )}
                           </div>
@@ -398,13 +398,13 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                               <div className="w-full h-16 rounded-lg border border-slate-200 overflow-hidden bg-white relative group">
                                 <img src={formData.logoAlternate} alt="Alternativo" className="w-full h-full object-contain p-1" />
                                 <button type="button" onClick={() => removeImage('alternate')} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                  <X className="w-4 h-4" />
+                                  <Cancel01Icon size={16} strokeWidth={2} />
                                 </button>
                               </div>
                             ) : (
                               <div className="relative w-full h-16 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition-colors flex items-center justify-center overflow-hidden cursor-pointer group">
                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'alternate')} disabled={isUploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Camera className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform" strokeWidth={1.5} />}
+                                {isUploadingImage ? <Loading02Icon size={20} className="animate-spin text-slate-400" /> : <Camera01Icon size={20} strokeWidth={1.5} className="text-slate-400 group-hover:scale-110 transition-transform" />}
                               </div>
                             )}
                           </div>
@@ -538,9 +538,9 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
             <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
               <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className={`w-full px-5 py-4 flex items-center justify-between transition-colors outline-none z-10 ${showAdvanced ? 'bg-slate-50/80 border-b border-slate-100' : 'bg-white hover:bg-slate-50'}`}>
                 <div className="font-black text-xs text-slate-800 flex items-center gap-2.5 uppercase tracking-wide">
-                  <ReceiptText className={`w-4 h-4 ${showAdvanced ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={2.5} /> RUC Independiente / Facturación
+                  <Note01Icon size={16} strokeWidth={2.5} className={`${showAdvanced ? 'text-slate-900' : 'text-slate-400'}`} /> RUC Independiente / Facturación
                 </div>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
+                <ArrowDown01Icon size={16} strokeWidth={2} className={`text-slate-400 transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
               </button>
               
               <div className={`grid transition-all duration-300 ease-in-out ${showAdvanced ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
@@ -566,7 +566,7 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
             Cancelar
           </Button>
           <Button type="submit" form="branch-form" disabled={isLoading || isUploadingImage} className="h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-6 rounded-xl shadow-md transition-all">
-            {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            {isLoading && <Loading02Icon size={14} strokeWidth={2} className="mr-1.5 animate-spin" />}
             {branchToEdit ? 'Guardar Cambios' : 'Crear Sucursal'}
           </Button>
         </div>

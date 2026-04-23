@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Package, ExternalLink, Users, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Loading02Icon, PackageIcon, Link03Icon, UserMultiple02Icon, Upload02Icon, Cancel01Icon, Image01Icon } from 'hugeicons-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -249,7 +249,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
         
         <DialogHeader className="px-6 py-4 bg-slate-50 border-b border-slate-100 shadow-sm flex flex-row items-center gap-4 shrink-0 z-10">
           <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 shrink-0">
-            <Package className="w-5 h-5 text-slate-700" />
+            <PackageIcon size={20} strokeWidth={2} className="text-slate-700" />
           </div>
           <div className="flex flex-col items-start text-left flex-1">
             <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
@@ -266,7 +266,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
             onClick={() => window.open('https://festamas.vercel.app/admin/products', '_blank')}
             className="h-8 text-xs font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-lg shrink-0 px-3"
           >
-            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+            <Link03Icon size={14} strokeWidth={2} className="mr-1.5" />
             E-commerce
           </Button>
         </DialogHeader>
@@ -275,7 +275,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
           {isLoadingProduct ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+                <Loading02Icon size={32} className="text-slate-400 animate-spin" />
                 <p className="text-sm text-slate-500 font-medium">Cargando datos del producto...</p>
               </div>
             </div>
@@ -341,7 +341,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Users className="w-3 h-3" /> Proveedor
+                  <UserMultiple02Icon size={12} strokeWidth={2} /> Proveedor
                 </Label>
                 <Select value={formData.supplierId || 'NONE'} onValueChange={(v) => setFormData(p => ({...p, supplierId: v === 'NONE' ? '' : v}))}>
                   <SelectTrigger className={`h-9 text-xs rounded-lg ${formData.supplierId ? 'bg-white border-slate-200 shadow-sm font-bold' : 'bg-slate-50 border-transparent'}`}>
@@ -491,7 +491,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
               {/* Imágenes */}
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                  <ImageIcon className="w-3.5 h-3.5 text-slate-400" /> Imágenes del Producto
+                  <Image01Icon size={14} strokeWidth={2} className="text-slate-400" /> Imágenes del Producto
                 </Label>
 
                 <div className="flex flex-wrap gap-2 p-3 bg-white rounded-lg border border-slate-200 min-h-[100px]">
@@ -517,7 +517,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                         }}
                         className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
                       >
-                        <X className="w-3 h-3" />
+                        <Cancel01Icon size={12} strokeWidth={2} />
                       </button>
                     </div>
                   ))}
@@ -541,10 +541,10 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
                         }`}
                       >
                         {isUploadingImage ? (
-                          <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                          <Loading02Icon size={20} className="text-slate-400 animate-spin" />
                         ) : (
                           <>
-                            <Upload className="w-5 h-5 text-slate-400" />
+                            <Upload02Icon size={20} strokeWidth={2} className="text-slate-400" />
                             <span className="text-[10px] font-bold text-slate-400">{imageUrls.length + 1}/5</span>
                           </>
                         )}
@@ -558,7 +558,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
               {!productToEdit && branches && branches.length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                    <Package className="w-3.5 h-3.5 text-slate-400" /> Stock Inicial
+                    <PackageIcon size={14} strokeWidth={2} className="text-slate-400" /> Stock Inicial
                   </Label>
 
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 p-3 bg-white rounded-lg border border-slate-200">
@@ -602,7 +602,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
             disabled={isLoading} 
             className="h-10 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white px-8 rounded-lg shadow-md transition-all"
           >
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isLoading && <Loading02Icon size={16} strokeWidth={2} className="mr-2 animate-spin" />}
             {productToEdit ? 'Guardar Cambios' : 'Crear Producto'}
           </Button>
         </div>

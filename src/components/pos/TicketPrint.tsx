@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer } from 'lucide-react';
+import { PrinterIcon } from 'hugeicons-react';
 
 interface TicketPrintProps {
   saleData: {
@@ -406,7 +406,7 @@ export function TicketPrint({ saleData, onComplete }: TicketPrintProps) {
             disabled={!pdfUrl || isGenerating}
             className="flex-1 bg-slate-900 hover:bg-slate-800"
           >
-            <Printer className="w-4 h-4 mr-2" />
+            <PrinterIcon size={16} strokeWidth={2} className="mr-2" />
             Imprimir
           </Button>
         </div>

@@ -4,9 +4,9 @@ import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { 
-  Receipt, User, Loader2, Banknote, Wallet, CreditCard, 
-  ArrowRightLeft, Printer, XCircle, ChevronLeft, ChevronRight 
-} from 'lucide-react';
+  Invoice01Icon, User02Icon, Loading02Icon, Money01Icon, Wallet03Icon, CreditCardIcon, 
+  ArrowDataTransferHorizontalIcon, PrinterIcon, Cancel01Icon, ArrowLeft01Icon, ArrowRight01Icon 
+} from 'hugeicons-react';
 import { TicketPrint } from './TicketPrint';
 
 interface SalesHistoryModalProps {
@@ -89,11 +89,11 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
             <div className="flex-1 overflow-y-auto p-4 space-y-1">
               {!salesData ? (
                 <div className="flex items-center justify-center py-16">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+                  <Loading02Icon size={24} className="animate-spin text-slate-300" />
                 </div>
               ) : sales.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                  <Receipt className="w-10 h-10 mb-2 opacity-50" />
+                  <Invoice01Icon size={40} strokeWidth={1.5} className="mb-2 opacity-50" />
                   <p className="text-xs font-medium">Sin ventas</p>
                 </div>
               ) : (
@@ -152,7 +152,7 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
                     disabled={currentPage === 1}
                     className="h-8 px-2"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ArrowLeft01Icon size={16} strokeWidth={2} />
                   </Button>
                   <span className="text-xs font-medium text-slate-600">
                     {currentPage} / {totalPages}
@@ -164,7 +164,7 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
                     disabled={currentPage === totalPages}
                     className="h-8 px-2"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ArrowRight01Icon size={16} strokeWidth={2} />
                   </Button>
                 </div>
               </div>
@@ -176,7 +176,7 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
             {!selectedSale ? (
               <div className="flex-1 flex items-center justify-center text-slate-400">
                 <div className="text-center">
-                  <Receipt className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <Invoice01Icon size={48} strokeWidth={1.5} className="mx-auto mb-3 opacity-50" />
                   <p className="text-sm font-medium">Selecciona una venta para ver el detalle</p>
                 </div>
               </div>
@@ -196,7 +196,7 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
                       </div>
                       <div className="flex items-center gap-4 text-[11px] text-slate-600">
                         <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
+                          <Invoice01Icon size={12} strokeWidth={2} />
                           {selectedSale.cashier?.name || 'Sin cajero'}
                         </span>
                         <span>
@@ -218,10 +218,10 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
                         variant="outline" 
                         className="h-8 px-3 text-xs font-semibold text-slate-600 border-slate-200 hover:bg-slate-50"
                       >
-                        <Printer className="w-3.5 h-3.5 mr-1.5" /> Imprimir
+                        <PrinterIcon size={14} strokeWidth={2} className="mr-1.5" /> Imprimir
                       </Button>
                       <Button variant="outline" className="h-8 px-3 text-xs font-semibold text-rose-600 border-rose-200 hover:bg-rose-50">
-                        <XCircle className="w-3.5 h-3.5 mr-1.5" /> Anular
+                        <Cancel01Icon size={14} strokeWidth={2} className="mr-1.5" /> Anular
                       </Button>
                     </div>
                   </div>
@@ -286,11 +286,11 @@ export function SalesHistoryModal({ isOpen, onClose, salesData }: SalesHistoryMo
                           {selectedSale.payments.map((payment: any) => (
                             <div key={payment.id} className="p-2 bg-white rounded-lg border border-slate-200">
                               <div className="flex items-center gap-1.5 mb-1">
-                                {payment.method === 'CASH' && <Banknote className="w-3 h-3 text-slate-600" />}
-                                {payment.method === 'YAPE' && <Wallet className="w-3 h-3 text-purple-600" />}
-                                {payment.method === 'PLIN' && <Wallet className="w-3 h-3 text-cyan-600" />}
-                                {payment.method === 'CARD' && <CreditCard className="w-3 h-3 text-blue-600" />}
-                                {payment.method === 'TRANSFER' && <ArrowRightLeft className="w-3 h-3 text-emerald-600" />}
+                                {payment.method === 'CASH' && <Money01Icon size={12} strokeWidth={2} className="text-slate-600" />}
+                                {payment.method === 'YAPE' && <Wallet03Icon size={12} strokeWidth={2} className="text-purple-600" />}
+                                {payment.method === 'PLIN' && <Wallet03Icon size={12} strokeWidth={2} className="text-cyan-600" />}
+                                {payment.method === 'CARD' && <CreditCardIcon size={12} strokeWidth={2} className="text-blue-600" />}
+                                {payment.method === 'TRANSFER' && <ArrowDataTransferHorizontalIcon size={12} strokeWidth={2} className="text-emerald-600" />}
                                 <p className="text-[10px] font-semibold text-slate-700">{payment.method}</p>
                               </div>
                               {payment.reference && (
