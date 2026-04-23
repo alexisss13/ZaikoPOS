@@ -80,9 +80,21 @@ function InventoryPageContent() {
   const canManage = role === 'OWNER' || role === 'MANAGER';
   const searchParams = useSearchParams();
 
-  const { data: movements, isLoading, mutate } = useSWR<StockMovement[]>('/api/inventory/movements', fetcher);
-  const { data: transfers, mutate: mutateTransfers } = useSWR<StockTransfer[]>('/api/stock-transfers', fetcher);
+  const { data: movements, isLoading, mutate, error: movementsError } = useSWR<StockMovement[]>('/api/inventory/movements', fetcher);
+  const { data: transfers, mutate: mutateTransfers, error: transfersError } = useSWR<StockTransfer[]>('/api/stock-transfers', fetcher);
   const { data: branches } = useSWR('/api/branches', fetcher);
+
+  // Log errors for debugging
+  useEffect(() => {
+    if (movementsError) {
+      console.error('Error loading movements:', movementsError);
+      toast.error('Error al cargar movimientos de inventario');
+    }
+    if (transfersError) {
+      console.error('Error loading transfers:', transfersError);
+      toast.error('Error al cargar traslados');
+    }
+  }, [movementsError, transfersError]);
 
   const [activeTab, setActiveTab] = useState<'kardex' | 'transfers'>('kardex');
 

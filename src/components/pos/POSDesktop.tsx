@@ -12,7 +12,7 @@ import {
   ArrowDataTransferHorizontalIcon, Logout01Icon, DashboardSquare01Icon, Home01Icon,
   ArrowLeft01Icon, ArrowRight01Icon, PackageIcon, ArrowDataTransferDiagonalIcon,
   Tag01Icon, CheckmarkCircle02Icon, User02Icon, Cancel01Icon, Delete02Icon,
-  MinusSignIcon, PlusSignIcon, Rocket01Icon, Clock01Icon, RotateClockwiseIcon,
+  MinusSignIcon, PlusSignIcon, Rocket01Icon, RotateClockwiseIcon, PrinterIcon
 } from 'hugeicons-react';
 import { CashOpenModal } from './modals/CashOpenModal';
 import { CashCloseModal } from './modals/CashCloseModal';
@@ -293,8 +293,8 @@ export function POSDesktop({ logic }: POSDesktopProps) {
             ) : (
               <div className="flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-300">
                 <div className="flex gap-2">
-                  <Button onClick={handleBoletear} variant="outline" className="flex-1 h-10 text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 rounded-xl"><Rocket01Icon size={16} /><span className="ml-1.5">Boletear</span></Button>
-                  <Button onClick={handleLiberar} className="flex-1 h-10 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-sm"><Clock01Icon size={16} /><span className="ml-1.5">Liberar</span></Button>
+                  <Button onClick={handleBoletear} variant="outline" className="flex-1 h-10 text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 rounded-xl"><PrinterIcon size={16} /><span className="ml-1.5">Boletear</span></Button>
+                  <Button onClick={handleLiberar} className="flex-1 h-10 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-sm"><Rocket01Icon size={16} /><span className="ml-1.5">Liberar</span></Button>
                 </div>
                 <Button onClick={handleAnular} variant="ghost" className="h-9 text-[11px] font-semibold text-red-500 hover:bg-red-50 hover:text-red-600 w-full rounded-lg"><RotateClockwiseIcon size={14} /><span className="ml-1.5">Anular Venta</span></Button>
               </div>

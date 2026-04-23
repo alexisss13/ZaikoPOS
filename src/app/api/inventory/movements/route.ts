@@ -6,6 +6,8 @@ export async function GET(req: Request) {
   const role = req.headers.get('x-user-role');
   const branchId = req.headers.get('x-branch-id');
 
+  console.log('[INVENTORY_MOVEMENTS] Headers:', { businessId, role, branchId });
+
   try {
     // Obtener parámetros de query
     const { searchParams } = new URL(req.url);
@@ -27,6 +29,8 @@ export async function GET(req: Request) {
         select: { id: true }
       });
       
+      console.log('[INVENTORY_MOVEMENTS] Found branches:', branches.length);
+      
       const branchIds = branches.map(b => b.id);
       
       // Si el usuario tiene una sucursal específica y no puede ver otras, filtrar
@@ -37,6 +41,8 @@ export async function GET(req: Request) {
         whereClause.branchId = { in: branchIds };
       }
     }
+
+    console.log('[INVENTORY_MOVEMENTS] Where clause:', JSON.stringify(whereClause));
 
     const movements = await prisma.stockMovement.findMany({
       where: whereClause,
@@ -66,6 +72,8 @@ export async function GET(req: Request) {
       },
       take: 500 // Limitar a los últimos 500 movimientos
     });
+
+    console.log('[INVENTORY_MOVEMENTS] Found movements:', movements.length);
 
     return NextResponse.json(movements);
   } catch (error: unknown) {

@@ -5,7 +5,10 @@ export async function GET(req: Request) {
   try {
     const userId = req.headers.get('x-user-id');
     
+    console.log('[SALES_CURRENT_SESSION] userId:', userId);
+    
     if (!userId) {
+      console.error('[SALES_CURRENT_SESSION] No userId in headers');
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
@@ -17,6 +20,8 @@ export async function GET(req: Request) {
       },
       orderBy: { openedAt: 'desc' }
     });
+
+    console.log('[SALES_CURRENT_SESSION] cashSession found:', !!cashSession);
 
     if (!cashSession) {
       return NextResponse.json({ sales: [] });
@@ -90,10 +95,11 @@ export async function GET(req: Request) {
       }))
     }));
 
+    console.log('[SALES_CURRENT_SESSION] Returning', formattedSales.length, 'sales');
     return NextResponse.json({ sales: formattedSales });
 
   } catch (error) {
-    console.error('Error fetching sales:', error);
+    console.error('[SALES_CURRENT_SESSION] Error fetching sales:', error);
     return NextResponse.json({ error: 'Error al obtener ventas' }, { status: 500 });
   }
 }
