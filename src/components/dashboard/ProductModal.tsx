@@ -134,7 +134,8 @@ export function ProductModal({ isOpen, onClose, onSuccess, productToEdit }: Prod
     };
 
     loadProductData();
-  }, [productToEdit, isOpen, categories, branches]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productToEdit?.id, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
