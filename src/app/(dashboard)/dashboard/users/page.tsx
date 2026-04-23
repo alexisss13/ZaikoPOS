@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  PlusSignIcon, MoreVerticalIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, UserSetting01Icon, PowerOffIcon, Delete02Icon, Building02Icon, Store01Icon, FilterIcon, CheckmarkCircle02Icon, Edit02Icon, Shield01Icon
+  PlusSignIcon, MoreVerticalIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, UserSettings01Icon, UnavailableIcon, Delete02Icon, Building02Icon, Store01Icon, FilterIcon, CheckmarkCircle02Icon, Edit02Icon, Shield01Icon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -304,7 +304,7 @@ export default function UsersPage() {
                 <tr>
                   <td colSpan={5} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-2">
-                      <UserSetting01Icon className="w-10 h-10 text-slate-200" strokeWidth={1} />
+                      <UserSettings01Icon className="w-10 h-10 text-slate-200" strokeWidth={1} />
                       <p className="font-medium text-sm text-slate-500">No se encontraron usuarios.</p>
                       <Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { setSearchTerm(''); setRoleFilter('ALL'); setStatusFilter('ALL'); }}>Limpiar filtros</Button>
                     </div>
@@ -400,7 +400,7 @@ export default function UsersPage() {
                             onClick={(e) => handleOpenEdit(u, e)}
                             title="Editar (Completo)"
                           >
-                            <UserSetting01Icon className="w-4 h-4" strokeWidth={1.5} />
+                            <UserSettings01Icon className="w-4 h-4" strokeWidth={1.5} />
                           </Button>
                           
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(isDropdownOpen ? null : u.id); }}>
@@ -413,7 +413,7 @@ export default function UsersPage() {
                               <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(null); }} />
                               <div className="absolute right-8 top-10 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95">
                                 <button onClick={(e) => handleToggleStatus(u, e)} className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-bold transition-colors">
-                                  <PowerOffIcon className={`w-4 h-4 shrink-0 ${u.isActive ? "text-amber-500" : "text-emerald-500"}`} strokeWidth={1.5} /> {u.isActive ? 'Suspender Acceso' : 'Restaurar Acceso'}
+                                  <UnavailableIcon className={`w-4 h-4 shrink-0 ${u.isActive ? "text-amber-500" : "text-emerald-500"}`} strokeWidth={1.5} /> {u.isActive ? 'Suspender Acceso' : 'Restaurar Acceso'}
                                 </button>
                                 <div className="h-px bg-slate-100 my-1 mx-2" />
                                 <button onClick={(e) => handleDelete(u.id, e)} className="w-full text-left px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-bold transition-colors">
