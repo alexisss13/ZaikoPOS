@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MobileProductList } from '@/components/dashboard/products/MobileProductList';
 import { SearchBar } from '@/components/dashboard/products/SearchBar';
 import { ProductsLoadingSkeleton } from '@/components/dashboard/products/ProductsLoadingSkeleton';
-import dynamic2 from 'next/dynamic';
+import { memo, useTransition } from 'react';
 import {
   Cancel01Icon, DashboardSquare01Icon, ArrowDataTransferHorizontalIcon, Store01Icon,
   UnavailableIcon, FilterIcon, PackageIcon, ArrowDown01Icon, Tag01Icon, File01Icon,
@@ -20,18 +20,19 @@ import {
 // Lazy-load desktop — no se descarga en móvil
 const ProductsDesktop = dynamic(
   () => import('@/components/dashboard/products/ProductsDesktop').then(m => ({ default: m.ProductsDesktop })),
-  { ssr: false }
+  { ssr: false, loading: () => <ProductsLoadingSkeleton /> }
 );
 
-// Lazy-load modales (solo móvil los necesita directamente)
-const ProductModal = dynamic2(() => import('@/components/dashboard/ProductModal').then(m => ({ default: m.ProductModal })), { ssr: false });
-const CategoryModal = dynamic2(() => import('@/components/dashboard/CategoryModal').then(m => ({ default: m.CategoryModal })), { ssr: false });
-const ImportProductsModal = dynamic2(() => import('@/components/dashboard/ImportProductsModal').then(m => ({ default: m.ImportProductsModal })), { ssr: false });
-const BarcodeGeneratorModal = dynamic2(() => import('@/components/dashboard/BarcodeGeneratorModal').then(m => ({ default: m.BarcodeGeneratorModal })), { ssr: false });
+// Lazy-load modales con loading states
+const ProductModal = dynamic(() => import('@/components/dashboard/ProductModal').then(m => ({ default: m.ProductModal })), { ssr: false });
+const CategoryModal = dynamic(() => import('@/components/dashboard/CategoryModal').then(m => ({ default: m.CategoryModal })), { ssr: false });
+const ImportProductsModal = dynamic(() => import('@/components/dashboard/ImportProductsModal').then(m => ({ default: m.ImportProductsModal })), { ssr: false });
+const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/BarcodeGeneratorModal').then(m => ({ default: m.BarcodeGeneratorModal })), { ssr: false });
 
 export default function ProductsPage() {
   const { isMobile } = useResponsive();
   const logic = useProductsLogic();
+  const [isPending, startTransition] = useTransition();
 
   const {
     user, canCreate, branches, categories, suppliers, isLoading, mutate, mutateCategories,
@@ -48,6 +49,13 @@ export default function ProductsPage() {
     handleTouchStart, handleTouchMove, handleTouchEnd,
     exportToExcel, exportToPDF,
   } = logic;
+
+  // Optimizar cambios de filtro con transiciones
+  const handleFilterChange = (filterFn: () => void) => {
+    startTransition(() => {
+      filterFn();
+    });
+  };
 
   // ── Mobile loading state ──
   if (isMobile && isLoading) {
@@ -160,7 +168,7 @@ export default function ProductsPage() {
                     ...visibleCodes.map(code => { const b = getBranchByCode(code); return { value: code, label: b?.name || code, icon: b?.logoUrl ? <img src={b.logoUrl} className="w-3 h-3 rounded-sm object-cover" alt="" /> : <Store01Icon className="w-3 h-3" /> }; }),
                     { value: 'INACTIVE', label: 'Inactivos', icon: <UnavailableIcon className="w-3 h-3" /> },
                   ].map(opt => (
-                    <button key={opt.value} onClick={() => { haptic(8); setCodeFilter(opt.value); setCategoryFilter('ALL'); logic.setCurrentPage(1); }}
+                    <button key={opt.value} onClick={() => { haptic(8); handleFilterChange(() => { setCodeFilter(opt.value); setCategoryFilter('ALL'); logic.setCurrentPage(1); }); }}
                       className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${codeFilter === opt.value ? (opt.value === 'INACTIVE' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm') : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                       {opt.icon}{opt.label}
                     </button>
@@ -171,9 +179,9 @@ export default function ProductsPage() {
                 <div>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Categoría</p>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <button onClick={() => { haptic(8); setCategoryFilter('ALL'); logic.setCurrentPage(1); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todas</button>
+                    <button onClick={() => { haptic(8); handleFilterChange(() => { setCategoryFilter('ALL'); logic.setCurrentPage(1); }); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todas</button>
                     {availableCategories.map(cat => (
-                      <button key={cat.id} onClick={() => { haptic(8); setCategoryFilter(cat.id); logic.setCurrentPage(1); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{cat.name}</button>
+                      <button key={cat.id} onClick={() => { haptic(8); handleFilterChange(() => { setCategoryFilter(cat.id); logic.setCurrentPage(1); }); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{cat.name}</button>
                     ))}
                   </div>
                 </div>
@@ -181,9 +189,9 @@ export default function ProductsPage() {
               <div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock</p>
                 <div className="grid grid-cols-3 gap-1.5">
-                  <button onClick={() => { haptic(8); setStockFilter('ALL'); logic.setCurrentPage(1); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todos</button>
-                  <button onClick={() => { haptic(8); setStockFilter('LOW'); logic.setCurrentPage(1); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'LOW' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>Bajo</button>
-                  <button onClick={() => { haptic(8); setStockFilter('OUT'); logic.setCurrentPage(1); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'OUT' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-red-50 text-red-600 border-red-200'}`}>Agotado</button>
+                  <button onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('ALL'); logic.setCurrentPage(1); }); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todos</button>
+                  <button onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('LOW'); logic.setCurrentPage(1); }); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'LOW' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>Bajo</button>
+                  <button onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('OUT'); logic.setCurrentPage(1); }); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'OUT' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-red-50 text-red-600 border-red-200'}`}>Agotado</button>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
@@ -198,7 +206,21 @@ export default function ProductsPage() {
       </div>
 
       {/* Product list */}
-      <div ref={scrollRef} className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-24" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', willChange: 'scroll-position' }}>
+      <div 
+        ref={scrollRef} 
+        className="flex flex-col flex-1 gap-2.5 overflow-y-auto pb-24" 
+        onTouchStart={handleTouchStart} 
+        onTouchMove={handleTouchMove} 
+        onTouchEnd={handleTouchEnd} 
+        style={{ 
+          overscrollBehavior: 'contain', 
+          WebkitOverflowScrolling: 'touch', 
+          willChange: 'scroll-position',
+          transform: 'translateZ(0)', // Forzar aceleración por hardware
+          backfaceVisibility: 'hidden',
+          perspective: 1000,
+        }}
+      >
         <div id="pull-indicator" className="flex items-center justify-center overflow-hidden transition-all duration-200" style={{ height: 0, opacity: 0, willChange: 'height, opacity' }}>
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
             <div className={`refresh-icon w-4 h-4 text-slate-400 ${isRefreshing ? 'animate-spin text-slate-700' : ''}`}>
@@ -208,7 +230,7 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading || isPending ? (
           <div className="space-y-2.5">
             {Array(5).fill(0).map((_, i) => (
               <div key={i} className="bg-white rounded-3xl border border-slate-100 p-4">

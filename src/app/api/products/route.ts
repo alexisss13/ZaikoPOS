@@ -61,7 +61,7 @@ export async function GET(req: Request) {
         }
       },
       orderBy: { createdAt: 'desc' },
-      take: 500, // Limitar productos
+      take: 200, // REDUCIR a 200 productos máximo
     });
     
     // Transform the data to include branchStocks at product level
@@ -92,7 +92,7 @@ export async function GET(req: Request) {
         title: product.title,
         description: product.description,
         slug: product.slug,
-        images: product.images,
+        images: product.images.slice(0, 1), // SOLO LA PRIMERA IMAGEN
         basePrice: product.basePrice,
         wholesalePrice: product.wholesalePrice,
         wholesaleMinCount: product.wholesaleMinCount,
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
         barcode,
         sku,
         code: barcode || sku || product.id.slice(0, 8),
-        variants: product.variants.map(v => ({
+        variants: product.variants.slice(0, 3).map(v => ({ // SOLO 3 VARIANTES
           id: v.id,
           name: v.name,
           sku: v.sku,
@@ -125,10 +125,10 @@ export async function GET(req: Request) {
       };
     });
     
-    // ⚡ Agregar cache headers
+    // ⚡ Agregar cache headers AGRESIVOS
     return NextResponse.json(productsWithStocks, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
     });
   } catch (error) {

@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { PackageIcon, Image01Icon, Store01Icon, Globe02Icon, Money01Icon, Note01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
+import { ImageWithSpinner } from '@/components/ui/ImageWithSpinner';
 import type { Product, Branch } from './types';
 
 interface ProductCardProps {
@@ -28,8 +29,7 @@ function ProductCardComponent({
   // Esto evita re-renders de toda la página cuando se expande una tarjeta
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const haptic = (ms = 10) => { try { navigator.vibrate?.(ms); } catch {} };
-  // Memoizar cálculos pesados
+  // Memoizar cálculos pesados con dependencias específicas
   const { visibleStocks, totalPhysicalStock, stockStatus, ownerBranch, branchesWithStock, hasWholesale } = useMemo(() => {
     const visibleStocks = canViewOthers
       ? (product.branchStocks || [])
@@ -40,26 +40,42 @@ function ProductCardComponent({
     const hasWholesale = Number(product.wholesalePrice) > 0;
 
     let stockStatus = { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
-    if (totalPhysicalStock <= 0) stockStatus = { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
-    else if (totalPhysicalStock <= minStock) stockStatus = { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+    if (totalPhysicalStock <= 0) {
+      stockStatus = { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
+    } else if (totalPhysicalStock <= minStock) {
+      stockStatus = { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+    }
 
     const ownerBranch = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
     const branchesWithStock = product.branchStocks?.filter(bs => bs.quantity > 0) || [];
 
     return { visibleStocks, totalPhysicalStock, stockStatus, ownerBranch, branchesWithStock, hasWholesale };
-  }, [product, branches, canViewOthers, userBranchId]);
+  }, [
+    product.branchStocks, 
+    product.branchOwnerId, 
+    product.minStock, 
+    product.wholesalePrice,
+    canViewOthers, 
+    userBranchId, 
+    branches
+  ]);
 
+  const haptic = (ms = 10) => { try { navigator.vibrate?.(ms); } catch {} };
+  
+  // Memoizar handlers para evitar re-renders
   const handleToggle = useCallback(() => {
     haptic(8);
     setIsExpanded(prev => !prev);
   }, []);
 
   const handleEdit = useCallback(() => {
+    haptic(8);
     onEdit(product);
   }, [onEdit, product]);
 
   const handleKardex = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    haptic(8);
     onKardex(product);
   }, [onKardex, product]);
 
@@ -71,7 +87,18 @@ function ProductCardComponent({
           {/* Imagen */}
           <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`} style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden' }}>
             {product.images?.[0] ? (
-              <img src={product.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+              <ImageWithSpinner
+                src={product.images[0]}
+                alt={product.title}
+                className="w-full h-full object-cover"
+                containerClassName="w-full h-full"
+                spinnerSize={16}
+                fallback={
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Image01Icon className="w-5 h-5 text-slate-400" />
+                  </div>
+                }
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Image01Icon className="w-5 h-5 text-slate-400" />

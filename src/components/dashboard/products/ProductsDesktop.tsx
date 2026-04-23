@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ImageWithSpinner } from '@/components/ui/ImageWithSpinner';
 import Barcode from 'react-barcode';
 import { SearchBar } from './SearchBar';
 import {
@@ -157,7 +158,18 @@ export function ProductsDesktop({ logic }: { logic: Logic }) {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center ${!product.active ? 'grayscale' : ''}`}>
-                            {product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" /> : <Image01Icon className="w-4 h-4 text-slate-300" />}
+                            {product.images?.[0] ? (
+                              <ImageWithSpinner
+                                src={product.images[0]}
+                                alt={product.title}
+                                className="w-full h-full object-cover"
+                                containerClassName="w-full h-full"
+                                spinnerSize={14}
+                                fallback={<Image01Icon className="w-4 h-4 text-slate-300" />}
+                              />
+                            ) : (
+                              <Image01Icon className="w-4 h-4 text-slate-300" />
+                            )}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">

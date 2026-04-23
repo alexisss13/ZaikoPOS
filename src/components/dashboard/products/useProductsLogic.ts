@@ -153,35 +153,62 @@ export function useProductsLogic() {
     } catch { toast.error('Error al generar la imagen.', { id: 'barcode-toast' }); }
   }, [barcodeProduct]);
 
-  // ── Computed ──
+  // ── Computed (OPTIMIZADO) ──
   const productsWithMetadata = useMemo(() => {
     if (!products) return [];
+    const userBranchId = user?.branchId;
+    
     return products.map(p => {
       const isGlobal = !p.branchOwnerId;
-      const isMine = p.branchOwnerId === user?.branchId;
-      const hasMyStock = p.branchStocks?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0) ?? false;
+      const isMine = p.branchOwnerId === userBranchId;
+      const hasMyStock = p.branchStocks?.some(bs => bs.branchId === userBranchId && bs.quantity > 0) ?? false;
+      
       let canEditThis = false;
       if (canManageGlobal) canEditThis = true;
       else if (canEdit && (isGlobal || isMine || hasMyStock)) canEditThis = true;
-      const visibleStocks = canViewOthers ? (p.branchStocks || []) : (p.branchStocks?.filter(bs => bs.branchId === user?.branchId) || []);
+      
+      const visibleStocks = canViewOthers 
+        ? (p.branchStocks || []) 
+        : (p.branchStocks?.filter(bs => bs.branchId === userBranchId) || []);
+      
       const totalStock = visibleStocks.reduce((s, bs) => s + bs.quantity, 0);
+      
       return { ...p, _meta: { isGlobal, isMine, hasMyStock, canEditThis, totalStock, visibleStocks } };
     });
   }, [products, user?.branchId, canManageGlobal, canEdit, canViewOthers]);
 
+  // Crear mapa de branches por código UNA VEZ
+  const branchByCodeMap = useMemo(() => {
+    return new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
+  }, [branches]);
+
   const baseFilteredProducts = useMemo(() => {
     if (!productsWithMetadata.length) return [];
-    const branchByCode = new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
+    
     return productsWithMetadata.filter(p => {
       const { isGlobal, isMine, hasMyStock } = p._meta;
-      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) return false;
+      
+      // Filtro de permisos
+      if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) {
+        return false;
+      }
+      
+      // Filtro de inactivos
       if (codeFilter === 'INACTIVE') return !p.active;
       if (!p.active) return false;
-      if (codeFilter === 'GENERAL') { const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || []; return isGlobal || bws.length > 1; }
-      else if (codeFilter !== 'ALL') { const b = branchByCode.get(codeFilter); return b ? p.branchOwnerId === b.id : true; }
+      
+      // Filtro de código
+      if (codeFilter === 'GENERAL') {
+        const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
+        return isGlobal || bws.length > 1;
+      } else if (codeFilter !== 'ALL') {
+        const b = branchByCodeMap.get(codeFilter);
+        return b ? p.branchOwnerId === b.id : true;
+      }
+      
       return true;
     });
-  }, [productsWithMetadata, codeFilter, branches, isSuperOrOwner, canViewOthers, canManageGlobal]);
+  }, [productsWithMetadata, codeFilter, branchByCodeMap, isSuperOrOwner, canViewOthers, canManageGlobal]);
 
   const availableCategories = useMemo(() => {
     if (!categories || !baseFilteredProducts.length) return [];
@@ -191,19 +218,39 @@ export function useProductsLogic() {
 
   const filteredProducts = useMemo(() => {
     if (!baseFilteredProducts.length) return [];
+    
     const q = debouncedSearch.toLowerCase();
+    const hasSearch = q.length > 0;
+    const hasCategoryFilter = categoryFilter !== 'ALL';
+    const hasStockFilter = stockFilter !== 'ALL';
+    
+    // Si no hay filtros, retornar directamente
+    if (!hasSearch && !hasCategoryFilter && !hasStockFilter) {
+      return baseFilteredProducts;
+    }
+    
     return baseFilteredProducts.filter(p => {
-      const { totalStock } = p._meta;
-      if (q) {
-        const matchesSearch = p.title.toLowerCase().includes(q) || (p.barcode?.includes(debouncedSearch) ?? false) || (p.sku?.toLowerCase().includes(q) ?? false);
-        if (!matchesSearch) return false;
+      // Búsqueda de texto
+      if (hasSearch) {
+        const matchesTitle = p.title.toLowerCase().includes(q);
+        const matchesBarcode = p.barcode?.includes(debouncedSearch) ?? false;
+        const matchesSku = p.sku?.toLowerCase().includes(q) ?? false;
+        
+        if (!matchesTitle && !matchesBarcode && !matchesSku) return false;
       }
-      if (categoryFilter !== 'ALL' && p.categoryId !== categoryFilter) return false;
-      if (stockFilter !== 'ALL') {
+      
+      // Filtro de categoría
+      if (hasCategoryFilter && p.categoryId !== categoryFilter) return false;
+      
+      // Filtro de stock
+      if (hasStockFilter) {
+        const { totalStock } = p._meta;
         const min = p.minStock || 5;
+        
         if (stockFilter === 'LOW' && (totalStock <= 0 || totalStock > min)) return false;
         if (stockFilter === 'OUT' && totalStock > 0) return false;
       }
+      
       return true;
     });
   }, [baseFilteredProducts, debouncedSearch, categoryFilter, stockFilter]);

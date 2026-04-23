@@ -63,10 +63,29 @@ export interface CartItem {
 }
 
 export function usePOSData() {
-  const { data: cashData, isLoading: loadingCash, mutate: mutateCash } = useSWR('/api/cash/current', fetcher);
-  const { data: products, isLoading: loadingProducts, mutate: mutateProducts } = useSWR<Product[]>('/api/products', fetcher);
-  const { data: categories, isLoading: loadingCats } = useSWR<Category[]>('/api/categories', fetcher);
-  const { data: branches } = useSWR<BranchBasic[]>('/api/branches', fetcher);
+  const { data: cashData, isLoading: loadingCash, mutate: mutateCash } = useSWR('/api/cash/current', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 10000,
+  });
+  
+  const { data: products, isLoading: loadingProducts, mutate: mutateProducts } = useSWR<Product[]>('/api/products', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 30000, // 30 segundos
+  });
+  
+  const { data: categories, isLoading: loadingCats } = useSWR<Category[]>('/api/categories', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000, // 1 minuto
+  });
+  
+  const { data: branches } = useSWR<BranchBasic[]>('/api/branches', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000, // 1 minuto
+  });
 
   const cashSession = cashData?.session;
   const hasCashOpen = cashSession?.status === 'OPEN';

@@ -97,57 +97,105 @@ export function usePOSLogic() {
     variant.stock?.reduce((acc, curr) => acc + curr.quantity, 0) || 0,
   []);
 
-  // ── Product filtering ──
+  // ── Product filtering (OPTIMIZADO) ──
+  // Crear mapa de categorías UNA VEZ
+  const categoryMap = useMemo(() => {
+    return new Map(categories?.map(c => [c.id, c]) || []);
+  }, [categories]);
+
   const allowedProducts = useMemo(() => {
     if (!products) return [];
     if (canViewOthers) return products;
+    
+    const userBranchId = user?.branchId;
+    
     return products.filter(p => {
-      const catCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
-      const hasStockHere = p.variants.some(v => v.stock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0));
+      const catCode = p.category?.ecommerceCode ?? categoryMap.get(p.categoryId)?.ecommerceCode;
+      const hasStockHere = p.variants.some(v => 
+        v.stock?.some(bs => bs.branchId === userBranchId && bs.quantity > 0)
+      );
       return !catCode || catCode === myCode || hasStockHere;
     });
-  }, [products, categories, myCode, user?.branchId, canViewOthers]);
+  }, [products, categoryMap, myCode, user?.branchId, canViewOthers]);
 
   const availableCategories = useMemo(() => {
     if (!categories || !allowedProducts) return [];
+    
+    const userBranchId = user?.branchId;
+    
     const baseProducts = allowedProducts.filter(p => {
       if (!canViewOthers) return true;
-      const catCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
+      
+      const catCode = p.category?.ecommerceCode ?? categoryMap.get(p.categoryId)?.ecommerceCode;
       const isGlobal = !catCode;
       const isMine = catCode === myCode;
-      const hasStockHere = p.variants.some(v => v.stock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0));
+      const hasStockHere = p.variants.some(v => 
+        v.stock?.some(bs => bs.branchId === userBranchId && bs.quantity > 0)
+      );
+      
       if (codeFilter === 'GENERAL') {
-        const storesWithStock = new Set(p.variants.flatMap(v => v.stock?.filter(bs => bs.quantity > 0).map(bs => bs.branchId) || [])).size;
+        const storesWithStock = new Set(
+          p.variants.flatMap(v => 
+            v.stock?.filter(bs => bs.quantity > 0).map(bs => bs.branchId) || []
+          )
+        ).size;
         return isGlobal || storesWithStock > 1 || (!isMine && hasStockHere);
       }
+      
       if (codeFilter !== 'ALL') return catCode === codeFilter;
       return true;
     });
+    
     const validIds = new Set(baseProducts.map(p => p.categoryId));
     return categories.filter(c => validIds.has(c.id));
-  }, [categories, allowedProducts, codeFilter, canViewOthers, myCode, user?.branchId]);
+  }, [categories, allowedProducts, codeFilter, canViewOthers, myCode, user?.branchId, categoryMap]);
 
   const filteredProducts = useMemo(() => {
     if (!allowedProducts) return [];
+    
+    const searchLower = searchTerm.toLowerCase();
+    const hasSearch = searchTerm.length > 0;
+    const hasCategoryFilter = selectedCategory !== 'ALL';
+    const hasCodeFilter = codeFilter !== 'ALL' && codeFilter !== 'GENERAL';
+    const userBranchId = user?.branchId;
+    
     return allowedProducts.filter(p => {
-      const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.variants.some(v => v.barcode?.includes(searchTerm) || v.sku?.includes(searchTerm));
-      const matchesCat = selectedCategory === 'ALL' || p.categoryId === selectedCategory;
-      if (!canViewOthers) return matchesSearch && matchesCat;
-      const catCode = p.category?.ecommerceCode ?? categories?.find(c => c.id === p.categoryId)?.ecommerceCode;
-      const isGlobal = !catCode;
-      const isMine = catCode === myCode;
-      const hasStockHere = p.variants.some(v => v.stock?.some(bs => bs.branchId === user?.branchId && bs.quantity > 0));
-      let matchesCode = true;
-      if (codeFilter === 'GENERAL') {
-        const storesWithStock = new Set(p.variants.flatMap(v => v.stock?.filter(bs => bs.quantity > 0).map(bs => bs.branchId) || [])).size;
-        matchesCode = isGlobal || storesWithStock > 1 || (!isMine && hasStockHere);
-      } else if (codeFilter !== 'ALL') {
-        matchesCode = catCode === codeFilter;
+      // Búsqueda de texto
+      if (hasSearch) {
+        const matchesTitle = p.title.toLowerCase().includes(searchLower);
+        const matchesVariant = p.variants.some(v => 
+          v.barcode?.includes(searchTerm) || v.sku?.includes(searchTerm)
+        );
+        if (!matchesTitle && !matchesVariant) return false;
       }
-      return matchesSearch && matchesCat && matchesCode;
+      
+      // Filtro de categoría
+      if (hasCategoryFilter && p.categoryId !== selectedCategory) return false;
+      
+      // Filtro de código (solo si canViewOthers)
+      if (canViewOthers) {
+        const catCode = p.category?.ecommerceCode ?? categoryMap.get(p.categoryId)?.ecommerceCode;
+        const isGlobal = !catCode;
+        const isMine = catCode === myCode;
+        const hasStockHere = p.variants.some(v => 
+          v.stock?.some(bs => bs.branchId === userBranchId && bs.quantity > 0)
+        );
+        
+        if (codeFilter === 'GENERAL') {
+          const storesWithStock = new Set(
+            p.variants.flatMap(v => 
+              v.stock?.filter(bs => bs.quantity > 0).map(bs => bs.branchId) || []
+            )
+          ).size;
+          if (!isGlobal && storesWithStock <= 1 && (isMine || !hasStockHere)) return false;
+        } else if (hasCodeFilter) {
+          if (catCode !== codeFilter) return false;
+        }
+      }
+      
+      return true;
     });
-  }, [allowedProducts, searchTerm, selectedCategory, codeFilter, canViewOthers, categories, myCode, user?.branchId]);
+  }, [allowedProducts, searchTerm, selectedCategory, codeFilter, canViewOthers, categoryMap, myCode, user?.branchId]);
 
   // ── Cart handlers ──
   const addToCart = useCallback((product: Product, variant: ProductVariant) => {

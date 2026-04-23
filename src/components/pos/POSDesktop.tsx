@@ -23,6 +23,7 @@ import { CustomerSearchModal } from './CustomerSearchModal';
 import { DiscountModal } from './DiscountModal';
 import { TicketPrint } from './TicketPrint';
 import type { usePOSLogic } from './hooks/usePOSLogic';
+import { ImageWithSpinner } from '@/components/ui/ImageWithSpinner';
 
 type POSLogic = ReturnType<typeof usePOSLogic>;
 
@@ -171,7 +172,18 @@ export function POSDesktop({ logic }: POSDesktopProps) {
                 return (
                   <div key={`${product.id}-${variant.id}`} onClick={() => addToCart(product, variant)} className={`group relative flex flex-col gap-2 p-2 rounded-2xl transition-all select-none bg-white border ${isOutOfStock ? 'opacity-80 border-slate-200 border-dashed cursor-pointer hover:bg-slate-50' : 'cursor-pointer border-slate-100 hover:border-slate-200 hover:shadow-sm'}`}>
                     <div className={`aspect-square bg-slate-50 rounded-xl relative overflow-hidden shrink-0 border border-slate-100 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}>
-                      {displayImages?.[0] ? <img src={displayImages[0]} alt={product.title} className="w-full h-full object-cover mix-blend-multiply" draggable={false} /> : <div className="w-full h-full flex items-center justify-center text-slate-300"><PackageIcon size={24} /></div>}
+                      {displayImages?.[0] ? (
+                        <ImageWithSpinner
+                          src={displayImages[0]}
+                          alt={product.title}
+                          className="w-full h-full object-cover mix-blend-multiply"
+                          containerClassName="w-full h-full"
+                          spinnerSize={24}
+                          fallback={<div className="w-full h-full flex items-center justify-center text-slate-300"><PackageIcon size={24} /></div>}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300"><PackageIcon size={24} /></div>
+                      )}
                       <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shadow-sm leading-none backdrop-blur-md ${isOutOfStock ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-700'}`}>{localStock} un.</span>
                         {hasDiscount && !isOutOfStock && <span className="text-[9px] font-bold bg-slate-800 text-white px-1.5 py-0.5 rounded-md shadow-sm leading-none">-{product.discountPercentage}%</span>}
