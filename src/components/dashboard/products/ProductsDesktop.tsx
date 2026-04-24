@@ -291,7 +291,15 @@ const arePropsEqual = (prevProps: { logic: Logic }, nextProps: { logic: Logic })
   const prev = prevProps.logic;
   const next = nextProps.logic;
   
-  // Comparar solo lo que afecta la UI
+  // Comparar estados de modales (CRÍTICO para que los botones funcionen)
+  if (prev.isModalOpen !== next.isModalOpen) return false;
+  if (prev.isCategoryModalOpen !== next.isCategoryModalOpen) return false;
+  if (prev.isImportModalOpen !== next.isImportModalOpen) return false;
+  if (prev.isBarcodeModalOpen !== next.isBarcodeModalOpen) return false;
+  if (prev.isKardexModalOpen !== next.isKardexModalOpen) return false;
+  if (prev.showExportMenu !== next.showExportMenu) return false;
+  
+  // Comparar productos y filtros
   if (prev.paginatedProducts.length !== next.paginatedProducts.length) return false;
   if (prev.currentPage !== next.currentPage) return false;
   if (prev.isLoading !== next.isLoading) return false;

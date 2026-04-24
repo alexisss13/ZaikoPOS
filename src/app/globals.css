@@ -84,29 +84,26 @@
     will-change: background-color;
   }
   
-  /* Optimizar botones con hover - ELIMINAR TODAS LAS TRANSICIONES */
+  /* Optimizar botones con hover - SIN transiciones pero permitir clicks */
   .btn-optimized {
     contain: layout style;
     transform: translateZ(0);
     backface-visibility: hidden;
     will-change: auto;
-    transition: none !important; /* Forzar sin transiciones */
+    transition-property: none;
+    transition-duration: 0s;
   }
   
   .btn-optimized:hover {
     will-change: background-color, color;
-    transition: none !important; /* Forzar sin transiciones en hover */
   }
   
   /* Optimizar TODOS los botones dentro de la tabla */
   .products-table button {
-    transition: none !important;
     transform: translateZ(0);
     backface-visibility: hidden;
-  }
-  
-  .products-table button:hover {
-    transition: none !important;
+    transition-property: background-color, color;
+    transition-duration: 0s;
   }
   
   /* Scrollbar personalizado */

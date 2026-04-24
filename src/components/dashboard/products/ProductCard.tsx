@@ -80,12 +80,12 @@ function ProductCardComponent({
   }, [onKardex, product]);
 
   return (
-    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden active:scale-[0.985] ${!product.active ? 'opacity-60' : ''}`} style={{ transition: 'transform 0.1s ease-out', contentVisibility: 'auto', containIntrinsicSize: '0 100px' }}>
+    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden ${!product.active ? 'opacity-60' : ''}`} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 100px', transform: 'translateZ(0)' }}>
       {/* Header */}
-      <div className="p-4 cursor-pointer select-none" onClick={handleToggle}>
+      <div className="p-4 cursor-pointer select-none active:scale-[0.99]" onClick={handleToggle} style={{ transition: 'transform 50ms ease-out', willChange: 'transform' }}>
         <div className="flex items-center gap-3">
           {/* Imagen */}
-          <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`} style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden' }}>
+          <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0 ${!product.active ? 'grayscale' : ''}`} style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}>
             {product.images?.[0] ? (
               <ImageWithSpinner
                 src={product.images[0]}
@@ -134,13 +134,13 @@ function ProductCardComponent({
             </div>
           </div>
 
-          <ArrowDown01Icon className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 0.1s ease-out', willChange: 'transform' }} />
+          <ArrowDown01Icon className={`w-4 h-4 text-slate-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ transition: 'transform 100ms ease-out', willChange: 'transform' }} />
         </div>
       </div>
 
       {/* Expandible - Solo renderizar cuando está expandido */}
       {isExpanded && (
-        <div className="border-t border-slate-100 p-4 bg-slate-50/50" style={{ animation: 'slideDown 0.1s ease-out' }}>
+        <div className="border-t border-slate-100 p-4 bg-slate-50/50">
           <div className="grid grid-cols-2 gap-2 mb-3">
             {/* Catálogo */}
             <div className="bg-white rounded-2xl p-3 border border-slate-100">
@@ -207,16 +207,16 @@ function ProductCardComponent({
           <div className="flex gap-2">
             <Button
               onClick={handleEdit}
-              className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-sm transition-transform duration-100 active:scale-95"
-              style={{ willChange: 'transform' }}
+              className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-sm active:scale-95"
+              style={{ transition: 'transform 50ms ease-out, background-color 0s', willChange: 'transform' }}
             >
               {canEdit ? 'Editar' : 'Ver detalles'}
             </Button>
             <Button
               onClick={handleKardex}
               variant="outline"
-              className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 transition-transform duration-100 active:scale-95"
-              style={{ willChange: 'transform' }}
+              className="h-11 px-3.5 rounded-2xl border-slate-200 shrink-0 text-xs font-semibold text-slate-600 gap-1.5 active:scale-95"
+              style={{ transition: 'transform 50ms ease-out, background-color 0s', willChange: 'transform' }}
             >
               <Note01Icon className="w-4 h-4" /> Kardex
             </Button>

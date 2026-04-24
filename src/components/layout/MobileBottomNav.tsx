@@ -231,18 +231,19 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 <button
                   key={index}
                   onClick={handleMoreClick}
-                  className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
+                  className="flex flex-col items-center justify-center p-2 min-w-0 flex-1 active:scale-95"
+                  style={{ transition: 'transform 50ms ease-out', willChange: 'transform' }}
                 >
-                  <div className={`p-2 rounded-xl transition-all duration-150 ${
+                  <div className={`p-2 rounded-xl ${
                     item.isActive 
                       ? 'bg-slate-900 text-white scale-105' 
                       : 'text-slate-500'
-                  }`} style={{ willChange: 'transform, background-color' }}>
+                  }`} style={{ transition: 'background-color 0s, transform 50ms ease-out', willChange: 'transform, background-color' }}>
                     {IconComponent && <IconComponent className="w-5 h-5" />}
                   </div>
-                  <span className={`text-xs font-medium mt-1 transition-colors duration-150 ${
+                  <span className={`text-xs font-medium mt-1 ${
                     item.isActive ? 'text-slate-900' : 'text-slate-500'
-                  }`}>
+                  }`} style={{ transition: 'color 0s' }}>
                     {item.label}
                   </span>
                 </button>
@@ -253,18 +254,19 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
+                className="flex flex-col items-center justify-center p-2 min-w-0 flex-1 active:scale-95"
+                style={{ transition: 'transform 50ms ease-out', willChange: 'transform' }}
               >
-                <div className={`p-2 rounded-xl transition-all duration-150 ${
+                <div className={`p-2 rounded-xl ${
                   item.isActive 
                     ? 'bg-slate-900 text-white scale-105' 
                     : 'text-slate-500'
-                }`} style={{ willChange: 'transform, background-color' }}>
+                }`} style={{ transition: 'background-color 0s, transform 50ms ease-out', willChange: 'transform, background-color' }}>
                   {IconComponent && <IconComponent className="w-5 h-5" />}
                 </div>
-                <span className={`text-xs font-medium mt-1 transition-colors duration-150 ${
+                <span className={`text-xs font-medium mt-1 ${
                   item.isActive ? 'text-slate-900' : 'text-slate-500'
-                }`}>
+                }`} style={{ transition: 'color 0s' }}>
                   {item.label}
                 </span>
               </Link>
