@@ -103,44 +103,44 @@ export default function StoreDashboardOverview() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full gap-5 animate-in fade-in duration-300">
+    <div className="flex flex-col h-full w-full gap-4 animate-in fade-in duration-200">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Dashboard</h1>
-          <BarChartIcon className="w-6 h-6 text-slate-500" strokeWidth={2} />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Dashboard</h1>
+          <BarChartIcon className="w-5 h-5 text-slate-500" strokeWidth={2} />
         </div>
 
         <div className="flex items-center gap-2">
           {/* Filtro de rango */}
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5">
+          <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
             <button
               onClick={() => setDateRange('today')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 dateRange === 'today'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Hoy
             </button>
             <button
               onClick={() => setDateRange('week')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 dateRange === 'week'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Semana
             </button>
             <button
               onClick={() => setDateRange('month')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 dateRange === 'month'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Mes
@@ -152,9 +152,9 @@ export default function StoreDashboardOverview() {
             <div className="relative">
               <button
                 onClick={() => setShowBranchFilter(!showBranchFilter)}
-                className="h-9 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-2"
+                className="h-9 px-3 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-2 shadow-sm transition-colors"
               >
-                <Store01Icon className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
+                <Store01Icon className="w-3.5 h-3.5 text-slate-500" strokeWidth={1.5} />
                 <span className="text-slate-700">
                   {selectedBranch === 'ALL' ? 'Todas las sucursales' : branches.find((b: any) => b.id === selectedBranch)?.name}
                 </span>
@@ -194,15 +194,15 @@ export default function StoreDashboardOverview() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Ingresos */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-start justify-between mb-2.5">
+            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
               <DollarCircleIcon className="w-5 h-5 text-emerald-600" strokeWidth={1.5} />
             </div>
             {stats.todayVsYesterday && (
-              <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full ${
+              <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full ${
                 stats.todayVsYesterday.revenueChange >= 0 
                   ? 'bg-emerald-50 text-emerald-700' 
                   : 'bg-red-50 text-red-700'
@@ -216,19 +216,19 @@ export default function StoreDashboardOverview() {
               </div>
             )}
           </div>
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ingresos</p>
-          <p className="text-2xl font-black text-slate-900 tabular-nums">S/ {stats.totalRevenue.toFixed(2)}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ingresos</p>
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">S/ {stats.totalRevenue.toFixed(2)}</p>
           <p className="text-[10px] text-slate-500 mt-1">{dateRangeLabel}</p>
         </div>
 
         {/* Ventas */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-start justify-between mb-2.5">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
               <ShoppingCart01Icon className="w-5 h-5 text-blue-600" strokeWidth={1.5} />
             </div>
             {stats.todayVsYesterday && (
-              <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full ${
+              <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full ${
                 stats.todayVsYesterday.ordersChange >= 0 
                   ? 'bg-emerald-50 text-emerald-700' 
                   : 'bg-red-50 text-red-700'
@@ -242,54 +242,54 @@ export default function StoreDashboardOverview() {
               </div>
             )}
           </div>
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ventas</p>
-          <p className="text-2xl font-black text-slate-900 tabular-nums">{stats.totalOrders}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ventas</p>
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">{stats.totalOrders}</p>
           <p className="text-[10px] text-slate-500 mt-1">{dateRangeLabel}</p>
         </div>
 
         {/* Ticket Promedio */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-start justify-between mb-2.5">
+            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
               <BarChartIcon className="w-5 h-5 text-purple-600" strokeWidth={1.5} />
             </div>
           </div>
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ticket Promedio</p>
-          <p className="text-2xl font-black text-slate-900 tabular-nums">S/ {stats.averageTicket.toFixed(2)}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ticket Promedio</p>
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">S/ {stats.averageTicket.toFixed(2)}</p>
           <p className="text-[10px] text-slate-500 mt-1">{dateRangeLabel}</p>
         </div>
 
         {/* Productos Vendidos */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-start justify-between mb-2.5">
+            <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
               <PackageIcon className="w-5 h-5 text-orange-600" strokeWidth={1.5} />
             </div>
           </div>
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Productos Vendidos</p>
-          <p className="text-2xl font-black text-slate-900 tabular-nums">{stats.totalSales}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Productos Vendidos</p>
+          <p className="text-2xl font-bold text-slate-900 tabular-nums">{stats.totalSales}</p>
           <p className="text-[10px] text-slate-500 mt-1">{dateRangeLabel}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
         
         {/* Columna Izquierda */}
-        <div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
+        <div className="lg:col-span-2 flex flex-col gap-3 min-h-0">
           
           {/* Ventas por Sucursal */}
           {isOwner && stats.salesByBranch && stats.salesByBranch.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-              <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Ventas por Sucursal</h3>
+            <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm">
+              <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">Ventas por Sucursal</h3>
               <div className="space-y-2">
                 {stats.salesByBranch.map((branch) => (
-                  <div key={branch.branchId} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center gap-2.5">
+                  <div key={branch.branchId} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
+                    <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center">
                         <Store01Icon className="w-4 h-4 text-slate-600" strokeWidth={1.5} />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-slate-900">{branch.branchName}</p>
+                        <p className="text-xs font-semibold text-slate-900">{branch.branchName}</p>
                         <p className="text-[10px] text-slate-500">{branch.orders} ventas</p>
                       </div>
                     </div>
@@ -304,18 +304,18 @@ export default function StoreDashboardOverview() {
           )}
 
           {/* Top Productos */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex-1 min-h-0 flex flex-col">
-            <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Productos Más Vendidos</h3>
-            <div className="space-y-1 overflow-y-auto flex-1">
+          <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col">
+            <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">Productos Más Vendidos</h3>
+            <div className="space-y-1 overflow-y-auto flex-1 custom-scrollbar">
               {stats.topProducts && stats.topProducts.length > 0 ? (
                 stats.topProducts.map((product, index) => (
                   <div key={product.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors border-b border-slate-100 last:border-0">
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                      <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-6 h-6 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
                         <span className="text-[10px] font-bold text-slate-600">#{index + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-900 truncate">{product.name}</p>
+                        <p className="text-xs font-semibold text-slate-900 truncate">{product.name}</p>
                         <p className="text-[10px] text-slate-500">{product.quantity} unidades</p>
                       </div>
                     </div>
@@ -332,11 +332,11 @@ export default function StoreDashboardOverview() {
         </div>
 
         {/* Columna Derecha */}
-        <div className="flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col gap-3 min-h-0">
           
           {/* Métodos de Pago */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Métodos de Pago</h3>
+          <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm">
+            <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">Métodos de Pago</h3>
             <div className="space-y-2">
               {stats.salesByPaymentMethod && Object.entries(stats.salesByPaymentMethod).map(([method, amount]) => {
                 const Icon = paymentMethodIcons[method] || MoneyExchange03Icon;
@@ -346,7 +346,7 @@ export default function StoreDashboardOverview() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Icon className="w-3.5 h-3.5 text-slate-500" />
-                        <span className="text-xs font-medium text-slate-700">{method}</span>
+                        <span className="text-xs font-semibold text-slate-700">{method}</span>
                       </div>
                       <span className="text-xs font-bold text-slate-900 tabular-nums">S/ {amount.toFixed(2)}</span>
                     </div>
@@ -363,22 +363,22 @@ export default function StoreDashboardOverview() {
           </div>
 
           {/* Stock Bajo */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex-1 min-h-0 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Alertas de Stock</h3>
+          <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Alertas de Stock</h3>
               {stats.lowStockProducts && stats.lowStockProducts.length > 0 && (
                 <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
                   <span className="text-[9px] font-bold text-red-700">{stats.lowStockProducts.length}</span>
                 </div>
               )}
             </div>
-            <div className="space-y-1 overflow-y-auto flex-1">
+            <div className="space-y-1 overflow-y-auto flex-1 custom-scrollbar">
               {stats.lowStockProducts && stats.lowStockProducts.length > 0 ? (
                 stats.lowStockProducts.map((product) => (
-                  <div key={product.id} className="flex items-start gap-2 p-2 bg-red-50 border border-red-100 rounded-lg">
+                  <div key={product.id} className="flex items-start gap-2 p-2 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors">
                     <Alert01Icon className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" strokeWidth={1.5} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-900 truncate">{product.name}</p>
+                      <p className="text-xs font-semibold text-slate-900 truncate">{product.name}</p>
                       <p className="text-[10px] text-slate-600">
                         Stock: {product.stock} / Min: {product.minStock}
                       </p>
@@ -398,14 +398,14 @@ export default function StoreDashboardOverview() {
           </div>
 
           {/* Ventas Recientes */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex-1 min-h-0 flex flex-col">
-            <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">Ventas Recientes</h3>
-            <div className="space-y-1 overflow-y-auto flex-1">
+          <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col">
+            <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2.5">Ventas Recientes</h3>
+            <div className="space-y-1 overflow-y-auto flex-1 custom-scrollbar">
               {stats.recentSales && stats.recentSales.length > 0 ? (
                 stats.recentSales.map((sale) => (
                   <div key={sale.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors border-b border-slate-100 last:border-0">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-900">{sale.code}</p>
+                      <p className="text-xs font-semibold text-slate-900">{sale.code}</p>
                       <p className="text-[10px] text-slate-500">
                         {new Date(sale.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
                         {sale.branchName && ` • ${sale.branchName}`}
