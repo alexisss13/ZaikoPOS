@@ -2,78 +2,148 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
   const businessId = req.headers.get('x-business-id');
   const role = req.headers.get('x-user-role');
 
   try {
-    // ⚡ OPTIMIZACIÓN: Query más ligera, solo campos necesarios
+    // ⚡ Detectar si es para POS (necesita variants completas)
+    const forPOS = searchParams.get('forPOS') === 'true';
+    
+    if (forPOS) {
+      // 🔥 QUERY COMPLETA PARA POS - Incluye variants y stock
+      const products = await prisma.product.findMany({
+        where: role === 'SUPER_ADMIN' ? { active: true } : { businessId: businessId || '', active: true },
+        select: {
+          id: true,
+          title: true,
+          images: true,
+          basePrice: true,
+          wholesalePrice: true,
+          wholesaleMinCount: true,
+          discountPercentage: true,
+          categoryId: true,
+          category: { 
+            select: { 
+              name: true,
+              ecommerceCode: true,
+            } 
+          },
+          variants: {
+            where: { active: true },
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              barcode: true,
+              price: true,
+              cost: true,
+              minStock: true,
+              active: true,
+              attributes: true,
+              images: true,
+              stock: {
+                select: {
+                  branchId: true,
+                  quantity: true,
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      return NextResponse.json(products, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+        },
+      });
+    }
+    
+    // ⚡ OPTIMIZACIÓN AGRESIVA PARA DASHBOARD: Paginación + campos mínimos
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const skip = (page - 1) * limit;
+
+    // 🔥 QUERY ULTRA OPTIMIZADA - Sin joins innecesarios
     const products = await prisma.product.findMany({
-      where: role === 'SUPER_ADMIN' ? {} : { businessId: businessId || '' },
+      where: role === 'SUPER_ADMIN' ? { active: true } : { businessId: businessId || '', active: true },
       select: {
         id: true,
         title: true,
-        description: true,
         slug: true,
         images: true,
         basePrice: true,
         wholesalePrice: true,
-        wholesaleMinCount: true,
-        discountPercentage: true,
-        groupTag: true,
-        tags: true,
-        isAvailable: true,
         active: true,
-        type: true,
         branchOwnerId: true,
         categoryId: true,
-        supplierId: true,
-        createdAt: true,
         category: { 
           select: { 
             id: true,
             name: true, 
-            ecommerceCode: true 
           } 
         },
-        supplier: { 
-          select: { 
-            id: true, 
-            name: true 
-          } 
-        },
-        variants: {
-          where: { active: true },
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            barcode: true,
-            price: true,
-            minStock: true,
-            stock: {
-              select: {
-                branchId: true,
-                quantity: true,
-              }
-            }
-          },
-          take: 5, // Limitar variantes
-        }
       },
       orderBy: { createdAt: 'desc' },
-      take: 200, // REDUCIR a 200 productos máximo
+      skip,
+      take: limit,
     });
     
-    // Transform the data to include branchStocks at product level
+    // Obtener IDs de productos para queries separadas (más rápido)
+    const productIds = products.map(p => p.id);
+    
+    // Query separada para variantes (más eficiente)
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        productId: { in: productIds },
+        active: true,
+      },
+      select: {
+        id: true,
+        productId: true,
+        name: true,
+        sku: true,
+        barcode: true,
+        minStock: true,
+      },
+      take: productIds.length, // Solo 1 por producto
+    });
+    
+    // Query separada para stock (más eficiente)
+    const variantIds = variants.map(v => v.id);
+    const stocks = await prisma.stock.findMany({
+      where: {
+        variantId: { in: variantIds },
+      },
+      select: {
+        variantId: true,
+        branchId: true,
+        quantity: true,
+      },
+    });
+    
+    // Mapear datos en memoria (rápido)
+    const variantMap = new Map(variants.map(v => [v.productId, v]));
+    const stockMap = new Map<string, { branchId: string; quantity: number }[]>();
+    
+    stocks.forEach(stock => {
+      const existing = stockMap.get(stock.variantId) || [];
+      existing.push({ branchId: stock.branchId, quantity: stock.quantity });
+      stockMap.set(stock.variantId, existing);
+    });
+    
+    // Transform the data
     const productsWithStocks = products.map(product => {
-      // Aggregate stock from all variants
-      const branchStocksMap = new Map<string, number>();
+      const variant = variantMap.get(product.id);
+      const variantStocks = variant ? (stockMap.get(variant.id) || []) : [];
       
-      product.variants.forEach(variant => {
-        variant.stock.forEach(stock => {
-          const currentQty = branchStocksMap.get(stock.branchId) || 0;
-          branchStocksMap.set(stock.branchId, currentQty + stock.quantity);
-        });
+      // Aggregate stock by branch
+      const branchStocksMap = new Map<string, number>();
+      variantStocks.forEach(stock => {
+        const currentQty = branchStocksMap.get(stock.branchId) || 0;
+        branchStocksMap.set(stock.branchId, currentQty + stock.quantity);
       });
       
       const branchStocks = Array.from(branchStocksMap.entries()).map(([branchId, quantity]) => ({
@@ -81,52 +151,40 @@ export async function GET(req: Request) {
         quantity
       }));
       
-      // Get data from the standard variant (or first variant)
-      const standardVariant = product.variants.find(v => v.name === 'Estándar') || product.variants[0];
-      const minStock = standardVariant?.minStock || 5;
-      const barcode = standardVariant?.barcode || null;
-      const sku = standardVariant?.sku || null;
-      
       return {
         id: product.id,
         title: product.title,
-        description: product.description,
         slug: product.slug,
-        images: product.images.slice(0, 1), // SOLO LA PRIMERA IMAGEN
+        images: product.images.slice(0, 1),
         basePrice: product.basePrice,
         wholesalePrice: product.wholesalePrice,
-        wholesaleMinCount: product.wholesaleMinCount,
-        discountPercentage: product.discountPercentage,
-        groupTag: product.groupTag,
-        tags: product.tags,
-        isAvailable: product.isAvailable,
         active: product.active,
-        type: product.type,
         branchOwnerId: product.branchOwnerId,
         categoryId: product.categoryId,
-        supplierId: product.supplierId,
-        createdAt: product.createdAt,
         category: product.category,
-        supplier: product.supplier,
         branchStocks,
-        minStock,
-        barcode,
-        sku,
-        code: barcode || sku || product.id.slice(0, 8),
-        variants: product.variants.slice(0, 3).map(v => ({ // SOLO 3 VARIANTES
-          id: v.id,
-          name: v.name,
-          sku: v.sku,
-          barcode: v.barcode,
-          price: v.price,
-          minStock: v.minStock,
-          stock: v.stock
-        }))
+        minStock: variant?.minStock || 5,
+        barcode: variant?.barcode || null,
+        sku: variant?.sku || null,
+        code: variant?.barcode || variant?.sku || product.id.slice(0, 8),
       };
     });
     
+    // Contar total (query simple y rápida)
+    const total = await prisma.product.count({
+      where: role === 'SUPER_ADMIN' ? { active: true } : { businessId: businessId || '', active: true },
+    });
+
     // ⚡ Agregar cache headers AGRESIVOS
-    return NextResponse.json(productsWithStocks, {
+    return NextResponse.json({
+      products: productsWithStocks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      }
+    }, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },

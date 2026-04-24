@@ -69,7 +69,8 @@ export function usePOSData() {
     dedupingInterval: 10000,
   });
   
-  const { data: products, isLoading: loadingProducts, mutate: mutateProducts } = useSWR<Product[]>('/api/products', fetcher, {
+  // ⚡ Usar forPOS=true para obtener variants completas
+  const { data: products, isLoading: loadingProducts, mutate: mutateProducts } = useSWR<Product[]>('/api/products?forPOS=true', fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     dedupingInterval: 30000, // 30 segundos

@@ -222,7 +222,7 @@ function InventoryPageContent() {
           ? (movement.currentStock - movement.previousStock)
           : movement.type === 'TRANSFER'
           ? (movement.currentStock > movement.previousStock ? movement.quantity : -movement.quantity)
-          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' ? movement.quantity : -movement.quantity),
+          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' ? movement.quantity : -Math.abs(movement.quantity)),
         movement.previousStock,
         movement.currentStock,
         movement.branch.name,
@@ -338,7 +338,7 @@ function InventoryPageContent() {
           ? movement.currentStock - movement.previousStock
           : movement.type === 'TRANSFER'
           ? (movement.currentStock > movement.previousStock ? movement.quantity : -movement.quantity)
-          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' ? movement.quantity : -movement.quantity);
+          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' ? movement.quantity : -Math.abs(movement.quantity));
 
         return (
           <span className={`font-bold text-sm ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -508,7 +508,7 @@ function InventoryPageContent() {
           ? (movement.currentStock - movement.previousStock).toString()
           : movement.type === 'TRANSFER'
           ? (movement.currentStock > movement.previousStock ? `+${movement.quantity}` : `-${movement.quantity}`)
-          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' ? `+${movement.quantity}` : `-${movement.quantity}`),
+          : (movement.type === 'INPUT' || movement.type === 'PURCHASE' ? `+${movement.quantity}` : `-${Math.abs(movement.quantity)}`),
         movement.previousStock.toString(),
         movement.currentStock.toString(),
         movement.branch.name,
@@ -1406,7 +1406,7 @@ function InventoryPageContent() {
                                 : `-${movement.quantity}`)
                             : (movement.type === 'INPUT' || movement.type === 'PURCHASE'
                                 ? `+${movement.quantity}` 
-                                : `-${movement.quantity}`)
+                                : `-${Math.abs(movement.quantity)}`)
                           }
                         </span>
                       </td>

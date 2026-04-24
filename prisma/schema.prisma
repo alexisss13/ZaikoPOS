@@ -354,6 +354,10 @@ model Product {
 
   @@index([businessId])
   @@index([branchOwnerId])
+  @@index([categoryId])
+  @@index([active])
+  @@index([supplierId])
+  @@index([businessId, active, categoryId])
 }
 
 model ProductVariant {
@@ -579,6 +583,7 @@ model Stock {
 
   @@unique([branchId, variantId])
   @@index([branchId])
+  @@index([branchId, quantity])
 }
 
 model CashSession {

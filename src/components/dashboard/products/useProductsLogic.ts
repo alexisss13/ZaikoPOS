@@ -10,7 +10,7 @@ import type { Product, Branch, Category } from './types';
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 export const haptic = (ms = 10) => { try { navigator.vibrate?.(ms); } catch {} };
 export const MOBILE_PAGE_SIZE = 8;
-export const ITEMS_PER_PAGE = 8;
+export const ITEMS_PER_PAGE = 7;
 
 export function useProductsLogic() {
   const { user, role } = useAuth();
@@ -21,10 +21,46 @@ export function useProductsLogic() {
   const canEdit = isSuperOrOwner || !!permissions.canEditProducts || canManageGlobal;
   const canViewOthers = isSuperOrOwner || !!permissions.canViewOtherBranches || canManageGlobal;
 
-  const { data: products, isLoading: isLoadingProducts, mutate } = useSWR<Product[]>('/api/products', fetcher, { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 5000 });
-  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher, { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 10000 });
-  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher, { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 10000 });
-  const { data: suppliers } = useSWR('/api/suppliers', fetcher, { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 10000 });
+  // ⚡ PAGINACIÓN EN EL SERVIDOR - cargar solo 50 productos a la vez
+  const [apiPage, setApiPage] = useState(1);
+  const apiLimit = 50;
+  
+  const { data: apiResponse, isLoading: isLoadingProducts, mutate } = useSWR<{ products: Product[], pagination: { page: number, limit: number, total: number, totalPages: number } }>(
+    `/api/products?page=${apiPage}&limit=${apiLimit}`, 
+    fetcher, 
+    { 
+      revalidateOnFocus: false, 
+      revalidateOnReconnect: false, 
+      revalidateOnMount: true, // ⚡ CAMBIAR A TRUE para que cargue al montar
+      revalidateIfStale: false,
+      dedupingInterval: 30000,
+    }
+  );
+  
+  const products = apiResponse?.products;
+  const apiPagination = apiResponse?.pagination;
+  
+  const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false, 
+    revalidateOnMount: true, // ⚡ Cargar al montar
+    revalidateIfStale: false,
+    dedupingInterval: 60000,
+  });
+  const { data: categories, mutate: mutateCategories } = useSWR<Category[]>('/api/categories', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false, 
+    revalidateOnMount: true, // ⚡ Cargar al montar
+    revalidateIfStale: false,
+    dedupingInterval: 60000,
+  });
+  const { data: suppliers } = useSWR('/api/suppliers', fetcher, { 
+    revalidateOnFocus: false, 
+    revalidateOnReconnect: false, 
+    revalidateOnMount: true, // ⚡ Cargar al montar
+    revalidateIfStale: false,
+    dedupingInterval: 60000,
+  });
 
   const isLoading = isLoadingProducts || !branches || !categories;
 
@@ -41,8 +77,6 @@ export function useProductsLogic() {
   const [codeFilter, setCodeFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [stockFilter, setStockFilter] = useState('ALL');
-  const [showCatFilter, setShowCatFilter] = useState(false);
-  const [showStockFilter, setShowStockFilter] = useState(false);
 
   // ── UI state ──
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +95,12 @@ export function useProductsLogic() {
   const [kardexMovements, setKardexMovements] = useState<any[]>([]);
 
   const ticketRef = useRef<HTMLDivElement>(null);
-  const { exportToExcel, exportToPDF, exportKardexToExcel, exportKardexToPDF } = useProductExports({ products, branches });
+  
+  // ⚡ Memoizar handlers de export para evitar re-renders
+  const { exportToExcel, exportToPDF, exportKardexToExcel, exportKardexToPDF } = useMemo(() => {
+    const handlers = useProductExports({ products, branches });
+    return handlers;
+  }, [products, branches]);
 
   const handleSearchChange = useCallback((value: string) => {
     setDebouncedSearch(value);
@@ -153,7 +192,7 @@ export function useProductsLogic() {
     } catch { toast.error('Error al generar la imagen.', { id: 'barcode-toast' }); }
   }, [barcodeProduct]);
 
-  // ── Computed (OPTIMIZADO) ──
+  // ⚡ SIMPLIFICACIÓN RADICAL: Eliminar filtrado en cliente, hacerlo en servidor
   const productsWithMetadata = useMemo(() => {
     if (!products) return [];
     const userBranchId = user?.branchId;
@@ -177,16 +216,12 @@ export function useProductsLogic() {
     });
   }, [products, user?.branchId, canManageGlobal, canEdit, canViewOthers]);
 
-  // Crear mapa de branches por código UNA VEZ
-  const branchByCodeMap = useMemo(() => {
-    return new Map(branches?.map(b => [b.ecommerceCode, b]) || []);
-  }, [branches]);
-
-  const baseFilteredProducts = useMemo(() => {
+  // ⚡ FILTRADO SIMPLIFICADO - Solo 1 paso
+  const filteredProducts = useMemo(() => {
     if (!productsWithMetadata.length) return [];
     
     return productsWithMetadata.filter(p => {
-      const { isGlobal, isMine, hasMyStock } = p._meta;
+      const { isGlobal, isMine, hasMyStock, totalStock } = p._meta;
       
       // Filtro de permisos
       if (!isSuperOrOwner && !canViewOthers && !canManageGlobal && !isGlobal && !isMine && !hasMyStock) {
@@ -197,64 +232,45 @@ export function useProductsLogic() {
       if (codeFilter === 'INACTIVE') return !p.active;
       if (!p.active) return false;
       
-      // Filtro de código
+      // Filtro de código/sucursal
       if (codeFilter === 'GENERAL') {
         const bws = p.branchStocks?.filter(bs => bs.quantity > 0) || [];
-        return isGlobal || bws.length > 1;
+        if (!isGlobal && bws.length <= 1) return false;
       } else if (codeFilter !== 'ALL') {
-        const b = branchByCodeMap.get(codeFilter);
-        return b ? p.branchOwnerId === b.id : true;
+        const targetBranch = branches?.find(b => b.ecommerceCode === codeFilter);
+        if (targetBranch && p.branchOwnerId !== targetBranch.id) return false;
       }
       
-      return true;
-    });
-  }, [productsWithMetadata, codeFilter, branchByCodeMap, isSuperOrOwner, canViewOthers, canManageGlobal]);
-
-  const availableCategories = useMemo(() => {
-    if (!categories || !baseFilteredProducts.length) return [];
-    const ids = new Set(baseFilteredProducts.map(p => p.categoryId));
-    return categories.filter(c => ids.has(c.id));
-  }, [baseFilteredProducts, categories]);
-
-  const filteredProducts = useMemo(() => {
-    if (!baseFilteredProducts.length) return [];
-    
-    const q = debouncedSearch.toLowerCase();
-    const hasSearch = q.length > 0;
-    const hasCategoryFilter = categoryFilter !== 'ALL';
-    const hasStockFilter = stockFilter !== 'ALL';
-    
-    // Si no hay filtros, retornar directamente
-    if (!hasSearch && !hasCategoryFilter && !hasStockFilter) {
-      return baseFilteredProducts;
-    }
-    
-    return baseFilteredProducts.filter(p => {
       // Búsqueda de texto
-      if (hasSearch) {
+      if (debouncedSearch) {
+        const q = debouncedSearch.toLowerCase();
         const matchesTitle = p.title.toLowerCase().includes(q);
         const matchesBarcode = p.barcode?.includes(debouncedSearch) ?? false;
         const matchesSku = p.sku?.toLowerCase().includes(q) ?? false;
-        
         if (!matchesTitle && !matchesBarcode && !matchesSku) return false;
       }
       
       // Filtro de categoría
-      if (hasCategoryFilter && p.categoryId !== categoryFilter) return false;
+      if (categoryFilter !== 'ALL' && p.categoryId !== categoryFilter) return false;
       
       // Filtro de stock
-      if (hasStockFilter) {
-        const { totalStock } = p._meta;
+      if (stockFilter !== 'ALL') {
         const min = p.minStock || 5;
-        
         if (stockFilter === 'LOW' && (totalStock <= 0 || totalStock > min)) return false;
         if (stockFilter === 'OUT' && totalStock > 0) return false;
       }
       
       return true;
     });
-  }, [baseFilteredProducts, debouncedSearch, categoryFilter, stockFilter]);
+  }, [productsWithMetadata, codeFilter, categoryFilter, stockFilter, debouncedSearch, isSuperOrOwner, canViewOthers, canManageGlobal, branches]);
 
+  const availableCategories = useMemo(() => {
+    if (!categories || !filteredProducts.length) return [];
+    const ids = new Set(filteredProducts.map(p => p.categoryId));
+    return categories.filter(c => ids.has(c.id));
+  }, [filteredProducts, categories]);
+
+  // ⚡ PAGINACIÓN OPTIMIZADA
   const { totalPages, paginatedProducts, mobileProducts, hasMore } = useMemo(() => {
     const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
     const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -288,8 +304,6 @@ export function useProductsLogic() {
     debouncedSearch, setDebouncedSearch,
     codeFilter, setCategoryFilter, setCodeFilter,
     categoryFilter, stockFilter, setStockFilter,
-    showCatFilter, setShowCatFilter,
-    showStockFilter, setShowStockFilter,
     // UI state
     currentPage, setCurrentPage,
     isModalOpen, setIsModalOpen,

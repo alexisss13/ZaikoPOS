@@ -1,20 +1,23 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { memo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ImageWithSpinner } from '@/components/ui/ImageWithSpinner';
 import Barcode from 'react-barcode';
 import { SearchBar } from './SearchBar';
+import { ProductTableRow } from './ProductTableRow';
+import { FilterDropdown } from './FilterDropdown';
 import {
   DashboardSquare01Icon, ArrowDataTransferHorizontalIcon, Store01Icon, UnavailableIcon,
   FilterIcon, PackageIcon, ArrowLeft01Icon, ArrowRight01Icon, Search01Icon, Tag01Icon,
-  File01Icon, Download01Icon, BarCode01Icon, PlusSignIcon, Image01Icon, Tick01Icon,
-  Note01Icon,
+  File01Icon, Download01Icon, BarCode01Icon, PlusSignIcon, Tick01Icon,
 } from 'hugeicons-react';
+import { toast } from 'sonner';
 import type { useProductsLogic } from './useProductsLogic';
+import type { Product } from './types';
 
 const ProductModal = dynamic(() => import('@/components/dashboard/ProductModal').then(m => ({ default: m.ProductModal })), { ssr: false });
 const CategoryModal = dynamic(() => import('@/components/dashboard/CategoryModal').then(m => ({ default: m.CategoryModal })), { ssr: false });
@@ -23,13 +26,12 @@ const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/Barco
 
 type Logic = ReturnType<typeof useProductsLogic>;
 
-export function ProductsDesktop({ logic }: { logic: Logic }) {
+function ProductsDesktopComponent({ logic }: { logic: Logic }) {
   const {
-    canCreate, branches, categories, suppliers, isLoading,
+    canCreate, branches, categories, isLoading,
     mutate, mutateCategories, visibleCodes, getBranchByCode,
     codeFilter, setCategoryFilter, setCodeFilter,
     categoryFilter, stockFilter, setStockFilter,
-    showCatFilter, setShowCatFilter, showStockFilter, setShowStockFilter,
     currentPage, setCurrentPage,
     isModalOpen, setIsModalOpen, isCategoryModalOpen, setIsCategoryModalOpen,
     isImportModalOpen, setIsImportModalOpen, isBarcodeModalOpen, setIsBarcodeModalOpen,
@@ -37,10 +39,55 @@ export function ProductsDesktop({ logic }: { logic: Logic }) {
     barcodeProduct, setBarcodeProduct, showExportMenu, setShowExportMenu,
     isKardexModalOpen, setIsKardexModalOpen, kardexProduct, kardexMovements,
     availableCategories, totalPages, paginatedProducts,
-    handleSearchChange, handleOpenEdit, handleDelete, openKardexModal, downloadBarcodePNG,
+    handleSearchChange, openKardexModal, downloadBarcodePNG,
     exportToExcel, exportToPDF, exportKardexToExcel, exportKardexToPDF,
-    ticketRef, debouncedSearch,
+    ticketRef,
   } = logic;
+
+  // ⚡ Memoizar handlers para evitar re-renders
+  const handleCategorySelect = useCallback((categoryId: string) => {
+    setCategoryFilter(categoryId);
+    setCurrentPage(1);
+  }, [setCategoryFilter, setCurrentPage]);
+
+  const handleStockSelect = useCallback((stockValue: string) => {
+    setStockFilter(stockValue);
+    setCurrentPage(1);
+  }, [setStockFilter, setCurrentPage]);
+
+  // ⚡ Memoizar handlers para evitar re-renders
+  const handleEdit = useCallback((product: Product) => {
+    setSelectedProduct(product);
+    setCanEditSelected(true);
+    setIsModalOpen(true);
+  }, [setSelectedProduct, setCanEditSelected, setIsModalOpen]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm('🛑 ¿Dar de baja este producto? No aparecerá en ventas, pero podrás reactivarlo desde el filtro "Inactivos".')) return;
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al desactivar');
+      mutate();
+      toast.success('Producto dado de baja');
+    } catch {
+      toast.error('Error al desactivar producto');
+    }
+  }, [mutate]);
+
+  const handleActivate = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: true })
+      });
+      if (!res.ok) throw new Error('Error al activar');
+      mutate();
+      toast.success('Producto activado');
+    } catch {
+      toast.error('Error al activar producto');
+    }
+  }, [mutate]);
 
   return (
     <>
@@ -106,42 +153,35 @@ export function ProductsDesktop({ logic }: { logic: Logic }) {
 
         {/* Table */}
         <div className="overflow-x-auto flex-1 relative custom-scrollbar">
-          {(showCatFilter || showStockFilter) && <div className="fixed inset-0 z-20" onClick={() => { setShowCatFilter(false); setShowStockFilter(false); }} />}
-          <table className="w-full text-left border-separate border-spacing-0 min-w-[700px]">
+          <table className="w-full text-left border-separate border-spacing-0 min-w-[700px] products-table">
             <thead className="bg-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-30 overflow-hidden">
               <tr>
                 <th className="px-5 py-3.5 font-semibold rounded-tl-xl">Producto</th>
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[200px]">
-                  <div className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${categoryFilter !== 'ALL' || showCatFilter ? 'text-slate-900 bg-slate-100' : ''}`} onClick={() => { setShowCatFilter(!showCatFilter); setShowStockFilter(false); }}>
-                    Categoría y Catálogo <FilterIcon className={`w-3.5 h-3.5 ${categoryFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
-                  </div>
-                  {showCatFilter && (
-                    <div className="absolute top-10 left-3 w-[220px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 max-h-60 overflow-y-auto custom-scrollbar">
-                      <button onClick={() => { setCategoryFilter('ALL'); setShowCatFilter(false); setCurrentPage(1); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${categoryFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>Todas las categorías {categoryFilter === 'ALL' && <Tick01Icon className="w-3.5 h-3.5" />}</button>
-                      <div className="h-px bg-slate-100 my-1 mx-2" />
-                      {availableCategories.length === 0 && <div className="px-3 py-2 text-xs text-slate-400 text-center italic">Sin categorías aquí</div>}
-                      {availableCategories.map(cat => (
-                        <button key={cat.id} onClick={() => { setCategoryFilter(cat.id); setShowCatFilter(false); setCurrentPage(1); }} className={`text-left px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors flex items-center justify-between ${categoryFilter === cat.id ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
-                          <span className="truncate pr-2">{cat.name}</span>{categoryFilter === cat.id && <Tick01Icon className="w-3.5 h-3.5 shrink-0" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <FilterDropdown
+                    label="Categoría y Catálogo"
+                    currentValue={categoryFilter}
+                    options={availableCategories}
+                    onSelect={handleCategorySelect}
+                    allLabel="Todas las categorías"
+                    width="w-[220px]"
+                  />
                 </th>
                 <th className="px-5 py-3.5 font-semibold w-[120px]">Precio (S/)</th>
                 <th className="px-5 py-3.5 font-semibold relative select-none w-[150px]">
-                  <div className={`inline-flex items-center gap-1.5 cursor-pointer hover:text-slate-700 px-2 py-1 -ml-2 rounded-md transition-colors ${stockFilter !== 'ALL' || showStockFilter ? 'text-slate-900 bg-slate-100' : ''}`} onClick={() => { setShowStockFilter(!showStockFilter); setShowCatFilter(false); }}>
-                    Inventario <FilterIcon className={`w-3.5 h-3.5 ${stockFilter !== 'ALL' ? 'text-slate-900 fill-slate-900' : ''}`} />
-                  </div>
-                  {showStockFilter && (
-                    <div className="absolute top-10 left-3 w-[160px] bg-white border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-xl p-1.5 z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
-                      <button onClick={() => { setStockFilter('ALL'); setShowStockFilter(false); setCurrentPage(1); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'ALL' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}>Todo el Stock {stockFilter === 'ALL' && <Tick01Icon className="w-3.5 h-3.5" />}</button>
-                      <button onClick={() => { setStockFilter('LOW'); setShowStockFilter(false); setCurrentPage(1); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'LOW' ? 'bg-amber-50 text-amber-700' : 'text-amber-600 hover:bg-amber-50/50'}`}>Stock Bajo {stockFilter === 'LOW' && <Tick01Icon className="w-3.5 h-3.5" />}</button>
-                      <button onClick={() => { setStockFilter('OUT'); setShowStockFilter(false); setCurrentPage(1); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold w-full transition-colors flex items-center justify-between ${stockFilter === 'OUT' ? 'bg-red-50 text-red-700' : 'text-red-600 hover:bg-red-50/50'}`}>Agotados {stockFilter === 'OUT' && <Tick01Icon className="w-3.5 h-3.5" />}</button>
-                    </div>
-                  )}
+                  <FilterDropdown
+                    label="Inventario"
+                    currentValue={stockFilter}
+                    options={[
+                      { id: 'LOW', name: 'Stock Bajo' },
+                      { id: 'OUT', name: 'Agotados' },
+                    ]}
+                    onSelect={handleStockSelect}
+                    allLabel="Todo el Stock"
+                    width="w-[160px]"
+                  />
                 </th>
-                <th className="px-5 py-3.5 font-semibold w-[80px] rounded-tr-xl text-center">Kardex</th>
+                <th className="px-5 py-3.5 font-semibold w-[80px] rounded-tr-xl text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50/80">
@@ -150,67 +190,17 @@ export function ProductsDesktop({ logic }: { logic: Logic }) {
               ) : paginatedProducts.length === 0 ? (
                 <tr><td colSpan={5} className="py-20 text-center"><div className="flex flex-col items-center justify-center text-slate-400 space-y-2"><PackageIcon className="w-10 h-10 text-slate-200" strokeWidth={1} /><p className="font-medium text-sm text-slate-500">{codeFilter === 'INACTIVE' ? 'No hay productos inactivos.' : 'No se encontraron productos.'}</p><Button variant="link" className="text-xs h-6 text-slate-900 font-bold" onClick={() => { logic.setDebouncedSearch(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); }}>Limpiar filtros</Button></div></td></tr>
               ) : (
-                paginatedProducts.map(product => {
-                  const { canEditThis, totalStock } = product._meta;
-                  const hasWholesale = Number(product.wholesalePrice) > 0;
-                  return (
-                    <tr key={product.id} onClick={() => { setSelectedProduct(product); setCanEditSelected(canEditThis); setIsModalOpen(true); }} className={`hover:bg-slate-50 transition-colors group text-xs cursor-pointer ${!product.active ? 'opacity-60 bg-slate-50/50' : ''}`}>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center ${!product.active ? 'grayscale' : ''}`}>
-                            {product.images?.[0] ? (
-                              <ImageWithSpinner
-                                src={product.images[0]}
-                                alt={product.title}
-                                className="w-full h-full object-cover"
-                                containerClassName="w-full h-full"
-                                spinnerSize={14}
-                                fallback={<Image01Icon className="w-4 h-4 text-slate-300" />}
-                              />
-                            ) : (
-                              <Image01Icon className="w-4 h-4 text-slate-300" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="font-bold text-slate-700 truncate leading-tight group-hover:text-slate-900 transition-colors text-sm">{product.title}</p>
-                              {!product.active && <Badge variant="destructive" className="text-[8px] px-1 py-0 h-3.5 leading-none bg-red-100 text-red-700 border-none shadow-none">INACTIVO</Badge>}
-                            </div>
-                            {(product.barcode || product.code) && <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono mt-1"><BarCode01Icon className="w-3 h-3" /> {product.barcode || product.code}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-col items-start gap-1.5">
-                          <span className="font-medium text-slate-500 truncate max-w-[140px] leading-none group-hover:text-slate-700 transition-colors">{product.category?.name || 'Sin Categoría'}</span>
-                          {(() => {
-                            const bws = product.branchStocks?.filter((bs: any) => bs.quantity > 0) || [];
-                            const ob = product.branchOwnerId ? branches?.find(b => b.id === product.branchOwnerId) : null;
-                            if (bws.length > 1) return <span className="text-[9px] font-bold text-slate-600 flex items-center gap-1.5 leading-none border border-slate-200 px-1.5 py-0.5 rounded-md bg-slate-50 w-max">{ob?.logoUrl ? <img src={ob.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover grayscale mix-blend-multiply" alt="" /> : <Store01Icon className="w-3 h-3 text-slate-400" />}{ob?.name || 'Sucursal'}<ArrowDataTransferHorizontalIcon className="w-2.5 h-2.5 text-slate-400 ml-0.5" /></span>;
-                            if (product.branchOwnerId) return <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200 w-max leading-none">{ob?.logoUrl ? <img src={ob.logoUrl} className="w-3.5 h-3.5 rounded-[2px] object-cover grayscale mix-blend-multiply" alt="" /> : <Store01Icon className="w-3 h-3 text-current" />}{ob?.name || 'Sucursal'}</span>;
-                            return <span className="text-[9px] font-bold text-slate-600 flex items-center gap-1 leading-none border border-slate-200 px-1.5 py-0.5 rounded-md bg-slate-50 w-max"><ArrowDataTransferHorizontalIcon className="w-2.5 h-2.5 text-slate-400" /> Compartido</span>;
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-col items-start gap-1">
-                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-emerald-400 bg-emerald-50 text-emerald-800 shadow-sm"><Note01Icon className="w-3 h-3 text-emerald-600" /><span className="font-mono text-[10px] text-emerald-600 font-bold">S/</span><span className="font-bold text-sm tracking-tight">{Number(product.basePrice).toFixed(2)}</span></div>
-                          {hasWholesale && <p className="text-[9px] text-emerald-600/80 font-medium pl-1 leading-none">Mayor: S/ {Number(product.wholesalePrice).toFixed(2)}</p>}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        {(() => {
-                          const min = product.minStock || 5;
-                          const c = totalStock <= 0 ? 'bg-red-50 text-red-700 border-red-200' : totalStock <= min ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                          return <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${c}`}>{totalStock} <span className="text-[9px] opacity-70 ml-1 font-semibold uppercase">un.</span></span>;
-                        })()}
-                      </td>
-                      <td className="px-5 py-3 text-center" onClick={e => e.stopPropagation()}>
-                        <Button onClick={() => openKardexModal(product)} variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-slate-200 text-slate-600 hover:text-slate-900"><File01Icon className="w-4 h-4" /></Button>
-                      </td>
-                    </tr>
-                  );
-                })
+                paginatedProducts.map(product => (
+                  <ProductTableRow
+                    key={product.id}
+                    product={product}
+                    branches={branches}
+                    onKardex={openKardexModal}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onActivate={handleActivate}
+                  />
+                ))
               )}
             </tbody>
           </table>
@@ -258,18 +248,33 @@ export function ProductsDesktop({ logic }: { logic: Logic }) {
                   <tr>{['Fecha', 'Tipo', 'Motivo', 'Cantidad', 'Había', 'Hay', 'Sucursal', 'Usuario'].map(h => <th key={h} className="px-4 py-2 text-left text-xs font-bold text-slate-500">{h}</th>)}</tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {kardexMovements.map((m: any) => (
-                    <tr key={m.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 text-xs text-slate-600">{new Date(m.createdAt).toLocaleDateString('es-PE')}</td>
-                      <td className="px-4 py-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.type === 'INPUT' || m.type === 'PURCHASE' ? 'bg-emerald-100 text-emerald-700' : m.type === 'OUTPUT' || m.type === 'SALE_POS' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{m.type}</span></td>
-                      <td className="px-4 py-2 text-xs text-slate-600 max-w-[200px] truncate">{m.reason || '-'}</td>
-                      <td className="px-4 py-2 text-xs font-bold text-center">{m.quantity}</td>
-                      <td className="px-4 py-2 text-xs text-slate-500 text-center">{m.previousStock}</td>
-                      <td className="px-4 py-2 text-xs font-bold text-center">{m.currentStock}</td>
-                      <td className="px-4 py-2 text-xs text-slate-600">{m.branch?.name || '-'}</td>
-                      <td className="px-4 py-2 text-xs text-slate-600">{m.user?.name || '-'}</td>
-                    </tr>
-                  ))}
+                  {kardexMovements.map((m: any) => {
+                    // Calcular la cantidad con el signo correcto
+                    const quantityDisplay = m.type === 'ADJUSTMENT'
+                      ? (m.currentStock - m.previousStock)
+                      : m.type === 'TRANSFER'
+                      ? (m.currentStock > m.previousStock ? m.quantity : -m.quantity)
+                      : (m.type === 'INPUT' || m.type === 'PURCHASE' ? m.quantity : -Math.abs(m.quantity));
+                    
+                    const quantityFormatted = quantityDisplay > 0 ? `+${quantityDisplay}` : quantityDisplay;
+                    
+                    return (
+                      <tr key={m.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-2 text-xs text-slate-600">{new Date(m.createdAt).toLocaleDateString('es-PE')}</td>
+                        <td className="px-4 py-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.type === 'INPUT' || m.type === 'PURCHASE' ? 'bg-emerald-100 text-emerald-700' : m.type === 'OUTPUT' || m.type === 'SALE_POS' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{m.type}</span></td>
+                        <td className="px-4 py-2 text-xs text-slate-600 max-w-[200px] truncate">{m.reason || '-'}</td>
+                        <td className="px-4 py-2 text-xs font-bold text-center">
+                          <span className={quantityDisplay > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                            {quantityFormatted}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-xs text-slate-500 text-center">{m.previousStock}</td>
+                        <td className="px-4 py-2 text-xs font-bold text-center">{m.currentStock}</td>
+                        <td className="px-4 py-2 text-xs text-slate-600">{m.branch?.name || '-'}</td>
+                        <td className="px-4 py-2 text-xs text-slate-600">{m.user?.name || '-'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -279,3 +284,27 @@ export function ProductsDesktop({ logic }: { logic: Logic }) {
     </>
   );
 }
+
+// ⚡ Memoizar el componente completo con comparación personalizada
+const arePropsEqual = (prevProps: { logic: Logic }, nextProps: { logic: Logic }) => {
+  // Solo re-renderizar si cambian los productos paginados o estados críticos
+  const prev = prevProps.logic;
+  const next = nextProps.logic;
+  
+  // Comparar solo lo que afecta la UI
+  if (prev.paginatedProducts.length !== next.paginatedProducts.length) return false;
+  if (prev.currentPage !== next.currentPage) return false;
+  if (prev.isLoading !== next.isLoading) return false;
+  if (prev.codeFilter !== next.codeFilter) return false;
+  if (prev.categoryFilter !== next.categoryFilter) return false;
+  if (prev.stockFilter !== next.stockFilter) return false;
+  
+  // Comparar IDs de productos (más rápido que comparar objetos completos)
+  const prevIds = prev.paginatedProducts.map(p => p.id).join(',');
+  const nextIds = next.paginatedProducts.map(p => p.id).join(',');
+  if (prevIds !== nextIds) return false;
+  
+  return true;
+};
+
+export const ProductsDesktop = memo(ProductsDesktopComponent, arePropsEqual);
