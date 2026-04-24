@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/auth-context';
@@ -196,6 +196,25 @@ export function usePOSLogic() {
       return true;
     });
   }, [allowedProducts, searchTerm, selectedCategory, codeFilter, canViewOthers, categoryMap, myCode, user?.branchId]);
+
+  // ⚡ PAGINACIÓN - Cargar productos de a 20
+  const PRODUCTS_PER_PAGE = 20;
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  
+  const visibleProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+  
+  const hasMoreProducts = visibleCount < filteredProducts.length;
+  
+  const loadMoreProducts = useCallback(() => {
+    setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, filteredProducts.length));
+  }, [filteredProducts.length]);
+  
+  // Reset visible count cuando cambian los filtros
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [searchTerm, selectedCategory, codeFilter]);
 
   // ── Cart handlers ──
   const addToCart = useCallback((product: Product, variant: ProductVariant) => {
@@ -437,6 +456,7 @@ export function usePOSLogic() {
     getBranchByCode, getLocalStock, getGlobalStock,
     // Products
     filteredProducts, availableCategories,
+    visibleProducts, hasMoreProducts, loadMoreProducts, // ⚡ NUEVO - Paginación
     // Filters
     searchTerm, setSearchTerm,
     codeFilter, setCodeFilter,

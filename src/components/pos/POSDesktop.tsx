@@ -36,6 +36,7 @@ export function POSDesktop({ logic }: POSDesktopProps) {
     cashSession, hasCashOpen, mutateCash, branches, cashHook, isGlobalUser,
     canViewOthers, visibleCodes, getBranchByCode,
     filteredProducts, availableCategories,
+    visibleProducts, hasMoreProducts, loadMoreProducts, // ⚡ Paginación
     searchTerm, setSearchTerm, codeFilter, setCodeFilter, selectedCategory, setSelectedCategory,
     showSalesHistory, setShowSalesHistory, showCashTransaction, setShowCashTransaction,
     showCustomerModal, setShowCustomerModal, showCustomerSearch, setShowCustomerSearch,
@@ -156,9 +157,9 @@ export function POSDesktop({ logic }: POSDesktopProps) {
                 Array(12).fill(0).map((_, i) => (
                   <div key={i} className="bg-white rounded-2xl border border-slate-100 p-2"><Skeleton className="aspect-square w-full rounded-xl" /><Skeleton className="h-3 w-full mt-2" /></div>
                 ))
-              ) : filteredProducts.length === 0 ? (
+              ) : visibleProducts.length === 0 ? (
                 <div className="col-span-full h-32 flex items-center justify-center text-slate-400 text-sm font-medium">No hay productos disponibles.</div>
-              ) : filteredProducts.map(product => {
+              ) : visibleProducts.map(product => {
                 const variant = product.variants.find((v: any) => v.name === 'Estándar') || product.variants[0];
                 if (!variant) return null;
                 const localStock = logic.getLocalStock(variant);
@@ -211,6 +212,17 @@ export function POSDesktop({ logic }: POSDesktopProps) {
                 );
               })}
             </div>
+            {/* Botón Cargar Más */}
+            {hasMoreProducts && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={loadMoreProducts}
+                  className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                >
+                  Cargar más productos ({filteredProducts.length - visibleProducts.length} restantes)
+                </button>
+              </div>
+            )}
           </div>
         </main>
         {/* CART */}

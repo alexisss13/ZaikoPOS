@@ -4,7 +4,7 @@
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/hooks/useResponsive';
 import { usePOSLogic } from '@/components/pos/hooks/usePOSLogic';
-import { Loading02Icon } from 'hugeicons-react';
+import { Loading02Icon, PackageIcon } from 'hugeicons-react';
 
 // Lazy-load vistas por plataforma — el bundle del otro no se descarga
 const POSDesktop = dynamic(
@@ -112,16 +112,35 @@ export default function PosPage() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5">
-              <MobileProductGrid
-                products={filteredProducts}
-                onProductClick={addToCart}
-                getLocalStock={logic.getLocalStock}
-                getGlobalStock={logic.getGlobalStock}
-                disabled={saleState === 'PAID' || !hasCashOpen}
-              />
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <PackageIcon className="w-10 h-10 text-slate-300" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 mb-1">No hay productos</p>
+              <p className="text-xs text-slate-400">Ajusta los filtros para ver más productos</p>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2.5">
+                <MobileProductGrid
+                  products={logic.visibleProducts}
+                  onProductClick={addToCart}
+                  getLocalStock={logic.getLocalStock}
+                  getGlobalStock={logic.getGlobalStock}
+                  disabled={saleState === 'PAID' || !hasCashOpen}
+                />
+              </div>
+              {logic.hasMoreProducts && (
+                <button
+                  onClick={logic.loadMoreProducts}
+                  className="w-full mt-4 py-3 bg-slate-900 text-white rounded-2xl font-semibold text-sm"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  Cargar más productos ({filteredProducts.length - logic.visibleProducts.length} restantes)
+                </button>
+              )}
+            </>
           )}
         </div>
 
