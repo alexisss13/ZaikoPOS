@@ -221,7 +221,7 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
   return (
     <>
       {/* Bottom Navigation Bar - Solo visible en móvil */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg" style={{ WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden', transform: 'translateZ(0)', contain: 'layout style paint' }}>
         <div className="flex items-center justify-around px-2 py-2 safe-area-pb">
           {bottomNavItems.map((item, index) => {
             const IconComponent = iconMap[item.icon];
@@ -231,19 +231,19 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                 <button
                   key={index}
                   onClick={handleMoreClick}
-                  className="flex flex-col items-center justify-center p-2 min-w-0 flex-1 active:scale-95"
-                  style={{ transition: 'transform 50ms ease-out', willChange: 'transform' }}
+                  className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <div className={`p-2 rounded-xl ${
                     item.isActive 
                       ? 'bg-slate-900 text-white scale-105' 
                       : 'text-slate-500'
-                  }`} style={{ transition: 'background-color 0s, transform 50ms ease-out', willChange: 'transform, background-color' }}>
+                  }`} style={{ transform: 'translateZ(0)', willChange: 'auto' }}>
                     {IconComponent && <IconComponent className="w-5 h-5" />}
                   </div>
                   <span className={`text-xs font-medium mt-1 ${
                     item.isActive ? 'text-slate-900' : 'text-slate-500'
-                  }`} style={{ transition: 'color 0s' }}>
+                  }`}>
                     {item.label}
                   </span>
                 </button>
@@ -254,19 +254,19 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center p-2 min-w-0 flex-1 active:scale-95"
-                style={{ transition: 'transform 50ms ease-out', willChange: 'transform' }}
+                className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 <div className={`p-2 rounded-xl ${
                   item.isActive 
                     ? 'bg-slate-900 text-white scale-105' 
                     : 'text-slate-500'
-                }`} style={{ transition: 'background-color 0s, transform 50ms ease-out', willChange: 'transform, background-color' }}>
+                }`} style={{ transform: 'translateZ(0)', willChange: 'auto' }}>
                   {IconComponent && <IconComponent className="w-5 h-5" />}
                 </div>
                 <span className={`text-xs font-medium mt-1 ${
                   item.isActive ? 'text-slate-900' : 'text-slate-500'
-                }`} style={{ transition: 'color 0s' }}>
+                }`}>
                   {item.label}
                 </span>
               </Link>

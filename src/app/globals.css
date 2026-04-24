@@ -106,6 +106,26 @@
     transition-duration: 0s;
   }
   
+  /* ⚡ OPTIMIZACIONES MÓVIL - Eliminar TODAS las transiciones */
+  @media (max-width: 1024px) {
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Forzar aceleración por hardware en elementos interactivos */
+    button, a, [role="button"] {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    
+    /* Optimizar scroll en móvil */
+    .overflow-y-auto, .overflow-auto {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+  }
+  
   /* Scrollbar personalizado */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
