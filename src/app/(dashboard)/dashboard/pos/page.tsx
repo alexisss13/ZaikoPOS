@@ -1,6 +1,7 @@
 // src/app/(dashboard)/dashboard/pos/page.tsx
 'use client';
 
+import React from 'react';
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/hooks/useResponsive';
 import { usePOSLogic } from '@/components/pos/hooks/usePOSLogic';
@@ -33,6 +34,13 @@ export default function PosPage() {
   const { isMobile } = useResponsive();
   const logic = usePOSLogic();
 
+  // Pull-to-refresh state (DEBE estar antes de cualquier return condicional)
+  const [isPulling, setIsPulling] = React.useState(false);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [pullDistance, setPullDistance] = React.useState(0);
+  const touchStartY = React.useRef(0);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
   const {
     cashSession, hasCashOpen, mutateCash, branches, cashHook, isGlobalUser,
     visibleCodes, getBranchByCode, availableCategories, filteredProducts,
@@ -51,6 +59,63 @@ export default function PosPage() {
     handleMobileCustomerAction, handleMobileDiscountAction,
     loadingCash, loadingProducts, loadingCats,
   } = logic;
+
+  // Pull-to-refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scrollRef.current && scrollRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (scrollRef.current && scrollRef.current.scrollTop === 0 && !isRefreshing) {
+      const currentY = e.touches[0].clientY;
+      const distance = currentY - touchStartY.current;
+      
+      if (distance > 0 && distance < 100) {
+        setPullDistance(distance);
+        setIsPulling(distance > 60);
+        
+        const indicator = document.getElementById('pull-indicator-pos');
+        if (indicator) {
+          indicator.style.height = `${Math.min(distance, 60)}px`;
+          indicator.style.opacity = `${Math.min(distance / 60, 1)}`;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (isPulling && !isRefreshing) {
+      setIsRefreshing(true);
+      setIsPulling(false);
+      
+      try {
+        await logic.mutateProducts();
+        await mutateCash();
+      } catch (error) {
+        console.error('Error refreshing:', error);
+      } finally {
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setPullDistance(0);
+          const indicator = document.getElementById('pull-indicator-pos');
+          if (indicator) {
+            indicator.style.height = '0';
+            indicator.style.opacity = '0';
+          }
+        }, 500);
+      }
+    } else {
+      setPullDistance(0);
+      setIsPulling(false);
+      const indicator = document.getElementById('pull-indicator-pos');
+      if (indicator) {
+        indicator.style.height = '0';
+        indicator.style.opacity = '0';
+      }
+    }
+  };
 
   if (loadingCash) {
     return (
@@ -90,6 +155,8 @@ export default function PosPage() {
           onOpenFilters={() => setShowMobileFilters(true)}
           hasActiveFilters={hasActiveFilters}
           disabled={saleState === 'PAID'}
+          cartItemCount={cart.length}
+          cartTotal={finalGlobalTotal}
         />
 
         <MobilePOSActiveFilters
@@ -101,7 +168,25 @@ export default function PosPage() {
           onClearCategoryFilter={() => setSelectedCategory('ALL')}
         />
 
-        <div className="flex-1 overflow-y-auto px-4 pb-20">
+        <div 
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 pb-20"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ 
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div id="pull-indicator-pos" className="flex items-center justify-center overflow-hidden transition-all duration-200" style={{ height: 0, opacity: 0 }}>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+              <div className={`w-4 h-4 text-slate-400 ${isRefreshing ? 'animate-spin' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+              </div>
+              {isRefreshing ? 'Actualizando...' : isPulling ? 'Suelta para actualizar' : 'Desliza para actualizar'}
+            </div>
+          </div>
           {loadingProducts || loadingCats ? (
             <div className="grid grid-cols-2 gap-2.5">
               {Array(8).fill(0).map((_, i) => (

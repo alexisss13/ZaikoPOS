@@ -78,7 +78,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
     }
   }, [isOpen, branches]);
 
-  const filteredProducts = products?.filter(p => {
+  const filteredProducts = (products && Array.isArray(products)) ? products.filter(p => {
     // Filtrar por búsqueda
     const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.variants.some(v => 
@@ -95,7 +95,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, branches }: Transfer
     });
     
     return hasStockInOrigin;
-  }) || [];
+  }) : [];
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);

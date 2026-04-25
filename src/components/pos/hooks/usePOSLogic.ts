@@ -450,6 +450,7 @@ export function usePOSLogic() {
     cashSession, hasCashOpen, mutateCash, branches, categories,
     loadingCash, loadingProducts, loadingCats,
     cashHook, isGlobalUser, currentBranch,
+    mutateProducts, // ⚡ NUEVO - Para pull-to-refresh
     // Permissions
     canViewOthers, visibleCodes, myCode,
     // Helpers

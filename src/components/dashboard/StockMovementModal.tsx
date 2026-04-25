@@ -77,13 +77,13 @@ export function StockMovementModal({ isOpen, onClose, onSuccess, branches }: Sto
     }
   }, [isOpen, branches]);
 
-  const filteredProducts = products?.filter(p => 
+  const filteredProducts = (products && Array.isArray(products)) ? products.filter(p => 
     p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.variants.some(v => 
       v.barcode?.includes(searchTerm) || 
       v.sku?.toLowerCase().includes(searchTerm.toLowerCase())
     )
-  ) || [];
+  ) : [];
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);

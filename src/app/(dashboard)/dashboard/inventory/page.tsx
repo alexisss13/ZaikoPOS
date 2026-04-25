@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import dynamic from 'next/dynamic';
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -83,6 +84,7 @@ function InventoryPageContent() {
   const { data: movements, isLoading, mutate, error: movementsError } = useSWR<StockMovement[]>('/api/inventory/movements', fetcher);
   const { data: transfers, mutate: mutateTransfers, error: transfersError } = useSWR<StockTransfer[]>('/api/stock-transfers', fetcher);
   const { data: branches } = useSWR('/api/branches', fetcher);
+  const { data: products } = useSWR('/api/products?forPOS=true', fetcher); // Cargar productos CON variantes para móvil
 
   // Log errors for debugging
   useEffect(() => {
@@ -124,26 +126,7 @@ function InventoryPageContent() {
   const [showTransferStatusFilter, setShowTransferStatusFilter] = useState(false);
   const [expandedTransferCards, setExpandedTransferCards] = useState<Set<string>>(new Set());
 
-  const handleTransferAction = async (transferId: string, action: 'APPROVED' | 'REJECTED') => {
-    setProcessingTransferId(transferId);
-    try {
-      const res = await fetch(`/api/transfers/${transferId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action })
-      });
-      
-      if (!res.ok) throw new Error('Error al procesar traslado');
-      
-      mutateTransfers();
-      toast.success(`Traslado ${action === 'APPROVED' ? 'aprobado' : 'rechazado'} correctamente`);
-    } catch (error) {
-      toast.error('Error al procesar el traslado');
-    } finally {
-      setProcessingTransferId(null);
-    }
-  };
-
+  // ── MEMOIZED DATA (MUST BE BEFORE ANY CONDITIONAL RETURNS) ──
   const filteredMovements = useMemo(() => {
     if (!movements) return [];
     
@@ -201,7 +184,153 @@ function InventoryPageContent() {
     transfersPage * ITEMS_PER_PAGE
   );
 
-  const exportToExcel = async () => {
+  // ── HANDLERS (AFTER ALL HOOKS) ──
+  const handleTransferAction = async (transferId: string, action: 'APPROVED' | 'REJECTED') => {
+    setProcessingTransferId(transferId);
+    try {
+      const res = await fetch(`/api/transfers/${transferId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action })
+      });
+      
+      if (!res.ok) throw new Error('Error al procesar traslado');
+      
+      mutateTransfers();
+      toast.success(`Traslado ${action === 'APPROVED' ? 'aprobado' : 'rechazado'} correctamente`);
+    } catch (error) {
+      toast.error('Error al procesar el traslado');
+    } finally {
+      setProcessingTransferId(null);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await Promise.all([mutate(), mutateTransfers()]);
+  };
+
+  // Estados para páginas nativas móviles
+  const [showNewMovement, setShowNewMovement] = useState(false);
+  const [showNewTransfer, setShowNewTransfer] = useState(false);
+
+  // ── COLUMN DEFINITIONS (ANTES DEL IF MÓVIL) ──
+  // Column definitions for Kardex ResponsiveTable
+  const kardexColumns: ColumnDef<StockMovement>[] = [
+    // Dynamic imports para páginas nativas (solo cuando se necesitan)
+    const NewMovementMobile = showNewMovement ? dynamic(() => import('@/components/inventory/NewMovementMobile').then(m => ({ default: m.NewMovementMobile })), { ssr: false }) : null;
+    const NewTransferMobile = showNewTransfer ? dynamic(() => import('@/components/inventory/NewTransferMobile').then(m => ({ default: m.NewTransferMobile })), { ssr: false }) : null;
+    
+    return (
+      <>
+        {/* Contenido móvil inline - sin componente separado */}
+        <div className="flex flex-col h-full w-full gap-3">
+          {/* Header compacto */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-slate-900 leading-tight">Inventario</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[11px] font-bold text-blue-600">
+                  {filteredMovements.length} movimientos
+                </span>
+                <span className="text-[11px] text-slate-300">•</span>
+                <span className="text-[11px] font-bold text-amber-600">
+                  {transfers?.filter(t => t.status === 'PENDING').length || 0} pendientes
+                </span>
+              </div>
+            </div>
+            
+            {canManage && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowNewMovement(true)}
+                  className="h-10 px-3 flex items-center gap-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 active:scale-95 transition-all"
+                >
+                  <CircleArrowUp02Icon className="w-3.5 h-3.5" />
+                  Nuevo
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('kardex')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === 'kardex'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white text-slate-600 border border-slate-200'
+              }`}
+            >
+              <PackageIcon className="w-4 h-4" />
+              Movimientos
+            </button>
+            <button
+              onClick={() => setActiveTab('transfers')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === 'transfers'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white text-slate-600 border border-slate-200'
+              }`}
+            >
+              <ArrowDataTransferHorizontalIcon className="w-4 h-4" />
+              Traslados
+              {transfers && transfers.filter(t => t.status === 'PENDING').length > 0 && (
+                <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {transfers.filter(t => t.status === 'PENDING').length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Content - Usar el mismo ResponsiveTable que desktop */}
+          <div className="flex-1 overflow-y-auto">
+            {activeTab === 'kardex' ? (
+              <ResponsiveTable
+                data={paginatedMovements}
+                columns={kardexColumns}
+                keyExtractor={(movement) => movement.id}
+              />
+            ) : (
+              <ResponsiveTable
+                data={paginatedTransfers}
+                columns={transfersColumns}
+                keyExtractor={(transfer) => transfer.id}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Páginas nativas */}
+        {showNewMovement && NewMovementMobile && (
+          <NewMovementMobile
+            onClose={() => setShowNewMovement(false)}
+            onSuccess={() => {
+              setShowNewMovement(false);
+              handleRefresh();
+            }}
+            branches={branches || []}
+            products={products || []}
+          />
+        )}
+
+        {showNewTransfer && NewTransferMobile && (
+          <NewTransferMobile
+            onClose={() => setShowNewTransfer(false)}
+            onSuccess={() => {
+              setShowNewTransfer(false);
+              handleRefresh();
+            }}
+            branches={branches || []}
+            products={products || []}
+          />
+        )}
+      </>
+    );
+  }
+
+  // ── EXPORT FUNCTIONS (DESPUÉS DEL IF MÓVIL) ──
+  const exportToPDF = async () => {
     if (!filteredMovements || filteredMovements.length === 0) {
       alert('No hay movimientos para exportar');
       return;
@@ -473,7 +602,8 @@ function InventoryPageContent() {
     },
   ];
 
-  const exportToPDF = async () => {
+  // ── MOBILE ──
+  if (isMobile) {
     if (!filteredMovements || filteredMovements.length === 0) {
       alert('No hay movimientos para exportar');
       return;
