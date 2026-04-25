@@ -87,7 +87,7 @@ export function CustomerModal({ isOpen, onClose, onSuccess }: CustomerModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
             <UserAdd01Icon size={20} strokeWidth={2} />

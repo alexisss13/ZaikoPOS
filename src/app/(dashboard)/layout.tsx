@@ -30,7 +30,8 @@ import {
   Globe02Icon,
   ShoppingBag01Icon,
   Notification01Icon,
-  Logout01Icon
+  Logout01Icon,
+  CalculatorIcon
 } from 'hugeicons-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -235,6 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/inventory', label: 'Inventario', icon: PackageDeliveredIcon },
     { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: UserAccountIcon },
     { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart01Icon },
+    { href: '/dashboard/accounting', label: 'Contabilidad', icon: CalculatorIcon },
   ];
 
   const menuItems = role === 'SUPER_ADMIN' ? tiMenuItems : shopMenuItems;

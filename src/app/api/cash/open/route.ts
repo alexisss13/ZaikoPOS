@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
+import { createCashOpenJournalEntry } from '@/lib/accounting-integration';
 
 const openSchema = z.object({
   initialCash: z.number().min(0),
@@ -44,6 +45,15 @@ export async function POST(req: Request) {
             openedAt: new Date() // Zona horaria controlada en BD y mostrada en UI
         }
     });
+
+    // 🆕 CREAR ASIENTO CONTABLE AUTOMÁTICO
+    try {
+        await createCashOpenJournalEntry(session.id);
+        console.log('[CASH_OPEN] Asiento contable creado automáticamente');
+    } catch (accountingError) {
+        console.error('[CASH_OPEN] Error al crear asiento contable:', accountingError);
+        // No fallar la apertura si falla la contabilidad
+    }
 
     return NextResponse.json(session);
   } catch (e) {

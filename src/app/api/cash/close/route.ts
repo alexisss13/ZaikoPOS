@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 import { logAudit } from '@/lib/audit';
+import { createCashCloseJournalEntry } from '@/lib/accounting-integration';
 
 const closeSchema = z.object({
   finalCash: z.number().min(0),
@@ -66,6 +67,15 @@ export async function POST(req: Request) {
           comments: comments || 'Sin comentarios'
         })
       });
+    }
+
+    // 🆕 CREAR ASIENTO CONTABLE AUTOMÁTICO
+    try {
+      await createCashCloseJournalEntry(closedSession.id);
+      console.log('[CASH_CLOSE] Asiento contable creado automáticamente');
+    } catch (accountingError) {
+      console.error('[CASH_CLOSE] Error al crear asiento contable:', accountingError);
+      // No fallar el cierre si falla la contabilidad
     }
 
     return NextResponse.json(closedSession);

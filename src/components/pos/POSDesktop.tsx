@@ -425,7 +425,7 @@ export function POSDesktop({ logic }: POSDesktopProps) {
       {/* TRANSFER MODAL */}
       {transferProduct && transferVariant && (
         <Dialog open={!!transferProduct} onOpenChange={() => { logic.setTransferProduct(null); logic.setTransferVariant(null); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md bg-white">
             <DialogHeader>
               <DialogTitle className="font-black text-slate-900">Solicitar Traslado</DialogTitle>
               <DialogDescription className="text-xs text-slate-500">Sin stock local. Solicita traslado desde otra sucursal.</DialogDescription>

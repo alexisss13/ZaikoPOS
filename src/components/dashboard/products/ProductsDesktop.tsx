@@ -214,7 +214,7 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
 
       {/* Barcode preview */}
       <Dialog open={!!barcodeProduct} onOpenChange={() => setBarcodeProduct(null)}>
-        <DialogContent className="sm:max-w-sm text-center border-none shadow-2xl p-6 bg-slate-100 rounded-2xl">
+        <DialogContent className="sm:max-w-sm text-center border-none shadow-2xl p-6 bg-white rounded-2xl">
           <DialogHeader className="mb-2"><DialogTitle className="text-center text-slate-500 text-xs uppercase tracking-widest font-bold">Vista Previa Etiqueta</DialogTitle></DialogHeader>
           <div className="flex flex-col items-center justify-center overflow-hidden">
             <div ref={ticketRef} className="bg-white px-6 py-5 flex flex-col items-center justify-center w-full max-w-[320px] text-black shadow-sm rounded-xl">
@@ -233,7 +233,7 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
 
       {/* Kardex */}
       <Dialog open={isKardexModalOpen} onOpenChange={setIsKardexModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col bg-white">
           <DialogHeader><DialogTitle className="text-lg font-bold">Kardex - {kardexProduct?.title}</DialogTitle></DialogHeader>
           <div className="flex gap-2 mb-4">
             <Button onClick={() => exportKardexToExcel(kardexProduct, kardexMovements)} variant="outline" size="sm" className="flex-1"><Download01Icon className="w-4 h-4 mr-2" />Exportar Excel</Button>

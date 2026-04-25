@@ -71,7 +71,11 @@ export async function GET(req: NextRequest) {
         createdAt: { gte: startDate }
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            variant: true // Incluir variant para obtener el costo
+          }
+        },
         payments: true,
         branch: true
       },
@@ -93,69 +97,129 @@ export async function GET(req: NextRequest) {
     const totalSales = sales.reduce((sum, sale) => 
       sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
     );
+    
+    // Calcular costos totales
+    const totalCost = sales.reduce((sum, sale) => 
+      sum + sale.items.reduce((itemSum, item) => {
+        const cost = item.variant?.cost ? Number(item.variant.cost) : 0;
+        return itemSum + (cost * item.quantity);
+      }, 0), 0
+    );
+    
+    // Calcular ganancias
+    const totalProfit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    
     const averageTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Comparación con período anterior
     const previousRevenue = previousSales.reduce((sum, sale) => sum + Number(sale.total), 0);
     const previousOrders = previousSales.length;
+    
+    // Calcular costos y ganancias del período anterior (necesitamos los items con variants)
+    const previousSalesWithItems = await prisma.sale.findMany({
+      where: {
+        ...branchCondition,
+        status: 'COMPLETED',
+        createdAt: { gte: yesterdayStart, lte: yesterdayEnd }
+      },
+      include: {
+        items: {
+          include: {
+            variant: true
+          }
+        }
+      }
+    });
+    
+    const previousCost = previousSalesWithItems.reduce((sum, sale) => 
+      sum + sale.items.reduce((itemSum, item) => {
+        const cost = item.variant?.cost ? Number(item.variant.cost) : 0;
+        return itemSum + (cost * item.quantity);
+      }, 0), 0
+    );
+    const previousProfit = previousRevenue - previousCost;
+    
     const revenueChange = previousRevenue > 0 
       ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 
       : 0;
     const ordersChange = previousOrders > 0 
       ? ((totalOrders - previousOrders) / previousOrders) * 100 
       : 0;
+    const profitChange = previousProfit > 0 
+      ? ((totalProfit - previousProfit) / previousProfit) * 100 
+      : 0;
 
-    // Top productos - usar nombre completo como key único
-    const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+    // Top productos - usar nombre completo como key único, incluir costos y ganancias
+    const productMap = new Map<string, { name: string; quantity: number; revenue: number; cost: number; profit: number }>();
     sales.forEach(sale => {
       sale.items.forEach(item => {
         const fullName = item.variantName && item.variantName !== 'Estándar' 
           ? `${item.productName} - ${item.variantName}`
           : item.productName;
         
+        const itemCost = item.variant?.cost ? Number(item.variant.cost) * item.quantity : 0;
+        const itemRevenue = Number(item.subtotal);
+        const itemProfit = itemRevenue - itemCost;
+        
         const current = productMap.get(fullName) || { 
           name: fullName, 
           quantity: 0, 
-          revenue: 0 
+          revenue: 0,
+          cost: 0,
+          profit: 0
         };
         productMap.set(fullName, {
           name: fullName,
           quantity: current.quantity + item.quantity,
-          revenue: current.revenue + Number(item.subtotal)
+          revenue: current.revenue + itemRevenue,
+          cost: current.cost + itemCost,
+          profit: current.profit + itemProfit
         });
       });
     });
 
     const topProducts = Array.from(productMap.entries())
       .map(([name, data], index) => ({ id: `product-${index}`, ...data }))
-      .sort((a, b) => b.revenue - a.revenue)
+      .sort((a, b) => b.profit - a.profit) // Ordenar por ganancia
       .slice(0, 10);
 
-    // Ventas por sucursal (solo para owner)
+    // Ventas por sucursal (solo para owner) - incluir costos y ganancias
     // Usamos Array<Record<string, any>> temporalmente para evitar quejas de 'any[]'
     let salesByBranch: Array<Record<string, any>> = [];
     if (isOwner) {
-      const branchMap = new Map<string, { branchName: string; sales: number; revenue: number; orders: number }>();
+      const branchMap = new Map<string, { branchName: string; sales: number; revenue: number; cost: number; profit: number; orders: number }>();
       sales.forEach(sale => {
         const key = sale.branchId;
         const current = branchMap.get(key) || { 
           branchName: sale.branch.name, 
           sales: 0, 
-          revenue: 0, 
+          revenue: 0,
+          cost: 0,
+          profit: 0,
           orders: 0 
         };
         const saleItems = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+        const saleCost = sale.items.reduce((sum, item) => {
+          const cost = item.variant?.cost ? Number(item.variant.cost) : 0;
+          return sum + (cost * item.quantity);
+        }, 0);
+        const saleRevenue = Number(sale.total);
+        const saleProfit = saleRevenue - saleCost;
+        
         branchMap.set(key, {
           branchName: sale.branch.name,
           sales: current.sales + saleItems,
-          revenue: current.revenue + Number(sale.total),
+          revenue: current.revenue + saleRevenue,
+          cost: current.cost + saleCost,
+          profit: current.profit + saleProfit,
           orders: current.orders + 1
         });
       });
 
       salesByBranch = Array.from(branchMap.entries())
         .map(([branchId, data]) => ({ branchId, ...data }))
-        .sort((a, b) => b.revenue - a.revenue);
+        .sort((a, b) => b.profit - a.profit); // Ordenar por ganancia
     }
 
     // Ventas por método de pago
@@ -212,6 +276,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       totalSales,
       totalRevenue,
+      totalCost,
+      totalProfit,
+      profitMargin,
       totalOrders,
       averageTicket,
       topProducts,
@@ -222,8 +289,10 @@ export async function GET(req: NextRequest) {
       todayVsYesterday: {
         revenue: totalRevenue,
         orders: totalOrders,
+        profit: totalProfit,
         revenueChange,
-        ordersChange
+        ordersChange,
+        profitChange
       }
     });
 

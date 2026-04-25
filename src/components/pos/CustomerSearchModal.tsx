@@ -88,7 +88,7 @@ export function CustomerSearchModal({ isOpen, onClose, onSelectCustomer, onCreat
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col bg-white">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Search01Icon className="w-5 h-5" />

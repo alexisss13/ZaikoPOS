@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { saleService } from '@/services/sale.service';
 import { z } from 'zod';
 import { PaymentMethod } from '@prisma/client';
+import { createSaleJournalEntries } from '@/lib/accounting-integration';
 
 const paymentSchema = z.object({
   method: z.nativeEnum(PaymentMethod),
@@ -65,6 +66,15 @@ export async function POST(req: Request) {
     }
 
     console.log('[API /api/sales] Venta creada exitosamente:', sale.code);
+
+    // 🆕 CREAR ASIENTOS CONTABLES AUTOMÁTICOS
+    try {
+      await createSaleJournalEntries(sale.id);
+      console.log('[API /api/sales] Asientos contables creados automáticamente');
+    } catch (accountingError) {
+      console.error('[API /api/sales] Error al crear asientos contables:', accountingError);
+      // No fallar la venta si falla la contabilidad, solo registrar el error
+    }
 
     // Convertir Decimals a números para el JSON
     const saleResponse = {

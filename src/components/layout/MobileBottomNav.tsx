@@ -167,13 +167,13 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           isActive: pathname === '/dashboard/purchases',
           category: 'Compras'
         },
-        // Categoría: Futuro (placeholder para módulos futuros)
+        // Categoría: Finanzas
         { 
-          href: '#', 
+          href: '/dashboard/accounting', 
           label: 'Contabilidad', 
           icon: 'hgi-calculator', 
-          isActive: false,
-          category: 'Próximamente'
+          isActive: pathname === '/dashboard/accounting',
+          category: 'Finanzas'
         },
         { 
           href: '#', 

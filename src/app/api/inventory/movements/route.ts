@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createInventoryAdjustmentJournalEntry } from '@/lib/accounting-integration';
 
 export async function GET(req: Request) {
   const businessId = req.headers.get('x-business-id');
@@ -195,6 +196,17 @@ export async function POST(req: Request) {
 
       return movement;
     });
+
+    // 🆕 CREAR ASIENTO CONTABLE AUTOMÁTICO (solo para ajustes)
+    if (type === 'ADJUSTMENT') {
+      try {
+        await createInventoryAdjustmentJournalEntry(result.id);
+        console.log('[INVENTORY_MOVEMENT] Asiento contable creado automáticamente');
+      } catch (accountingError) {
+        console.error('[INVENTORY_MOVEMENT] Error al crear asiento contable:', accountingError);
+        // No fallar el movimiento si falla la contabilidad
+      }
+    }
 
     return NextResponse.json(result);
   } catch (error: unknown) {

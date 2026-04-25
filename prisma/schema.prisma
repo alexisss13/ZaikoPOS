@@ -142,6 +142,31 @@ enum AttendanceStatus {
 }
 
 // ==========================================
+// 💰 ACCOUNTING ENUMS
+// ==========================================
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum TransactionSource {
+  MANUAL
+  SALE
+  PURCHASE
+  CASH_SESSION
+  INVENTORY
+  ADJUSTMENT
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+// ==========================================
 // 👤 USUARIOS Y RRHH (ERP)
 // ==========================================
 model User {
@@ -182,12 +207,17 @@ model User {
   payrolls    Payroll[]
 
   // Transaccional
-  cashSessions    CashSession[]
-  sales           Sale[]
-  auditLogs       AuditLog[]
-  stockTransfers  StockTransfer[]
-  stockMovements  StockMovement[]
-  purchaseOrders  PurchaseOrder[]
+  cashSessions   CashSession[]
+  sales          Sale[]
+  auditLogs      AuditLog[]
+  stockTransfers StockTransfer[]
+  stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
+
+  // Accounting
+  journalEntries      JournalEntry[]
+  fiscalPeriodsClosed FiscalPeriod[]
+  bankReconciliations BankReconciliation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -303,6 +333,9 @@ model Supplier {
   products       Product[]
   purchaseOrders PurchaseOrder[]
 
+  // Accounting
+  accountsPayable AccountsPayable[]
+
   createdAt DateTime @default(now())
 }
 
@@ -414,17 +447,20 @@ model PurchaseOrder {
   id           String              @id @default(uuid())
   businessId   String
   supplierId   String?
-  createdById  String?             // Usuario que creó la orden
+  createdById  String? // Usuario que creó la orden
   orderDate    DateTime            @default(now())
-  receivedDate DateTime?           // Fecha de recepción
+  receivedDate DateTime? // Fecha de recepción
   status       PurchaseOrderStatus @default(PENDING)
   totalAmount  Decimal             @db.Decimal(12, 2)
-  notes        String?             // Notas adicionales
+  notes        String? // Notas adicionales
 
   business  Business            @relation(fields: [businessId], references: [id])
   supplier  Supplier?           @relation(fields: [supplierId], references: [id])
   createdBy User?               @relation(fields: [createdById], references: [id])
   items     PurchaseOrderItem[]
+
+  // Accounting
+  accountsPayable AccountsPayable?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -504,6 +540,14 @@ model Business {
   pointLedger    PointTransaction[]
   partners       Partner[]
 
+  // Accounting
+  accounts            AccountingAccount[]
+  journalEntries      JournalEntry[]
+  fiscalPeriods       FiscalPeriod[]
+  accountsReceivable  AccountsReceivable[]
+  accountsPayable     AccountsPayable[]
+  bankReconciliations BankReconciliation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -536,6 +580,9 @@ model Branch {
   popups        PopupConfig[]
   coupons       Coupon[]
   productsOwned Product[]
+
+  // Accounting
+  journalEntries JournalEntry[]
 }
 
 model Partner {
@@ -639,6 +686,9 @@ model Customer {
   sales       Sale[]
   pointLedger PointTransaction[]
 
+  // Accounting
+  accountsReceivable AccountsReceivable[]
+
   @@unique([businessId, docNumber])
 }
 
@@ -673,6 +723,9 @@ model Sale {
   payments    SalePayment[]
   invoice     Invoice?
   pointLedger PointTransaction[]
+
+  // Accounting
+  accountsReceivable AccountsReceivable?
 }
 
 model SaleItem {
@@ -803,12 +856,12 @@ model PointTransaction {
 // 🛒 E-COMMERCE
 // ==========================================
 model Address {
-  id        String  @id @default(uuid())
-  address   String
-  address2  String?
-  city      String
-  province  String?
-  country   String  @default("Perú")
+  id       String  @id @default(uuid())
+  address  String
+  address2 String?
+  city     String
+  province String?
+  country  String  @default("Perú")
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -1003,4 +1056,207 @@ model Catalog {
   branch    Branch?  @relation(fields: [branchId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 💰 ACCOUNTING MODULE
+// ==========================================
+model AccountingAccount {
+  id         String      @id @default(uuid())
+  businessId String
+  code       String // e.g., "1010", "4010"
+  name       String // e.g., "Cash", "Sales Revenue"
+  type       AccountType
+  parentId   String?
+  isActive   Boolean     @default(true)
+  balance    Decimal     @default(0) @db.Decimal(15, 2)
+
+  business Business            @relation(fields: [businessId], references: [id])
+  parent   AccountingAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children AccountingAccount[] @relation("AccountHierarchy")
+
+  journalLines        JournalEntryLine[]
+  bankReconciliations BankReconciliation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, code])
+  @@index([businessId, type])
+  @@index([businessId, isActive])
+}
+
+model JournalEntry {
+  id           String            @id @default(uuid())
+  businessId   String
+  branchId     String
+  entryNumber  Int // Sequential number per business
+  entryDate    DateTime
+  description  String
+  source       TransactionSource
+  sourceId     String? // Reference to Sale, Purchase, etc.
+  isReversed   Boolean           @default(false)
+  reversalOfId String? // Reference to original entry if this is a reversal
+  attachments  String[] // URLs to supporting documents
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business   Business       @relation(fields: [businessId], references: [id])
+  branch     Branch         @relation(fields: [branchId], references: [id])
+  createdBy  User           @relation(fields: [createdById], references: [id])
+  reversalOf JournalEntry?  @relation("JournalReversal", fields: [reversalOfId], references: [id])
+  reversals  JournalEntry[] @relation("JournalReversal")
+
+  lines                   JournalEntryLine[]
+  bankReconciliationItems BankReconciliationItem[]
+
+  @@unique([businessId, entryNumber])
+  @@index([businessId, entryDate])
+  @@index([branchId, entryDate])
+  @@index([source, sourceId])
+}
+
+model JournalEntryLine {
+  id             String  @id @default(uuid())
+  journalEntryId String
+  accountId      String
+  debit          Decimal @default(0) @db.Decimal(15, 2)
+  credit         Decimal @default(0) @db.Decimal(15, 2)
+  description    String?
+
+  journalEntry JournalEntry      @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      AccountingAccount @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+model FiscalPeriod {
+  id         String             @id @default(uuid())
+  businessId String
+  name       String // e.g., "2024-Q1", "2024-12"
+  startDate  DateTime
+  endDate    DateTime
+  status     FiscalPeriodStatus @default(OPEN)
+  closedAt   DateTime?
+  closedById String?
+
+  business Business @relation(fields: [businessId], references: [id])
+  closedBy User?    @relation(fields: [closedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, name])
+  @@index([businessId, status])
+}
+
+model AccountsReceivable {
+  id          String   @id @default(uuid())
+  businessId  String
+  customerId  String
+  saleId      String   @unique
+  invoiceDate DateTime
+  dueDate     DateTime
+  amount      Decimal  @db.Decimal(12, 2)
+  paidAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  balance     Decimal  @db.Decimal(12, 2)
+
+  business Business @relation(fields: [businessId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  sale     Sale     @relation(fields: [saleId], references: [id])
+
+  payments ARPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId, customerId])
+  @@index([dueDate])
+}
+
+model ARPayment {
+  id          String   @id @default(uuid())
+  arId        String
+  amount      Decimal  @db.Decimal(12, 2)
+  paymentDate DateTime
+  reference   String?
+
+  ar AccountsReceivable @relation(fields: [arId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model AccountsPayable {
+  id          String   @id @default(uuid())
+  businessId  String
+  supplierId  String
+  purchaseId  String   @unique
+  invoiceDate DateTime
+  dueDate     DateTime
+  amount      Decimal  @db.Decimal(12, 2)
+  paidAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  balance     Decimal  @db.Decimal(12, 2)
+
+  business Business      @relation(fields: [businessId], references: [id])
+  supplier Supplier      @relation(fields: [supplierId], references: [id])
+  purchase PurchaseOrder @relation(fields: [purchaseId], references: [id])
+
+  payments APPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId, supplierId])
+  @@index([dueDate])
+}
+
+model APPayment {
+  id          String   @id @default(uuid())
+  apId        String
+  amount      Decimal  @db.Decimal(12, 2)
+  paymentDate DateTime
+  reference   String?
+
+  ap AccountsPayable @relation(fields: [apId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model BankReconciliation {
+  id               String    @id @default(uuid())
+  businessId       String
+  accountId        String // Bank account
+  statementDate    DateTime
+  statementBalance Decimal   @db.Decimal(15, 2)
+  bookBalance      Decimal   @db.Decimal(15, 2)
+  difference       Decimal   @db.Decimal(15, 2)
+  isReconciled     Boolean   @default(false)
+  reconciledAt     DateTime?
+  reconciledById   String?
+
+  business     Business          @relation(fields: [businessId], references: [id])
+  account      AccountingAccount @relation(fields: [accountId], references: [id])
+  reconciledBy User?             @relation(fields: [reconciledById], references: [id])
+
+  items BankReconciliationItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId, accountId])
+}
+
+model BankReconciliationItem {
+  id               String  @id @default(uuid())
+  reconciliationId String
+  journalEntryId   String
+  isCleared        Boolean @default(false)
+
+  reconciliation BankReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  journalEntry   JournalEntry       @relation(fields: [journalEntryId], references: [id])
+
+  @@index([reconciliationId])
 }

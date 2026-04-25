@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createPurchaseJournalEntry } from '@/lib/accounting-integration';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const role = req.headers.get('x-user-role');
@@ -154,6 +155,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
       }
     });
+
+    // 🆕 CREAR ASIENTO CONTABLE AUTOMÁTICO
+    try {
+      await createPurchaseJournalEntry(id);
+      console.log('[PURCHASE_RECEIVE] Asiento contable creado automáticamente');
+    } catch (accountingError) {
+      console.error('[PURCHASE_RECEIVE] Error al crear asiento contable:', accountingError);
+      // No fallar la recepción si falla la contabilidad
+    }
 
     return NextResponse.json(updatedPurchase);
   } catch (error: unknown) {

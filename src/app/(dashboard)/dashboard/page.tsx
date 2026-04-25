@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import TiDashboardOverview from '@/components/dashboard/TiDashboardOverview';
-import StoreDashboardOverview from '@/components/dashboard/StoreDashboardOverview';
+import StoreDashboardModern from '@/components/dashboard/StoreDashboardModern';
 import { MobileHomeScreen } from '@/components/dashboard/MobileHomeScreen';
 
 export default function DashboardPage() {
@@ -24,5 +24,5 @@ export default function DashboardPage() {
   }
 
   // 🏬 Los dueños, jefes y cajeros ven el resumen de la tienda física
-  return <StoreDashboardOverview />;
+  return <StoreDashboardModern />;
 }

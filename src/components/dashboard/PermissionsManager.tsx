@@ -208,7 +208,7 @@ export function PermissionsManager({ isOpen, onClose, onSuccess, userToEdit }: P
     
     return (
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-2xl bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <EyeIcon className="w-5 h-5" strokeWidth={1.5} />
