@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { useAccountingLogic, haptic } from './useAccountingLogic';
+import { BalanceSheet } from './reports/BalanceSheet';
+import { IncomeStatement } from './reports/IncomeStatement';
+import { CashFlow } from './reports/CashFlow';
 import {
   CalculatorIcon,
   FileScriptIcon,
@@ -10,6 +13,7 @@ import {
   ChartUpIcon,
   Money01Icon,
   ArrowRight01Icon,
+  ArrowLeft01Icon,
   Calendar03Icon,
   Add01Icon,
   Search01Icon,
@@ -19,12 +23,14 @@ import {
 } from 'hugeicons-react';
 
 type MobileView = 'home' | 'accounts' | 'journal' | 'reports';
+type ReportType = 'balance' | 'income' | 'cashflow' | null;
 
 export default function AccountingMobile() {
   const logic = useAccountingLogic();
   const { stats, isLoading, mobileJournalEntries, accounts } = logic;
   const [currentView, setCurrentView] = useState<MobileView>('home');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedReport, setSelectedReport] = useState<ReportType>(null);
 
   if (isLoading) {
     return (
@@ -168,7 +174,7 @@ export default function AccountingMobile() {
 
               {/* Reportes */}
               <button
-                onClick={() => { haptic(8); setCurrentView('reports'); }}
+                onClick={() => { haptic(8); setCurrentView('reports'); setSelectedReport(null); }}
                 className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 active:scale-[0.97] transition-transform"
                 style={{ 
                   WebkitTapHighlightColor: 'transparent',
@@ -184,7 +190,14 @@ export default function AccountingMobile() {
 
               {/* Nuevo Asiento */}
               <button
-                onClick={() => { haptic(8); }}
+                onClick={() => { 
+                  haptic(8); 
+                  setCurrentView('journal');
+                  // Scroll to top para mostrar el botón de nuevo asiento
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }, 100);
+                }}
                 className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 shadow-lg active:scale-[0.97] transition-transform"
                 style={{ 
                   WebkitTapHighlightColor: 'transparent',
@@ -194,8 +207,8 @@ export default function AccountingMobile() {
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-3">
                   <Add01Icon className="w-6 h-6 text-white" />
                 </div>
-                <p className="font-bold text-sm text-white mb-0.5">Nuevo</p>
-                <p className="text-xs text-white/80">Crear asiento</p>
+                <p className="font-bold text-sm text-white mb-0.5">Nuevo Asiento</p>
+                <p className="text-xs text-white/80">Registrar operación</p>
               </button>
             </div>
           </div>
@@ -271,34 +284,35 @@ export default function AccountingMobile() {
 
     return (
       <div 
-        className="flex flex-col h-full w-full overflow-hidden bg-slate-50"
+        className="fixed inset-0 bg-white z-50 flex flex-col"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
         }}
       >
-        {/* Header */}
-        <div className="bg-white px-4 pt-6 pb-4 border-b border-slate-200">
-          <div className="flex items-center gap-3 mb-4">
-            <button
-              onClick={() => { haptic(8); setCurrentView('home'); }}
-              className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <ArrowRight01Icon className="w-5 h-5 text-slate-700 rotate-180" />
-            </button>
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-slate-900">Plan de Cuentas</h1>
-              <p className="text-xs text-slate-500">{accounts?.length || 0} cuentas activas</p>
-            </div>
-            <button
-              onClick={() => { haptic(8); }}
-              className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center active:scale-95 transition-transform shadow-sm"
-            >
-              <Add01Icon className="w-5 h-5 text-white" />
-            </button>
+        {/* Header - Native Pattern */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
+          <button
+            onClick={() => { haptic(8); setCurrentView('home'); }}
+            className="p-2 -ml-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all"
+          >
+            <ArrowLeft01Icon className="w-5 h-5 text-slate-700" />
+          </button>
+          <div className="flex-1">
+            <h2 className="text-lg font-black text-slate-900">Plan de Cuentas</h2>
+            <p className="text-xs text-slate-500">{accounts?.length || 0} cuentas activas</p>
           </div>
+          <button
+            onClick={() => { haptic(8); }}
+            className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <Add01Icon className="w-4 h-4" />
+            Nueva
+          </button>
+        </div>
 
-          {/* Search Bar */}
+        {/* Search Bar */}
+        <div className="px-4 py-3 bg-white border-b border-slate-200">
           <div className="relative">
             <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -312,7 +326,7 @@ export default function AccountingMobile() {
         </div>
 
         {/* Accounts List */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 bg-slate-50">
           {filteredAccounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mt-4">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -381,36 +395,35 @@ export default function AccountingMobile() {
   if (currentView === 'journal') {
     return (
       <div 
-        className="flex flex-col h-full w-full overflow-hidden bg-slate-50"
+        className="fixed inset-0 bg-white z-50 flex flex-col"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
         }}
       >
-        {/* Header */}
-        <div className="bg-white px-4 pt-6 pb-4 border-b border-slate-200">
-          <div className="flex items-center gap-3 mb-4">
-            <button
-              onClick={() => { haptic(8); setCurrentView('home'); }}
-              className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <ArrowRight01Icon className="w-5 h-5 text-slate-700 rotate-180" />
-            </button>
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-slate-900">Asientos Contables</h1>
-              <p className="text-xs text-slate-500">{mobileJournalEntries.length} registros</p>
-            </div>
-            <button
-              onClick={() => { haptic(8); }}
-              className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center active:scale-95 transition-transform shadow-sm"
-            >
-              <Add01Icon className="w-5 h-5 text-white" />
-            </button>
+        {/* Header - Native Pattern */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
+          <button
+            onClick={() => { haptic(8); setCurrentView('home'); }}
+            className="p-2 -ml-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all"
+          >
+            <ArrowLeft01Icon className="w-5 h-5 text-slate-700" />
+          </button>
+          <div className="flex-1">
+            <h2 className="text-lg font-black text-slate-900">Asientos Contables</h2>
+            <p className="text-xs text-slate-500">{mobileJournalEntries.length} registros</p>
           </div>
+          <button
+            onClick={() => { haptic(8); }}
+            className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <Add01Icon className="w-4 h-4" />
+            Nuevo
+          </button>
         </div>
 
         {/* Journal Entries List */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 bg-slate-50">
           {mobileJournalEntries.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mt-4">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -471,38 +484,128 @@ export default function AccountingMobile() {
   if (currentView === 'reports') {
     return (
       <div 
-        className="flex flex-col h-full w-full overflow-hidden bg-slate-50"
+        className="fixed inset-0 bg-white z-50 flex flex-col"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
         }}
       >
-        {/* Header */}
-        <div className="bg-white px-4 pt-6 pb-4 border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { haptic(8); setCurrentView('home'); }}
-              className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <ArrowRight01Icon className="w-5 h-5 text-slate-700 rotate-180" />
-            </button>
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-slate-900">Reportes</h1>
-              <p className="text-xs text-slate-500">Estados financieros</p>
+        {selectedReport ? (
+          // Mostrar reporte seleccionado
+          <>
+            {selectedReport === 'balance' && (
+              <BalanceSheet 
+                accounts={accounts || []} 
+                isMobile 
+                onBack={() => { haptic(8); setSelectedReport(null); }}
+              />
+            )}
+            {selectedReport === 'income' && (
+              <IncomeStatement 
+                accounts={accounts || []} 
+                isMobile 
+                onBack={() => { haptic(8); setSelectedReport(null); }}
+              />
+            )}
+            {selectedReport === 'cashflow' && (
+              <CashFlow 
+                accounts={accounts || []} 
+                journalEntries={mobileJournalEntries} 
+                isMobile 
+                onBack={() => { haptic(8); setSelectedReport(null); }}
+              />
+            )}
+          </>
+        ) : (
+          // Menú de selección de reportes
+          <>
+            {/* Header - Native Pattern */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
+              <button
+                onClick={() => { haptic(8); setCurrentView('home'); }}
+                className="p-2 -ml-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all"
+              >
+                <ArrowLeft01Icon className="w-5 h-5 text-slate-700" />
+              </button>
+              <div className="flex-1">
+                <h2 className="text-lg font-black text-slate-900">Reportes</h2>
+                <p className="text-xs text-slate-500">Estados financieros</p>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Reports Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24">
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center mx-auto mb-3">
-              <FileValidationIcon className="w-8 h-8 text-purple-600" />
+            {/* Reports Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 bg-slate-50 space-y-3">
+              {/* Balance General */}
+              <button
+                onClick={() => { haptic(8); setSelectedReport('balance'); }}
+                className="w-full bg-white rounded-2xl border-2 border-slate-200 p-5 text-left active:scale-[0.98] transition-all shadow-sm"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  transform: 'translateZ(0)',
+                }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                    <Wallet01Icon className="w-7 h-7 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-black text-slate-900 mb-1">Balance General</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Estado de situación financiera. Muestra activos, pasivos y patrimonio.
+                    </p>
+                  </div>
+                  <ArrowRight01Icon className="w-5 h-5 text-slate-400 shrink-0 mt-1" />
+                </div>
+              </button>
+
+              {/* Estado de Resultados */}
+              <button
+                onClick={() => { haptic(8); setSelectedReport('income'); }}
+                className="w-full bg-white rounded-2xl border-2 border-slate-200 p-5 text-left active:scale-[0.98] transition-all shadow-sm"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  transform: 'translateZ(0)',
+                }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
+                    <ChartUpIcon className="w-7 h-7 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-black text-slate-900 mb-1">Estado de Resultados</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Ingresos, gastos y utilidad neta del período.
+                    </p>
+                  </div>
+                  <ArrowRight01Icon className="w-5 h-5 text-slate-400 shrink-0 mt-1" />
+                </div>
+              </button>
+
+              {/* Flujo de Efectivo */}
+              <button
+                onClick={() => { haptic(8); setSelectedReport('cashflow'); }}
+                className="w-full bg-white rounded-2xl border-2 border-slate-200 p-5 text-left active:scale-[0.98] transition-all shadow-sm"
+                style={{ 
+                  WebkitTapHighlightColor: 'transparent',
+                  transform: 'translateZ(0)',
+                }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center shrink-0">
+                    <Money01Icon className="w-7 h-7 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-black text-slate-900 mb-1">Flujo de Efectivo</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Entradas y salidas de efectivo del período.
+                    </p>
+                  </div>
+                  <ArrowRight01Icon className="w-5 h-5 text-slate-400 shrink-0 mt-1" />
+                </div>
+              </button>
             </div>
-            <p className="text-sm font-bold text-slate-900 mb-1">Próximamente</p>
-            <p className="text-xs text-slate-500">Los reportes financieros estarán disponibles pronto</p>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     );
   }

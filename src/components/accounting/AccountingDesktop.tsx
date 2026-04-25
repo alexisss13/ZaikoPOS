@@ -1,10 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useAccountingLogic } from './useAccountingLogic';
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/dashboard/products/SearchBar';
 import AccountModal from './AccountModal';
 import JournalEntryModal from './JournalEntryModal';
+import { BalanceSheet } from './reports/BalanceSheet';
+import { IncomeStatement } from './reports/IncomeStatement';
+import { CashFlow } from './reports/CashFlow';
 import {
   CalculatorIcon,
   FileScriptIcon,
@@ -27,6 +31,7 @@ export default function AccountingDesktop() {
     filteredAccounts,
     filteredJournalEntries,
     accounts,
+    journalEntries,
     mutateAccounts,
     mutateJournal,
     isAccountModalOpen,
@@ -38,6 +43,8 @@ export default function AccountingDesktop() {
     selectedJournal,
     setSelectedJournal,
   } = logic;
+
+  const [selectedReport, setSelectedReport] = useState<'balance' | 'income' | 'cashflow' | null>(null);
 
   if (isLoading) {
     return (
@@ -359,20 +366,56 @@ export default function AccountingDesktop() {
         )}
 
         {activeTab === 'reports' && (
-          <div className="grid grid-cols-3 gap-4">
-            <button className="p-6 bg-white border-2 border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50 transition-all text-left">
-              <h4 className="font-bold text-slate-900 mb-1">Balance General</h4>
-              <p className="text-sm text-slate-500">Estado de situación financiera</p>
-            </button>
-            <button className="p-6 bg-white border-2 border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50 transition-all text-left">
-              <h4 className="font-bold text-slate-900 mb-1">Estado de Resultados</h4>
-              <p className="text-sm text-slate-500">Ingresos y gastos del período</p>
-            </button>
-            <button className="p-6 bg-white border-2 border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50 transition-all text-left">
-              <h4 className="font-bold text-slate-900 mb-1">Flujo de Efectivo</h4>
-              <p className="text-sm text-slate-500">Movimientos de caja</p>
-            </button>
-          </div>
+          <>
+            {!selectedReport ? (
+              <div className="grid grid-cols-3 gap-4">
+                <button 
+                  onClick={() => setSelectedReport('balance')}
+                  className="p-6 bg-white border-2 border-slate-200 rounded-2xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left group"
+                >
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-100 transition-colors">
+                    <Wallet01Icon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-1">Balance General</h4>
+                  <p className="text-sm text-slate-500">Estado de situación financiera</p>
+                </button>
+                <button 
+                  onClick={() => setSelectedReport('income')}
+                  className="p-6 bg-white border-2 border-slate-200 rounded-2xl hover:border-emerald-300 hover:bg-emerald-50 transition-all text-left group"
+                >
+                  <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-3 group-hover:bg-emerald-100 transition-colors">
+                    <ChartUpIcon className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-1">Estado de Resultados</h4>
+                  <p className="text-sm text-slate-500">Ingresos y gastos del período</p>
+                </button>
+                <button 
+                  onClick={() => setSelectedReport('cashflow')}
+                  className="p-6 bg-white border-2 border-slate-200 rounded-2xl hover:border-purple-300 hover:bg-purple-50 transition-all text-left group"
+                >
+                  <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-3 group-hover:bg-purple-100 transition-colors">
+                    <Money01Icon className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-1">Flujo de Efectivo</h4>
+                  <p className="text-sm text-slate-500">Movimientos de caja</p>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Button
+                  onClick={() => setSelectedReport(null)}
+                  variant="outline"
+                  className="h-9 text-xs"
+                >
+                  ← Volver a Reportes
+                </Button>
+                
+                {selectedReport === 'balance' && <BalanceSheet accounts={accounts || []} />}
+                {selectedReport === 'income' && <IncomeStatement accounts={accounts || []} />}
+                {selectedReport === 'cashflow' && <CashFlow accounts={accounts || []} journalEntries={journalEntries || []} />}
+              </div>
+            )}
+          </>
         )}
       </div>
 

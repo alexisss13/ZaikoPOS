@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense, lazy } from 'react';
 import useSWR from 'swr';
 import { useState, useMemo } from 'react';
 import { ContactIcon, Download01Icon, Loading03Icon, FilterIcon, CancelCircleIcon, ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react';
@@ -7,7 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
+import { useResponsive } from '@/hooks/useResponsive';
 import { toast } from 'sonner';
+
+const CashSessionsMobile = lazy(() => import('@/components/cash-sessions/CashSessionsMobile'));
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -49,6 +53,7 @@ interface CashSession {
 
 export default function CashSessionsPage() {
   const { role } = useAuth();
+  const { isMobile } = useResponsive();
   const canView = role === 'OWNER' || role === 'MANAGER' || role === 'SUPER_ADMIN';
 
   const { data: sessions, isLoading, mutate } = useSWR<CashSession[]>(
@@ -62,12 +67,17 @@ export default function CashSessionsPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [statusFilterSession, setStatusFilterSession] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  
+  // Filtro de fecha: por defecto solo hoy
+  const today = new Date().toISOString().split('T')[0];
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [showBranchFilter, setShowBranchFilter] = useState(false);
 
-  const ITEMS_PER_PAGE = 6  ;
+  const ITEMS_PER_PAGE = 6;
 
   const { data: branches } = useSWR('/api/branches', fetcher);
 
@@ -82,7 +92,8 @@ export default function CashSessionsPage() {
       let matchesDateFrom = true;
       let matchesDateTo = true;
       
-      if (dateFrom || dateTo) {
+      // Si showAllHistory es true, no filtrar por fecha
+      if (!showAllHistory && (dateFrom || dateTo)) {
         const sessionDateStr = session.openedAt.split('T')[0];
         if (dateFrom) matchesDateFrom = sessionDateStr >= dateFrom;
         if (dateTo) matchesDateTo = sessionDateStr <= dateTo;
@@ -90,7 +101,7 @@ export default function CashSessionsPage() {
 
       return matchesBranch && matchesStatus && matchesDateFrom && matchesDateTo;
     });
-  }, [sessions, branchFilter, statusFilterSession, dateFrom, dateTo]);
+  }, [sessions, branchFilter, statusFilterSession, dateFrom, dateTo, showAllHistory]);
 
   const totalPages = Math.ceil(filteredSessions.length / ITEMS_PER_PAGE) || 1;
   const paginatedSessions = filteredSessions.slice(
@@ -105,6 +116,27 @@ export default function CashSessionsPage() {
           <p className="text-slate-600">No tienes permisos para ver esta página</p>
         </div>
       </div>
+    );
+  }
+
+  // Render mobile version
+  if (isMobile) {
+    return (
+      <Suspense fallback={
+        <div className="flex flex-col h-full w-full overflow-y-auto pb-24 px-4 pt-4 gap-4 bg-slate-50">
+          <div className="flex flex-col gap-1.5">
+            <div className="h-6 bg-slate-200 rounded-lg w-48 animate-pulse" />
+            <div className="h-4 bg-slate-200 rounded w-32 animate-pulse" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2].map(i => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 h-24 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      }>
+        <CashSessionsMobile />
+      </Suspense>
     );
   }
 
@@ -392,6 +424,67 @@ export default function CashSessionsPage() {
 
         {/* Filtros y paginación */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          {/* Botón Hoy */}
+          <button
+            onClick={() => {
+              const today = new Date().toISOString().split('T')[0];
+              setDateFrom(today);
+              setDateTo(today);
+              setShowAllHistory(false);
+              setCurrentPage(1);
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all bg-slate-900 text-white shadow-sm hover:bg-slate-800 flex items-center gap-1.5"
+          >
+            <ContactIcon className="w-3.5 h-3.5" />
+            <span>Hoy</span>
+          </button>
+
+          {/* Botón Historial Completo */}
+          <button
+            onClick={() => {
+              setShowAllHistory(true);
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              showAllHistory
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Loading03Icon className="w-3.5 h-3.5" />
+            <span>Todo</span>
+          </button>
+
+          {/* Separador */}
+          <div className="h-6 w-px bg-slate-200" />
+
+          {/* Filtros de fecha */}
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { 
+              setDateFrom(e.target.value); 
+              setShowAllHistory(false);
+              setCurrentPage(1); 
+            }}
+            className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
+            placeholder="Desde"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { 
+              setDateTo(e.target.value); 
+              setShowAllHistory(false);
+              setCurrentPage(1); 
+            }}
+            className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
+            placeholder="Hasta"
+          />
+
+          {/* Separador */}
+          <div className="h-6 w-px bg-slate-200" />
+
           {/* Filtro por estado */}
           <div className="flex items-center gap-1">
             <button
@@ -457,31 +550,17 @@ export default function CashSessionsPage() {
             )}
           </div>
 
-          {/* Filtros de fecha */}
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
-            className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
-            placeholder="Desde"
-          />
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
-            className="h-8 px-3 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300 focus:border-slate-300"
-            placeholder="Hasta"
-          />
-
           {/* Limpiar filtros */}
-          {(branchFilter !== 'ALL' || dateFrom || dateTo || statusFilterSession !== 'ALL') && (
+          {(branchFilter !== 'ALL' || (showAllHistory && (dateFrom || dateTo)) || statusFilterSession !== 'ALL') && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setBranchFilter('ALL');
-                setDateFrom('');
-                setDateTo('');
+                const today = new Date().toISOString().split('T')[0];
+                setDateFrom(today);
+                setDateTo(today);
+                setShowAllHistory(false);
                 setStatusFilterSession('ALL');
                 setCurrentPage(1);
               }}
@@ -526,6 +605,9 @@ export default function CashSessionsPage() {
             ) : (
               paginatedSessions?.map((session, index) => {
                 const sessionIndex = filteredSessions.findIndex(s => s.id === session.id);
+                const stats = getSessionStats(session);
+                const hasNegativeDifference = session.status === 'CLOSED' && stats.cashDifference < 0;
+                
                 return (
                 <button
                   key={session.id}
@@ -533,6 +615,8 @@ export default function CashSessionsPage() {
                   className={`w-full p-3 rounded-lg border text-left transition-all ${
                     selectedSession?.id === session.id
                       ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                      : hasNegativeDifference
+                      ? 'border-red-200 bg-red-50 hover:border-red-300 hover:bg-red-100'
                       : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -540,17 +624,24 @@ export default function CashSessionsPage() {
                     <span className={`text-xs font-semibold ${selectedSession?.id === session.id ? 'text-white' : 'text-slate-900'}`}>
                       Corte N°{getSessionNumber(sessionIndex)}
                     </span>
-                    <Badge className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
-                      session.status === 'OPEN'
-                        ? selectedSession?.id === session.id 
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-emerald-100 text-emerald-700'
-                        : selectedSession?.id === session.id
-                          ? 'bg-slate-700 text-slate-200'
-                          : 'bg-slate-100 text-slate-700'
-                    }`}>
-                      {session.status === 'OPEN' ? 'ABIERTO' : 'CERRADO'}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      {hasNegativeDifference && selectedSession?.id !== session.id && (
+                        <Badge className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-red-600 text-white mr-1">
+                          ⚠️
+                        </Badge>
+                      )}
+                      <Badge className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                        session.status === 'OPEN'
+                          ? selectedSession?.id === session.id 
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-emerald-100 text-emerald-700'
+                          : selectedSession?.id === session.id
+                            ? 'bg-slate-700 text-slate-200'
+                            : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {session.status === 'OPEN' ? 'ABIERTO' : 'CERRADO'}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div className={`flex items-center gap-2 text-[10px] ${selectedSession?.id === session.id ? 'text-slate-300' : 'text-slate-500'}`}>
@@ -590,6 +681,26 @@ export default function CashSessionsPage() {
 
               return (
                 <div className="space-y-3">
+                  {/* ALERTA DE DIFERENCIA NEGATIVA */}
+                  {selectedSession.status === 'CLOSED' && stats.cashDifference < 0 && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-sm font-bold text-red-900 mb-1">Falta Dinero en Caja</h3>
+                          <p className="text-xs text-red-700 leading-relaxed">
+                            Hay una diferencia negativa de <span className="font-bold">S/ {Math.abs(stats.cashDifference).toFixed(2)}</span>. 
+                            El efectivo declarado (S/ {stats.declaredCash.toFixed(2)}) es menor al esperado (S/ {stats.totalInCash.toFixed(2)}).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* HEADER */}
                   <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                     <p className="text-xs text-slate-700 leading-relaxed">
