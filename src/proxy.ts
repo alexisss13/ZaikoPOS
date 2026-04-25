@@ -7,7 +7,7 @@ const key = new TextEncoder().encode(SECRET_KEY);
 
 const publicRoutes = ['/login', '/register', '/api/auth/login'];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   // 1. Permitir acceso a rutas públicas y assets estáticos

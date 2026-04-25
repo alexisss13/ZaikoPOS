@@ -191,16 +191,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     });
 
     if (standardVariant) {
+      const variantUpdateData: any = {
+        sku: body.sku !== undefined ? (body.sku || null) : standardVariant.sku,
+        barcode: body.barcode !== undefined ? (body.barcode || null) : standardVariant.barcode,
+        price: body.basePrice !== undefined ? parseFloat(body.basePrice) : standardVariant.price,
+        images,
+      };
+
+      // Solo actualizar cost si se envió en el body
+      if (body.cost !== undefined) {
+        variantUpdateData.cost = body.cost !== null ? parseFloat(body.cost) : null;
+      }
+
+      // Solo actualizar minStock si se envió en el body
+      if (body.minStock !== undefined) {
+        variantUpdateData.minStock = body.minStock !== null ? parseInt(body.minStock) : standardVariant.minStock;
+      }
+
       await prisma.productVariant.update({
         where: { id: standardVariant.id },
-        data: {
-          sku: body.sku !== undefined ? (body.sku || null) : standardVariant.sku,
-          barcode: body.barcode !== undefined ? (body.barcode || null) : standardVariant.barcode,
-          price: body.basePrice !== undefined ? parseFloat(body.basePrice) : standardVariant.price,
-          cost: body.cost !== undefined ? (body.cost !== null ? parseFloat(body.cost) : null) : standardVariant.cost,
-          minStock: body.minStock !== undefined ? (body.minStock !== null ? parseInt(body.minStock) : standardVariant.minStock) : standardVariant.minStock,
-          images,
-        }
+        data: variantUpdateData
       });
     }
 
