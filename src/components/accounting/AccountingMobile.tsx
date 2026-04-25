@@ -62,61 +62,38 @@ export default function AccountingMobile() {
   if (currentView === 'home') {
     return (
       <div 
-        className="flex flex-col h-full w-full overflow-y-auto pb-24 bg-slate-50"
+        className="flex flex-col h-full w-full gap-3"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
           contain: 'layout style paint',
         }}
       >
-        {/* Header con gradiente */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-6 pb-8 rounded-b-[2rem] shadow-lg">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-1">
-                Contabilidad
-              </h1>
-              <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                <Calendar03Icon className="w-3.5 h-3.5" />
-                <span>{new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' })}</span>
-              </div>
-            </div>
-            <button
-              onClick={() => { haptic(8); }}
-              className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white active:scale-95 transition-transform"
-            >
-              <FilterIcon className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Stats Cards - Dentro del header */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Ingresos */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                  <ArrowUp01Icon className="w-4 h-4 text-emerald-400" />
-                </div>
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">Ingresos</span>
-              </div>
-              <p className="text-2xl font-bold text-white">S/ {stats.totalIncome.toFixed(2)}</p>
-            </div>
-
-            {/* Gastos */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                  <ArrowDown01Icon className="w-4 h-4 text-red-400" />
-                </div>
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">Gastos</span>
-              </div>
-              <p className="text-2xl font-bold text-white">S/ {stats.totalExpenses.toFixed(2)}</p>
+        {/* Header compacto */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black text-slate-900 leading-tight">Contabilidad</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[11px] font-bold text-emerald-600">
+                S/ {stats.totalIncome.toFixed(2)} ingresos
+              </span>
+              <span className="text-[11px] text-slate-300">•</span>
+              <span className="text-[11px] font-bold text-red-600">
+                S/ {stats.totalExpenses.toFixed(2)} gastos
+              </span>
             </div>
           </div>
+          
+          <button
+            onClick={() => { haptic(8); }}
+            className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+          >
+            <FilterIcon className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Content Area */}
-        <div className="px-4 py-6 space-y-6">
+        <div className="flex-1 overflow-y-auto pb-20 space-y-6">
           {/* Utilidad Neta Card */}
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-3">

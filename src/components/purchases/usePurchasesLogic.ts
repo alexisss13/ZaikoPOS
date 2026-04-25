@@ -15,6 +15,7 @@ export interface PurchaseOrder {
   notes: string | null;
   supplier: {
     name: string;
+    phone: string | null;
   } | null;
   createdBy: {
     name: string;

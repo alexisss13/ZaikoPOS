@@ -183,103 +183,72 @@ export default function CashSessionsMobile() {
 
     return (
       <div 
-        className="flex flex-col h-full w-full overflow-y-auto pb-24 bg-slate-50"
+        className="flex flex-col h-full w-full gap-3"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
           contain: 'layout style paint',
         }}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 pt-6 pb-8 rounded-b-[2rem] shadow-lg">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-1">
-                Corte de Turnos
-              </h1>
-              <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                <Calendar03Icon className="w-3.5 h-3.5" />
-                <span>
-                  {showAllHistory 
-                    ? 'Historial completo' 
-                    : dateFrom === dateTo 
-                    ? new Date(dateFrom).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })
-                    : `${new Date(dateFrom).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })} - ${new Date(dateTo).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}`
-                  }
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => { haptic(8); setShowDatePicker(true); }}
-              className="px-3 py-2 rounded-xl bg-white/10 backdrop-blur-sm flex items-center gap-2 text-white active:scale-95 transition-all"
-            >
-              <FilterIcon className="w-4 h-4" />
-              <span className="text-xs font-bold">Filtrar</span>
-            </button>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                  <ContactIcon className="w-4 h-4 text-emerald-400" />
-                </div>
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">Abiertos</span>
-              </div>
-              <p className="text-2xl font-bold text-white">{openSessions}</p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-slate-500/20 flex items-center justify-center">
-                  <ContactIcon className="w-4 h-4 text-slate-300" />
-                </div>
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">Cerrados</span>
-              </div>
-              <p className="text-2xl font-bold text-white">{closedSessions}</p>
+        {/* Header compacto */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black text-slate-900 leading-tight">Corte de Turnos</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[11px] font-bold text-emerald-600">
+                {openSessions} abiertos
+              </span>
+              <span className="text-[11px] text-slate-300">•</span>
+              <span className="text-[11px] font-bold text-slate-600">
+                {closedSessions} cerrados
+              </span>
             </div>
           </div>
+          
+          <button
+            onClick={() => { haptic(8); setShowDatePicker(true); }}
+            className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+          >
+            <FilterIcon className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Filtros */}
-        <div className="px-4 py-4">
-          <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-            <button
-              onClick={() => { haptic(8); setStatusFilter('ALL'); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                statusFilter === 'ALL'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200'
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => { haptic(8); setStatusFilter('OPEN'); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                statusFilter === 'OPEN'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200'
-              }`}
-            >
-              Abiertos
-            </button>
-            <button
-              onClick={() => { haptic(8); setStatusFilter('CLOSED'); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                statusFilter === 'CLOSED'
-                  ? 'bg-slate-700 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200'
-              }`}
-            >
-              Cerrados
-            </button>
-          </div>
+        <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+          <button
+            onClick={() => { haptic(8); setStatusFilter('ALL'); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+              statusFilter === 'ALL'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => { haptic(8); setStatusFilter('OPEN'); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+              statusFilter === 'OPEN'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >
+            Abiertos
+          </button>
+          <button
+            onClick={() => { haptic(8); setStatusFilter('CLOSED'); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+              statusFilter === 'CLOSED'
+                ? 'bg-slate-700 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >
+            Cerrados
+          </button>
         </div>
 
         {/* Lista de turnos */}
-        <div className="px-4 space-y-2.5 pb-4">
+        <div className="flex-1 overflow-y-auto space-y-2.5 pb-20">
           {filteredSessions.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -637,7 +606,7 @@ export default function CashSessionsMobile() {
                 onClick={() => { haptic(8); setShowDatePicker(false); }}
                 className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center active:scale-95 transition-transform"
               >
-                <Cancel01Icon className="w-5 h-5 text-slate-600" />
+                <Cancel01Icon className="w-5 h-5 text-slate-600"/>
               </button>
             </div>
 
@@ -707,7 +676,7 @@ export default function CashSessionsMobile() {
             {/* Botón aplicar */}
             <button
               onClick={() => { haptic(8); setShowDatePicker(false); }}
-              className="w-full h-12 bg-slate-900 text-white font-bold rounded-xl active:scale-95 transition-transform"
+              className="w-full h-12 bg-slate-900 text-white mb-25 font-bold rounded-xl active:scale-95 transition-transform"
             >
               Aplicar Filtros
             </button>

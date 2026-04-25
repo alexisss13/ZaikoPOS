@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense, lazy } from 'react';
 import React from 'react';
 import { 
   PlusSignIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, LayoutGridIcon, 
@@ -13,8 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/context/auth-context';
+import { useResponsive } from '@/hooks/useResponsive';
 import { PurchaseModal } from '@/components/dashboard/PurchaseModal';
 import { SupplierModal } from '@/components/dashboard/SupplierModal';
+
+const PurchasesMobile = lazy(() => import('@/components/purchases/PurchasesMobile'));
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -60,8 +63,31 @@ const statusConfig = {
 
 export default function PurchasesPage() {
   const { role } = useAuth();
+  const { isMobile } = useResponsive();
   const canManage = role === 'OWNER' || role === 'MANAGER';
 
+  // Render mobile version
+  if (isMobile) {
+    return (
+      <Suspense fallback={
+        <div className="flex flex-col h-full w-full overflow-y-auto pb-24 px-4 pt-4 gap-4 bg-slate-50">
+          <div className="flex flex-col gap-1.5">
+            <div className="h-6 bg-slate-200 rounded-lg w-48 animate-pulse" />
+            <div className="h-4 bg-slate-200 rounded w-32 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 h-32 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      }>
+        <PurchasesMobile />
+      </Suspense>
+    );
+  }
+
+  // Desktop hooks and logic only execute if not mobile
   const { data: purchases, isLoading, mutate } = useSWR<PurchaseOrder[]>('/api/purchases', fetcher);
   const { data: branches } = useSWR('/api/branches', fetcher);
   const { data: suppliers, mutate: mutateSuppliers } = useSWR('/api/suppliers', fetcher);

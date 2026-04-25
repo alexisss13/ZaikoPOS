@@ -17,6 +17,7 @@ export async function GET(req: Request) {
         supplier: {
           select: {
             name: true,
+            phone: true,
           }
         },
         createdBy: {

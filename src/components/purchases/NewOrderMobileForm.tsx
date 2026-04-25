@@ -1,0 +1,431 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { ArrowLeft01Icon, ShoppingCart01Icon, PlusSignIcon, Cancel01Icon } from 'hugeicons-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+
+interface NewOrderMobileFormProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+interface OrderItem {
+  id: string;
+  productTitle: string;
+  variantName: string;
+  quantity: number;
+  cost: number;
+}
+
+export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormProps) {
+  // Todos los hooks deben ejecutarse siempre en el mismo orden
+  const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [formData, setFormData] = useState({
+    supplierId: '',
+    orderDate: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    // Cargar proveedores y productos
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [suppliersRes, productsRes] = await Promise.all([
+          fetch('/api/suppliers'),
+          fetch('/api/products?forPOS=true') // Usar forPOS=true para obtener variantes completas
+        ]);
+        
+        if (suppliersRes.ok) {
+          const suppliersData = await suppliersRes.json();
+          setSuppliers(Array.isArray(suppliersData) ? suppliersData.filter((s: any) => s.isActive) : []);
+        }
+        
+        if (productsRes.ok) {
+          const productsData = await productsRes.json();
+          // Con forPOS=true, la respuesta es directamente un array
+          setProducts(Array.isArray(productsData) ? productsData.filter((p: any) => p.active) : []);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+        // Asegurar que siempre tengamos arrays vacíos en caso de error
+        setSuppliers([]);
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+
+  const addProduct = (product: any, variant: any) => {
+    const existingIndex = orderItems.findIndex(
+      item => item.id === `${product.id}-${variant.id}`
+    );
+    
+    if (existingIndex >= 0) {
+      const newItems = [...orderItems];
+      newItems[existingIndex].quantity += 1;
+      setOrderItems(newItems);
+    } else {
+      const newItem: OrderItem = {
+        id: `${product.id}-${variant.id}`,
+        productTitle: product.title,
+        variantName: variant.name,
+        quantity: 1,
+        cost: variant.cost || product.cost || 0,
+      };
+      setOrderItems([...orderItems, newItem]);
+    }
+    setSearchTerm('');
+  };
+
+  const updateQuantity = (itemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setOrderItems(orderItems.filter(item => item.id !== itemId));
+    } else {
+      setOrderItems(orderItems.map(item => 
+        item.id === itemId ? { ...item, quantity } : item
+      ));
+    }
+  };
+
+  const updateCost = (itemId: string, cost: number) => {
+    setOrderItems(orderItems.map(item => 
+      item.id === itemId ? { ...item, cost } : item
+    ));
+  };
+
+  const getTotalAmount = () => {
+    return orderItems.reduce((total, item) => total + (item.quantity * item.cost), 0);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.supplierId) {
+      toast.error('Selecciona un proveedor');
+      return;
+    }
+    
+    if (orderItems.length === 0) {
+      toast.error('Agrega al menos un producto');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        supplierId: formData.supplierId,
+        orderDate: formData.orderDate,
+        notes: formData.notes || null,
+        items: orderItems.map(item => {
+          const [productId, variantId] = item.id.split('-');
+          return {
+            productId,
+            variantId,
+            quantity: item.quantity,
+            cost: item.cost,
+          };
+        }),
+        totalAmount: getTotalAmount(),
+      };
+
+      const res = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Error al crear la orden');
+      }
+
+      toast.success('Orden de compra creada');
+      onSuccess();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Error al crear la orden');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canGoNext = () => {
+    if (step === 1) return formData.supplierId;
+    if (step === 2) return orderItems.length > 0;
+    return true;
+  };
+
+  const filteredProducts = products.filter(product =>
+    product && product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
+        <button
+          onClick={isLoading ? onClose : (step === 1 ? onClose : () => setStep(step - 1))}
+          className="p-2 -ml-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all"
+        >
+          <ArrowLeft01Icon className="w-5 h-5 text-slate-700" />
+        </button>
+        <div className="flex-1">
+          <h2 className="text-lg font-black text-slate-900">Nueva Orden</h2>
+          <p className="text-xs text-slate-500">
+            {isLoading ? 'Cargando datos...' : `Paso ${step} de 3`}
+          </p>
+        </div>
+        {!isLoading && step < 3 && (
+          <Button
+            onClick={() => setStep(step + 1)}
+            disabled={!canGoNext()}
+            className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl disabled:opacity-50 text-xs px-4"
+          >
+            Continuar
+          </Button>
+        )}
+        {!isLoading && step === 3 && (
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl disabled:opacity-50 text-xs px-4"
+          >
+            {isSubmitting ? 'Creando...' : 'Crear'}
+          </Button>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      {!isLoading && (
+        <div className="h-1 bg-slate-100">
+          <div 
+            className="h-full bg-slate-900 transition-all duration-300"
+            style={{ width: `${(step / 3) * 100}%` }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {isLoading ? (
+          // Loading content
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-sm text-slate-500">Cargando proveedores y productos...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Step 1: Proveedor */}
+            {step === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="supplierId" className="text-sm font-bold text-slate-700 mb-2 block">
+                    Proveedor *
+                  </Label>
+                  <select
+                    id="supplierId"
+                    value={formData.supplierId}
+                    onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                    className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-sm"
+                  >
+                    <option value="">Selecciona un proveedor</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="orderDate" className="text-sm font-bold text-slate-700 mb-2 block">
+                    Fecha de orden
+                  </Label>
+                  <Input
+                    id="orderDate"
+                    type="date"
+                    value={formData.orderDate}
+                    onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+                    className="h-12 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="notes" className="text-sm font-bold text-slate-700 mb-2 block">
+                    Notas (opcional)
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Notas adicionales sobre la orden..."
+                    className="rounded-xl"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Productos */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                    Buscar productos
+                  </Label>
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar productos..."
+                    className="h-12 rounded-xl"
+                  />
+                </div>
+
+                {/* Productos seleccionados */}
+                {orderItems.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <h3 className="text-sm font-bold text-slate-900 mb-3">
+                      Productos seleccionados ({orderItems.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {orderItems.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-slate-900">{item.productTitle}</p>
+                            <p className="text-[10px] text-slate-500">{item.variantName}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
+                              className="w-16 h-8 text-xs text-center"
+                            />
+                            <span className="text-xs text-slate-500">×</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.cost}
+                              onChange={(e) => updateCost(item.id, parseFloat(e.target.value) || 0)}
+                              className="w-20 h-8 text-xs text-center"
+                            />
+                          </div>
+                          <button
+                            onClick={() => updateQuantity(item.id, 0)}
+                            className="p-1 rounded text-red-500 hover:bg-red-50"
+                          >
+                            <Cancel01Icon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
+                      <span className="text-sm font-bold text-slate-700">Total</span>
+                      <span className="text-lg font-bold text-slate-900">
+                        S/ {getTotalAmount().toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista de productos */}
+                {searchTerm && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <h3 className="text-sm font-bold text-slate-900 mb-3">Resultados</h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {filteredProducts.length === 0 ? (
+                        <p className="text-xs text-slate-500 text-center py-4">
+                          No se encontraron productos
+                        </p>
+                      ) : (
+                        filteredProducts.map((product) =>
+                          (product.variants && Array.isArray(product.variants) ? product.variants : []).map((variant: any) => (
+                            <button
+                              key={`${product.id}-${variant.id}`}
+                              onClick={() => addProduct(product, variant)}
+                              className="w-full p-2 text-left rounded-lg hover:bg-slate-50 border border-slate-100"
+                            >
+                              <p className="text-xs font-bold text-slate-900">{product.title}</p>
+                              <p className="text-[10px] text-slate-500">{variant.name}</p>
+                              <p className="text-[10px] text-slate-400">
+                                Costo: S/ {(variant.cost || product.cost || 0).toFixed(2)}
+                              </p>
+                            </button>
+                          ))
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Resumen */}
+            {step === 3 && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                  <h3 className="text-sm font-bold text-slate-900 mb-3">Resumen de la orden</h3>
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-xs text-slate-600">Proveedor:</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {suppliers.find(s => s.id === formData.supplierId)?.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs text-slate-600">Fecha:</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {new Date(formData.orderDate).toLocaleDateString('es-PE')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs text-slate-600">Productos:</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {orderItems.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-200 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-slate-700">Total</span>
+                      <span className="text-xl font-bold text-slate-900">
+                        S/ {getTotalAmount().toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {formData.notes && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <h3 className="text-sm font-bold text-slate-900 mb-2">Notas</h3>
+                    <p className="text-xs text-slate-600">{formData.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
