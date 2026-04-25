@@ -2,8 +2,7 @@
 
 import { 
   WarehouseIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, Download01Icon, 
-  CircleArrowUp02Icon, ArrowDataTransferHorizontalIcon, FilterIcon, PackageIcon, 
-  Store01Icon
+  CircleArrowUp02Icon, ArrowDataTransferHorizontalIcon, PackageIcon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

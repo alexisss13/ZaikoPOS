@@ -197,8 +197,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           sku: body.sku !== undefined ? (body.sku || null) : standardVariant.sku,
           barcode: body.barcode !== undefined ? (body.barcode || null) : standardVariant.barcode,
           price: body.basePrice !== undefined ? parseFloat(body.basePrice) : standardVariant.price,
-          cost: body.cost !== undefined ? parseFloat(body.cost) : standardVariant.cost,
-          minStock: body.minStock !== undefined ? parseInt(body.minStock) : standardVariant.minStock,
+          cost: body.cost !== undefined ? (body.cost !== null ? parseFloat(body.cost) : null) : standardVariant.cost,
+          minStock: body.minStock !== undefined ? (body.minStock !== null ? parseInt(body.minStock) : standardVariant.minStock) : standardVariant.minStock,
           images,
         }
       });

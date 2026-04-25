@@ -98,6 +98,29 @@
     will-change: background-color, color;
   }
   
+  /* Toast notifications - z-index máximo y centrado */
+  [data-sonner-toaster] {
+    z-index: 9999 !important;
+  }
+  
+  [data-sonner-toast] {
+    z-index: 9999 !important;
+  }
+  
+  /* Centrado perfecto en móvil */
+  @media (max-width: 768px) {
+    [data-sonner-toaster][data-position="top-center"] {
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      right: auto !important;
+    }
+    
+    [data-sonner-toast] {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+  }
+  
   /* Optimizar TODOS los botones dentro de la tabla */
   .products-table button {
     transform: translateZ(0);

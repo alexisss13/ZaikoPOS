@@ -23,11 +23,17 @@ const ProductsDesktop = dynamic(
   { ssr: false, loading: () => <ProductsLoadingSkeleton /> }
 );
 
-// Lazy-load modales con loading states
+// Lazy-load modales desktop
 const ProductModal = dynamic(() => import('@/components/dashboard/ProductModal').then(m => ({ default: m.ProductModal })), { ssr: false });
 const CategoryModal = dynamic(() => import('@/components/dashboard/CategoryModal').then(m => ({ default: m.CategoryModal })), { ssr: false });
 const ImportProductsModal = dynamic(() => import('@/components/dashboard/ImportProductsModal').then(m => ({ default: m.ImportProductsModal })), { ssr: false });
 const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/BarcodeGeneratorModal').then(m => ({ default: m.BarcodeGeneratorModal })), { ssr: false });
+
+// Lazy-load formulario móvil nativo
+const ProductMobileForm = dynamic(() => import('@/components/dashboard/products/ProductMobileForm').then(m => ({ default: m.ProductMobileForm })), { ssr: false });
+const CategoryMobileForm = dynamic(() => import('@/components/dashboard/products/CategoryMobileForm').then(m => ({ default: m.CategoryMobileForm })), { ssr: false });
+const ImportMobileForm = dynamic(() => import('@/components/dashboard/products/ImportMobileForm').then(m => ({ default: m.ImportMobileForm })), { ssr: false });
+const BarcodeMobileForm = dynamic(() => import('@/components/dashboard/products/BarcodeMobileForm').then(m => ({ default: m.BarcodeMobileForm })), { ssr: false });
 
 export default function ProductsPage() {
   const { isMobile } = useResponsive();
@@ -155,50 +161,159 @@ export default function ProductsPage() {
 
         {/* Filter sheet */}
         <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
-          <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-10 max-h-[85vh] overflow-y-auto">
-            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-slate-200" /></div>
-            <SheetHeader className="px-6 pt-3 pb-0"><SheetTitle className="text-xl font-black text-slate-900 text-left">Filtros</SheetTitle></SheetHeader>
-            <div className="px-5 pt-4 space-y-4">
-              <div>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Catálogo</p>
-                <div className="grid grid-cols-2 gap-1.5">
+          <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-8 max-h-[85vh] overflow-y-auto bg-slate-50">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1.5 rounded-full bg-slate-300" />
+            </div>
+            
+            {/* Header */}
+            <div className="px-5 pb-4">
+              <SheetHeader>
+                <SheetTitle className="text-2xl font-black text-slate-900 text-left">Filtros</SheetTitle>
+              </SheetHeader>
+              <p className="text-sm text-slate-500 mt-1">Personaliza tu búsqueda</p>
+            </div>
+
+            {/* Content */}
+            <div className="px-5 space-y-5">
+              {/* Catálogo */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+                    <DashboardSquare01Icon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-900">Catálogo</p>
+                    <p className="text-xs text-slate-500">Selecciona una sucursal</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'ALL', label: 'Todos', icon: <DashboardSquare01Icon className="w-3 h-3" /> },
-                    { value: 'GENERAL', label: 'Compartidos', icon: <ArrowDataTransferHorizontalIcon className="w-3 h-3" /> },
-                    ...visibleCodes.map(code => { const b = getBranchByCode(code); return { value: code, label: b?.name || code, icon: b?.logoUrl ? <img src={b.logoUrl} className="w-3 h-3 rounded-sm object-cover" alt="" /> : <Store01Icon className="w-3 h-3" /> }; }),
-                    { value: 'INACTIVE', label: 'Inactivos', icon: <UnavailableIcon className="w-3 h-3" /> },
+                    { value: 'ALL', label: 'Todos', icon: <DashboardSquare01Icon className="w-3.5 h-3.5" /> },
+                    { value: 'GENERAL', label: 'Compartidos', icon: <ArrowDataTransferHorizontalIcon className="w-3.5 h-3.5" /> },
+                    ...visibleCodes.map(code => { const b = getBranchByCode(code); return { value: code, label: b?.name || code, icon: b?.logoUrl ? <img src={b.logoUrl} className="w-3.5 h-3.5 rounded object-cover" alt="" /> : <Store01Icon className="w-3.5 h-3.5" /> }; }),
+                    { value: 'INACTIVE', label: 'Inactivos', icon: <UnavailableIcon className="w-3.5 h-3.5" /> },
                   ].map(opt => (
-                    <button key={opt.value} onClick={() => { haptic(8); handleFilterChange(() => { setCodeFilter(opt.value); setCategoryFilter('ALL'); logic.setCurrentPage(1); }); }}
-                      className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${codeFilter === opt.value ? (opt.value === 'INACTIVE' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm') : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                      {opt.icon}{opt.label}
+                    <button 
+                      key={opt.value} 
+                      onClick={() => { haptic(8); handleFilterChange(() => { setCodeFilter(opt.value); setCategoryFilter('ALL'); logic.setCurrentPage(1); }); }}
+                      className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                        codeFilter === opt.value 
+                          ? opt.value === 'INACTIVE' 
+                            ? 'bg-red-500 text-white shadow-md shadow-red-500/30' 
+                            : 'bg-slate-900 text-white shadow-md shadow-slate-900/30'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {opt.icon}
+                      <span className="truncate">{opt.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* Categoría */}
               {availableCategories.length > 0 && (
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Categoría</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button onClick={() => { haptic(8); handleFilterChange(() => { setCategoryFilter('ALL'); logic.setCurrentPage(1); }); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${categoryFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todas</button>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
+                      <Tag01Icon className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-900">Categoría</p>
+                      <p className="text-xs text-slate-500">Filtra por tipo de producto</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => { haptic(8); handleFilterChange(() => { setCategoryFilter('ALL'); logic.setCurrentPage(1); }); }} 
+                      className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                        categoryFilter === 'ALL' 
+                          ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      Todas
+                    </button>
                     {availableCategories.map(cat => (
-                      <button key={cat.id} onClick={() => { haptic(8); handleFilterChange(() => { setCategoryFilter(cat.id); logic.setCurrentPage(1); }); }} className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform truncate ${categoryFilter === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>{cat.name}</button>
+                      <button 
+                        key={cat.id} 
+                        onClick={() => { haptic(8); handleFilterChange(() => { setCategoryFilter(cat.id); logic.setCurrentPage(1); }); }} 
+                        className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 truncate ${
+                          categoryFilter === cat.id 
+                            ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' 
+                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
                     ))}
                   </div>
                 </div>
               )}
-              <div>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('ALL'); logic.setCurrentPage(1); }); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>Todos</button>
-                  <button onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('LOW'); logic.setCurrentPage(1); }); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'LOW' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>Bajo</button>
-                  <button onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('OUT'); logic.setCurrentPage(1); }); }} className={`py-1.5 rounded-lg text-[10px] font-bold border active:scale-95 transition-transform ${stockFilter === 'OUT' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-red-50 text-red-600 border-red-200'}`}>Agotado</button>
+
+              {/* Stock */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+                    <PackageIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-900">Nivel de Stock</p>
+                    <p className="text-xs text-slate-500">Estado del inventario</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('ALL'); logic.setCurrentPage(1); }); }} 
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                      stockFilter === 'ALL' 
+                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' 
+                        : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  <button 
+                    onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('LOW'); logic.setCurrentPage(1); }); }} 
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                      stockFilter === 'LOW' 
+                        ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30' 
+                        : 'bg-amber-50 text-amber-700 border border-amber-200 hover:border-amber-300'
+                    }`}
+                  >
+                    Bajo
+                  </button>
+                  <button 
+                    onClick={() => { haptic(8); handleFilterChange(() => { setStockFilter('OUT'); logic.setCurrentPage(1); }); }} 
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                      stockFilter === 'OUT' 
+                        ? 'bg-red-500 text-white shadow-md shadow-red-500/30' 
+                        : 'bg-red-50 text-red-700 border border-red-200 hover:border-red-300'
+                    }`}
+                  >
+                    Agotado
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-2 pt-1">
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2 pb-2">
                 {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
-                  <button onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setDebouncedSearch(''); logic.setCurrentPage(1); }} className="flex-1 py-2.5 rounded-lg border border-slate-200 bg-white text-[10px] font-bold text-slate-600 active:scale-95 transition-transform">Limpiar</button>
+                  <button 
+                    onClick={() => { haptic(15); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); setDebouncedSearch(''); logic.setCurrentPage(1); }} 
+                    className="flex-1 py-3.5 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 active:scale-95 transition-all hover:bg-slate-50"
+                  >
+                    Limpiar
+                  </button>
                 )}
-                <button onClick={() => { haptic(8); setShowMobileFilters(false); }} className="flex-1 py-2.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold active:scale-95 transition-transform">Aplicar</button>
+                <button 
+                  onClick={() => { haptic(8); setShowMobileFilters(false); }} 
+                  className="flex-1 py-3.5 rounded-xl bg-slate-900 text-white text-sm font-bold active:scale-95 transition-all shadow-lg shadow-slate-900/30"
+                >
+                  Aplicar Filtros
+                </button>
               </div>
             </div>
           </SheetContent>
@@ -276,10 +391,46 @@ export default function ProductsPage() {
       </div>
 
       {/* Modales móvil */}
-      {isModalOpen && <ProductModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSuccess={() => mutate()} productToEdit={selectedProduct} canEdit={canEditSelected} onDelete={handleDelete} onPrintBarcode={(p: any) => logic.setBarcodeProduct(p)} />}
-      {isImportModalOpen && <ImportProductsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onSuccess={() => mutate()} categories={categories || []} suppliers={suppliers || []} branches={branches || []} />}
-      {isBarcodeModalOpen && <BarcodeGeneratorModal isOpen={isBarcodeModalOpen} onClose={() => setIsBarcodeModalOpen(false)} products={logic.products || []} />}
-      {isCategoryModalOpen && <CategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSuccess={() => { mutate(); mutateCategories(); }} categories={categories || []} branches={branches || []} />}
+      {isModalOpen && isMobile && (
+        <ProductMobileForm
+          onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }}
+          onSuccess={() => { mutate(); setIsModalOpen(false); setSelectedProduct(null); }}
+          productToEdit={selectedProduct}
+          categories={categories}
+          suppliers={suppliers}
+          branches={branches}
+        />
+      )}
+      {isModalOpen && !isMobile && <ProductModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSuccess={() => mutate()} productToEdit={selectedProduct} canEdit={canEditSelected} onDelete={handleDelete} onPrintBarcode={(p: any) => logic.setBarcodeProduct(p)} />}
+      
+      {isCategoryModalOpen && isMobile && (
+        <CategoryMobileForm
+          onClose={() => setIsCategoryModalOpen(false)}
+          onSuccess={() => { mutate(); mutateCategories(); setIsCategoryModalOpen(false); }}
+          categories={categories}
+          branches={branches}
+        />
+      )}
+      {isCategoryModalOpen && !isMobile && <CategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSuccess={() => { mutate(); mutateCategories(); }} categories={categories || []} branches={branches || []} />}
+      
+      {isImportModalOpen && isMobile && (
+        <ImportMobileForm
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={() => { mutate(); setIsImportModalOpen(false); }}
+          categories={categories}
+          suppliers={suppliers}
+          branches={branches}
+        />
+      )}
+      {isImportModalOpen && !isMobile && <ImportProductsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onSuccess={() => mutate()} categories={categories || []} suppliers={suppliers || []} branches={branches || []} />}
+      
+      {isBarcodeModalOpen && isMobile && (
+        <BarcodeMobileForm
+          onClose={() => setIsBarcodeModalOpen(false)}
+          products={logic.products}
+        />
+      )}
+      {isBarcodeModalOpen && !isMobile && <BarcodeGeneratorModal isOpen={isBarcodeModalOpen} onClose={() => setIsBarcodeModalOpen(false)} products={logic.products || []} />}
     </div>
   );
 }
