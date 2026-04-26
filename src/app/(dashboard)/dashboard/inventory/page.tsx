@@ -76,7 +76,7 @@ export default function InventoryPage() {
         pendingCount={transfers?.filter(t => t.status === 'PENDING').length || 0}
       />
 
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto pb-10">
         {activeTab === 'kardex' ? (
           <MobileKardexList
             movements={paginatedMovements}
