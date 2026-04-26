@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {}, // Silenciar warning de webpack config
 };
 
 // @ts-ignore - next-pwa no tiene tipos oficiales
