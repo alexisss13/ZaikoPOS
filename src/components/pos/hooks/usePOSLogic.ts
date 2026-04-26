@@ -239,8 +239,12 @@ export function usePOSLogic() {
       const existing = prev.find(item => item.variantId === variant.id);
       if (existing) {
         if (existing.cartQuantity >= localStock) { toast.error(`Stock límite: ${localStock} un.`); return prev; }
+        // 📳 Haptic: toque sutil al incrementar cantidad
+        try { navigator.vibrate?.(50); } catch {}
         return prev.map(item => item.variantId === variant.id ? { ...item, cartQuantity: item.cartQuantity + 1 } : item);
       }
+      // 📳 Haptic: pulso satisfactorio al agregar nuevo producto al carrito
+      try { navigator.vibrate?.(50); } catch {}
       return [...prev, {
         variantId: variant.id, productId: product.id,
         productName: product.title, variantName: variant.name,
@@ -373,6 +377,9 @@ export function usePOSLogic() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || data?.message || 'Error procesando la venta');
+
+      // 📳 Haptic: doble pulso de confirmación al completar la venta
+      try { navigator.vibrate?.([50, 30, 80]); } catch {}
 
       if (foundCustomer && data.pointsEarned > 0) {
         toast.success(`¡Venta registrada! ${foundCustomer.name} ganó ${data.pointsEarned} punto${data.pointsEarned > 1 ? 's' : ''}`, { duration: 5000 });
