@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const SECRET_KEY = process.env.JWT_SECRET || 'secret-fallback-dev-only';
+const SECRET_KEY = process.env.JWT_SECRET || 'dev-secret-key-change-me';
 const key = new TextEncoder().encode(SECRET_KEY);
 
 const publicRoutes = ['/login', '/register', '/api/auth/login'];
@@ -10,7 +10,7 @@ const publicRoutes = ['/login', '/register', '/api/auth/login'];
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  // 1. Permitir acceso a rutas públicas y assets estáticos
+  // 1. Rutas públicas y assets
   if (
     publicRoutes.includes(path) || 
     path.startsWith('/_next') || 
@@ -20,40 +20,31 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Verificar Sesión
   const cookie = req.cookies.get('session')?.value;
+  const isApiRoute = path.startsWith('/api/');
   
   if (!cookie) {
+    if (isApiRoute) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
   try {
-    // Verificar JWT y decodificar
     const { payload } = await jwtVerify(cookie, key, { algorithms: ['HS256'] });
     const role = payload.role as string;
 
-    // 3. Control de Acceso por Rol (RBAC)
-    if (role === 'CASHIER' && path.startsWith('/dashboard')) {
-      return NextResponse.redirect(new URL('/pos', req.nextUrl));
+    // 2. RBAC - Control de acceso por rol
+    if (role === 'CASHIER' && path.startsWith('/dashboard') && path !== '/dashboard/pos') {
+      return NextResponse.redirect(new URL('/dashboard/pos', req.nextUrl));
     }
 
-    if (role === 'OWNER' && path === '/') {
-       return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
-    }
-    
-    // Redirección inicial inteligente si entra a raíz
-    if (path === '/') {
-      if (role === 'CASHIER') return NextResponse.redirect(new URL('/pos', req.nextUrl));
-      if (role === 'OWNER' || role === 'SUPER_ADMIN') return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
-    }
-
-    // 4. Inyectar headers para el Backend
+    // 3. Inyectar headers (ESTO ES LO QUE HACE QUE LAS APIS FUNCIONEN)
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-user-id', payload.userId as string);
     requestHeaders.set('x-business-id', (payload.businessId as string) || '');
     requestHeaders.set('x-branch-id', (payload.branchId as string) || '');
     requestHeaders.set('x-user-role', role);
 
+    // Clonamos la petición con los nuevos headers
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -61,8 +52,10 @@ export async function middleware(req: NextRequest) {
     });
 
   } catch (error) {
-    // Token inválido o expirado
-    const response = NextResponse.redirect(new URL('/login', req.nextUrl));
+    console.error('🔥 MIDDLEWARE ERROR:', error);
+    const response = isApiRoute 
+      ? NextResponse.json({ error: 'Sesión expirada' }, { status: 401 })
+      : NextResponse.redirect(new URL('/login', req.nextUrl));
     response.cookies.delete('session');
     return response;
   }
@@ -70,6 +63,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    // Se aplica a todo excepto static files y public
     '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 };

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // <-- Importación correcta
 import { toast } from 'sonner';
 import { Loading02Icon, Store01Icon, ArrowRight01Icon, SecurityCheckIcon } from 'hugeicons-react';
 
@@ -23,7 +23,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router = useRouter(); // <-- Aquí ya lo tenías, ¡perfecto!
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,11 +69,11 @@ export default function LoginPage() {
 
       toast.success(`Bienvenido, ${result.user.name}`);
 
-      // Redirección inteligente
+      // 🔥 CORRECCIÓN: Usar router.push en lugar de window.location.href
       if (result.user.role === 'CASHIER') {
-        window.location.href = '/pos'; 
+        router.push('/dashboard/pos'); // Redirige a la ruta correcta usando Next.js Router
       } else {
-        window.location.href = '/dashboard'; 
+        router.push('/dashboard'); 
       }
 
     } catch (err) {
@@ -202,7 +202,7 @@ export default function LoginPage() {
 
           <div className="text-center lg:text-left pt-6 border-t border-slate-100">
             <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
-              Soporte: sistemas@festamas.com
+              Soporte: ti@pos.com
             </p>
           </div>
 
