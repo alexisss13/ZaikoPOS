@@ -125,6 +125,7 @@ export async function POST(req: Request) {
     return NextResponse.json(newPurchase);
   } catch (error: unknown) {
     console.error('[PURCHASES_POST_ERROR]', error);
-    return NextResponse.json({ error: 'Error al crear orden de compra' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Error al crear orden de compra';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

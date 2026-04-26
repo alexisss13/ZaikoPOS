@@ -50,13 +50,36 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
         
         if (suppliersRes.ok) {
           const suppliersData = await suppliersRes.json();
+          console.log('Suppliers loaded:', suppliersData.length);
           setSuppliers(Array.isArray(suppliersData) ? suppliersData.filter((s: any) => s.isActive) : []);
         }
         
         if (productsRes.ok) {
           const productsData = await productsRes.json();
-          // Con forPOS=true, la respuesta es directamente un array
-          setProducts(Array.isArray(productsData) ? productsData.filter((p: any) => p.active) : []);
+          console.log('=== PRODUCTS DATA ===');
+          console.log('Products loaded:', productsData.length);
+          
+          if (productsData.length > 0) {
+            console.log('First product structure:', productsData[0]);
+            if (productsData[0].variants && productsData[0].variants.length > 0) {
+              console.log('First variant structure:', productsData[0].variants[0]);
+            }
+          }
+          
+          // NO filtrar por active aquí, solo asegurar que sea un array
+          // El filtrado se hará al mostrar las variantes
+          const allProducts = Array.isArray(productsData) ? productsData : [];
+          
+          // Filtrar productos que tengan al menos una variante
+          const productsWithVariants = allProducts.filter((p: any) => 
+            p.variants && Array.isArray(p.variants) && p.variants.length > 0
+          );
+          
+          console.log('Products with variants:', productsWithVariants.length);
+          if (productsWithVariants.length > 0) {
+            console.log('First product with variants:', productsWithVariants[0]);
+          }
+          setProducts(productsWithVariants);
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -72,6 +95,10 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
   }, []);
 
   const addProduct = (product: any, variant: any) => {
+    console.log('Adding product:', product.id, 'variant:', variant.id);
+    console.log('Product:', product);
+    console.log('Variant:', variant);
+    
     const existingIndex = orderItems.findIndex(
       item => item.id === `${product.id}-${variant.id}`
     );
@@ -86,8 +113,9 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
         productTitle: product.title,
         variantName: variant.name,
         quantity: 1,
-        cost: variant.cost || product.cost || 0,
+        cost: Number(variant.cost || product.cost || 0),
       };
+      console.log('New item created:', newItem);
       setOrderItems([...orderItems, newItem]);
     }
     setSearchTerm('');
@@ -132,15 +160,17 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
         notes: formData.notes || null,
         items: orderItems.map(item => {
           const [productId, variantId] = item.id.split('-');
+          console.log('Item:', item.id, '-> productId:', productId, 'variantId:', variantId);
           return {
-            productId,
-            variantId,
+            variantId,  // Solo enviar variantId, no productId
             quantity: item.quantity,
             cost: item.cost,
           };
         }),
         totalAmount: getTotalAmount(),
       };
+
+      console.log('Creating purchase order with payload:', JSON.stringify(payload, null, 2));
 
       const res = await fetch('/api/purchases', {
         method: 'POST',
@@ -150,6 +180,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
 
       if (!res.ok) {
         const errorData = await res.json();
+        console.error('Purchase order creation failed:', errorData);
         throw new Error(errorData.error || 'Error al crear la orden');
       }
 
@@ -172,6 +203,10 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
   const filteredProducts = products.filter(product =>
     product && product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  console.log('Search term:', searchTerm);
+  console.log('Total products:', products.length);
+  console.log('Filtered products:', filteredProducts.length);
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
@@ -295,6 +330,9 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                     placeholder="Buscar productos..."
                     className="h-12 rounded-xl"
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    {products.length} productos disponibles
+                  </p>
                 </div>
 
                 {/* Productos seleccionados */}
@@ -346,33 +384,50 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                   </div>
                 )}
 
-                {/* Lista de productos */}
-                {searchTerm && (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                    <h3 className="text-sm font-bold text-slate-900 mb-3">Resultados</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {filteredProducts.length === 0 ? (
+                {/* Lista de productos - SIEMPRE MOSTRAR SI HAY PRODUCTOS */}
+                {products.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-30">
+                    <h3 className="text-sm font-bold text-slate-900 mb-3">
+                      {searchTerm ? `Resultados (${filteredProducts.length})` : 'Todos los productos'}
+                    </h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {(searchTerm ? filteredProducts : products).length === 0 ? (
                         <p className="text-xs text-slate-500 text-center py-4">
                           No se encontraron productos
                         </p>
                       ) : (
-                        filteredProducts.map((product) =>
-                          (product.variants && Array.isArray(product.variants) ? product.variants : []).map((variant: any) => (
+                        (searchTerm ? filteredProducts : products).map((product) => {
+                          const variants = product.variants && Array.isArray(product.variants) ? product.variants : [];
+                          if (variants.length === 0) return null;
+                          
+                          return variants.map((variant: any) => (
                             <button
                               key={`${product.id}-${variant.id}`}
                               onClick={() => addProduct(product, variant)}
-                              className="w-full p-2 text-left rounded-lg hover:bg-slate-50 border border-slate-100"
+                              className="w-full p-3 text-left rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
                             >
                               <p className="text-xs font-bold text-slate-900">{product.title}</p>
                               <p className="text-[10px] text-slate-500">{variant.name}</p>
                               <p className="text-[10px] text-slate-400">
-                                Costo: S/ {(variant.cost || product.cost || 0).toFixed(2)}
+                                Costo: S/ {Number(variant.cost || product.cost || 0).toFixed(2)}
                               </p>
                             </button>
-                          ))
-                        )
+                          ));
+                        })
                       )}
                     </div>
+                  </div>
+                )}
+
+                {products.length === 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                      <ShoppingCart01Icon className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">Sin productos</h3>
+                    <p className="text-sm text-slate-600">
+                      No hay productos disponibles para crear órdenes de compra
+                    </p>
                   </div>
                 )}
               </div>

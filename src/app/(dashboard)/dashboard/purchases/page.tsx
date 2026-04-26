@@ -66,7 +66,69 @@ export default function PurchasesPage() {
   const { isMobile } = useResponsive();
   const canManage = role === 'OWNER' || role === 'MANAGER';
 
-  // Render mobile version
+  // IMPORTANTE: Declarar TODOS los hooks ANTES de cualquier early return
+  const { data: purchases, isLoading, mutate } = useSWR<PurchaseOrder[]>('/api/purchases', fetcher);
+  const { data: branches } = useSWR('/api/branches', fetcher);
+  const { data: suppliers, mutate: mutateSuppliers } = useSWR('/api/suppliers', fetcher);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'RECEIVED' | 'CANCELLED'>('ALL');
+  const [supplierFilter, setSupplierFilter] = useState('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseOrder | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isBranchSelectModalOpen, setIsBranchSelectModalOpen] = useState(false);
+  const [stockDistribution, setStockDistribution] = useState<Record<string, Record<string, number>>>({});
+  const [showSupplierFilter, setShowSupplierFilter] = useState(false);
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // useMemo debe estar ANTES del early return
+  const filteredPurchases = useMemo(() => {
+    if (!purchases) return [];
+    
+    return purchases.filter(purchase => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        purchase.supplier?.name.toLowerCase().includes(searchLower) ||
+        purchase.items.some(item => 
+          item.variant.product.title.toLowerCase().includes(searchLower)
+        );
+
+      const matchesStatus = statusFilter === 'ALL' || purchase.status === statusFilter;
+      
+      const matchesSupplier = supplierFilter === 'ALL' || purchase.supplier?.name === supplierFilter;
+      
+      let matchesDateFrom = true;
+      let matchesDateTo = true;
+      
+      if (dateFrom || dateTo) {
+        const purchaseDateStr = purchase.createdAt.split('T')[0];
+        
+        if (dateFrom) {
+          matchesDateFrom = purchaseDateStr >= dateFrom;
+        }
+        
+        if (dateTo) {
+          matchesDateTo = purchaseDateStr <= dateTo;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesSupplier && matchesDateFrom && matchesDateTo;
+    });
+  }, [purchases, searchTerm, statusFilter, supplierFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.ceil(filteredPurchases.length / ITEMS_PER_PAGE) || 1;
+  const paginatedPurchases = filteredPurchases.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE, 
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Render mobile version DESPUÉS de declarar todos los hooks
   if (isMobile) {
     return (
       <Suspense fallback={
@@ -87,26 +149,7 @@ export default function PurchasesPage() {
     );
   }
 
-  // Desktop hooks and logic only execute if not mobile
-  const { data: purchases, isLoading, mutate } = useSWR<PurchaseOrder[]>('/api/purchases', fetcher);
-  const { data: branches } = useSWR('/api/branches', fetcher);
-  const { data: suppliers, mutate: mutateSuppliers } = useSWR('/api/suppliers', fetcher);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'RECEIVED' | 'CANCELLED'>('ALL');
-  const [supplierFilter, setSupplierFilter] = useState('ALL');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseOrder | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isBranchSelectModalOpen, setIsBranchSelectModalOpen] = useState(false);
-  const [stockDistribution, setStockDistribution] = useState<Record<string, Record<string, number>>>({});
-  const [showSupplierFilter, setShowSupplierFilter] = useState(false);
-  const [showStatusFilter, setShowStatusFilter] = useState(false);
-
+  // Resto del código desktop continúa aquí...
   const initializeStockDistribution = () => {
     if (!selectedPurchase || !branches || branches.length === 0) return;
     
@@ -226,8 +269,6 @@ export default function PurchasesPage() {
       alert(error.message || 'Error al cancelar la orden');
     }
   };
-
-  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const exportToExcel = async () => {
     if (!filteredPurchases || filteredPurchases.length === 0) {
@@ -362,48 +403,6 @@ export default function PurchasesPage() {
       alert('Error al generar el archivo PDF');
     }
   };
-
-  const filteredPurchases = useMemo(() => {
-    if (!purchases) return [];
-    
-    return purchases.filter(purchase => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        purchase.supplier?.name.toLowerCase().includes(searchLower) ||
-        purchase.items.some(item => 
-          item.variant.product.title.toLowerCase().includes(searchLower)
-        );
-
-      const matchesStatus = statusFilter === 'ALL' || purchase.status === statusFilter;
-      
-      const matchesSupplier = supplierFilter === 'ALL' || purchase.supplier?.name === supplierFilter;
-      
-      // Filtro de fechas - comparar solo las fechas sin horas
-      let matchesDateFrom = true;
-      let matchesDateTo = true;
-      
-      if (dateFrom || dateTo) {
-        // Obtener solo la fecha (YYYY-MM-DD) de la compra
-        const purchaseDateStr = purchase.createdAt.split('T')[0];
-        
-        if (dateFrom) {
-          matchesDateFrom = purchaseDateStr >= dateFrom;
-        }
-        
-        if (dateTo) {
-          matchesDateTo = purchaseDateStr <= dateTo;
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesSupplier && matchesDateFrom && matchesDateTo;
-    });
-  }, [purchases, searchTerm, statusFilter, supplierFilter, dateFrom, dateTo]);
-
-  const totalPages = Math.ceil(filteredPurchases.length / ITEMS_PER_PAGE) || 1;
-  const paginatedPurchases = filteredPurchases.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE, 
-    currentPage * ITEMS_PER_PAGE
-  );
 
   return (
     <div className="flex flex-col h-full w-full animate-in fade-in duration-300 gap-5">

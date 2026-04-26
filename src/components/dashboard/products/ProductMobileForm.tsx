@@ -143,7 +143,17 @@ export function ProductMobileForm({
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
+        const text = await res.text();
+        console.error('Response status:', res.status);
+        console.error('Response text:', text);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = { error: text || 'Error desconocido' };
+        }
+        
         throw new Error(errorData.error || 'Error al guardar producto');
       }
 

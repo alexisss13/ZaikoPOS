@@ -59,6 +59,8 @@ export async function POST(req: Request) {
         name: body.name,
         email: body.email || null,
         phone: body.phone || null,
+        ruc: body.ruc || null,
+        address: body.address || null,
         representative: body.representative || null,
         website: body.website || null,
         comments: body.comments || null,

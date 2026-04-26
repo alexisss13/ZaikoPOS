@@ -176,7 +176,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         groupTag: body.groupTag !== undefined ? (body.groupTag || null) : product.groupTag,
         isAvailable: body.active !== undefined ? body.active : product.isAvailable,
         active: body.active !== undefined ? body.active : product.active,
-        supplierId: body.supplierId || product.supplierId,
+        supplierId: body.supplierId !== undefined ? (body.supplierId || null) : product.supplierId,
       },
       include: {
         category: true,
@@ -198,9 +198,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         images,
       };
 
-      // Solo actualizar cost si se envió en el body
-      if (body.cost !== undefined) {
-        variantUpdateData.cost = body.cost !== null ? parseFloat(body.cost) : null;
+      // Solo actualizar cost si se envió en el body Y no es null
+      if (body.cost !== undefined && body.cost !== null) {
+        variantUpdateData.cost = parseFloat(body.cost);
       }
 
       // Solo actualizar minStock si se envió en el body
@@ -216,7 +216,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     return NextResponse.json(updatedProduct);
   } catch (error: unknown) {
-    return NextResponse.json({ error: 'Error al actualizar producto' }, { status: 500 });
+    console.error('[PRODUCT_UPDATE_ERROR]', error);
+    const errorMessage = error instanceof Error ? error.message : 'Error al actualizar producto';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
