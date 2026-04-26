@@ -97,7 +97,7 @@ export function MobileHomeScreen() {
 
   return (
     <div 
-      className="flex flex-col h-full w-full overflow-y-auto pb-24 bg-slate-50"
+      className="flex flex-col h-full w-full overflow-y-auto pb-12 bg-slate-50"
       style={{
         WebkitTapHighlightColor: 'transparent',
         transform: 'translateZ(0)',

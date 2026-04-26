@@ -35,7 +35,7 @@ export default function AccountingMobile() {
   if (isLoading) {
     return (
       <div 
-        className="flex flex-col h-full w-full overflow-y-auto pb-10 px-4 pt-4 gap-4 bg-slate-50"
+        className="flex flex-col h-full w-full overflow-y-auto pb-24 px-4 pt-4 gap-4 bg-slate-50"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
@@ -303,7 +303,7 @@ export default function AccountingMobile() {
         </div>
 
         {/* Accounts List */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-10 bg-slate-50">
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 bg-slate-50">
           {filteredAccounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mt-4">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -400,7 +400,7 @@ export default function AccountingMobile() {
         </div>
 
         {/* Journal Entries List */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-10 bg-slate-50">
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 bg-slate-50">
           {mobileJournalEntries.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center mt-4">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -511,7 +511,7 @@ export default function AccountingMobile() {
             </div>
 
             {/* Reports Content */}
-            <div className="flex-1 overflow-y-auto px-4 py-6 pb-10 bg-slate-50 space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 bg-slate-50 space-y-3">
               {/* Balance General */}
               <button
                 onClick={() => { haptic(8); setSelectedReport('balance'); }}

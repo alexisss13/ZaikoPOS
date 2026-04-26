@@ -170,7 +170,7 @@ export default function PosPage() {
 
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 pb-36"
+          className="flex-1 overflow-y-auto px-4 pb-24"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
