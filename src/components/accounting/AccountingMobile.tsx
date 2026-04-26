@@ -93,7 +93,7 @@ export default function AccountingMobile() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto pb-5 space-y-6">
+        <div className="flex-1 overflow-y-auto pb-24 space-y-6">
           {/* Utilidad Neta Card */}
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-3">
