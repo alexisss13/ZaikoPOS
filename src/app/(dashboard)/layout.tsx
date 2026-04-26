@@ -393,11 +393,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ========================================================
           🚀 TARJETA PRINCIPAL DE CONTENIDO (APP CANVAS)
           ======================================================== */}
-      <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
+      <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] lg:overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
         
         {/* 🚀 CONTENIDO DE LAS PÁGINAS */}
         {/* El fondo del canvas ahora es blanco para todas las páginas que se renderizan dentro */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 md:px-8 relative z-10 custom-scrollbar bg-slate-50/30 pb-20 lg:pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 md:px-8 relative z-10 custom-scrollbar bg-slate-50/30 pb-[5.5rem] lg:pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           
           {/* Notificaciones Móvil */}
           {showNotifs && (
