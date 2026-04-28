@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { usePurchasesLogic, PurchaseOrder } from './usePurchasesLogic';
 import { StockDistributionMobile } from './StockDistributionMobile';
+import { CostAdjustmentMobile } from './CostAdjustmentMobile';
 import {
   ShoppingCart01Icon,
   ArrowLeft01Icon,
@@ -92,6 +93,12 @@ export default function PurchasesMobile() {
   const [showSuppliersForm, setShowSuppliersForm] = useState(false);
   const [showExportForm, setShowExportForm] = useState(false);
   const [showStockDistribution, setShowStockDistribution] = useState(false);
+  const [showCostAdjustment, setShowCostAdjustment] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 5;
 
   // Extract logic properties after all hooks are declared
   const {
@@ -109,6 +116,37 @@ export default function PurchasesMobile() {
 
   // Derived values
   const canManage = role === 'OWNER' || role === 'MANAGER';
+
+  // Filtrado con fechas
+  const filteredPurchasesWithDates = useMemo(() => {
+    if (!filteredPurchases) return [];
+    
+    return filteredPurchases.filter(purchase => {
+      // Filtro por fecha
+      if (dateFrom || dateTo) {
+        const orderDate = new Date(purchase.orderDate);
+        const fromDate = dateFrom ? new Date(dateFrom) : null;
+        const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+        
+        if (fromDate && orderDate < fromDate) return false;
+        if (toDate && orderDate > toDate) return false;
+      }
+      
+      return true;
+    });
+  }, [filteredPurchases, dateFrom, dateTo]);
+
+  // Paginación
+  const paginatedPurchases = useMemo(() => {
+    return filteredPurchasesWithDates.slice(0, currentPage * ITEMS_PER_PAGE);
+  }, [filteredPurchasesWithDates, currentPage]);
+
+  const hasMoreItems = filteredPurchasesWithDates.length > currentPage * ITEMS_PER_PAGE;
+  const remainingItems = filteredPurchasesWithDates.length - (currentPage * ITEMS_PER_PAGE);
+
+  const loadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
 
   const handleSelectPurchase = (purchase: PurchaseOrder) => {
     haptic(8);
@@ -491,7 +529,14 @@ export default function PurchasesMobile() {
               {selectedPurchase.items.map((item) => (
                 <div key={item.id} className="flex justify-between items-start p-2 bg-slate-50 rounded-lg">
                   <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-900">{item.variant.product.title}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-xs font-bold text-slate-900">{item.variant.product.title}</p>
+                      {item.costModified && (
+                        <span className="text-[8px] font-black px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                          COSTO MODIFICADO
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-slate-500">{item.variant.name}</p>
                     <p className="text-[10px] text-slate-400 mt-1">
                       {item.quantity} {item.uom?.abbreviation || 'und'} × S/ {Number(item.cost).toFixed(2)}
@@ -546,6 +591,16 @@ export default function PurchasesMobile() {
               
               {/* Botones de acción secundarios */}
               <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => setShowCostAdjustment(true)}
+                  variant="outline"
+                  className="w-full h-11 border-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold rounded-xl"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                  Ajustar Costos
+                </Button>
                 <Button
                   onClick={() => setShowStockDistribution(true)}
                   className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
@@ -627,8 +682,15 @@ export default function PurchasesMobile() {
       {showFilters && (
         <FiltersMobileForm
           onClose={() => setShowFilters(false)}
-          onApply={(filters) => setStatusFilter(filters.status as any)}
+          onApply={(filters) => {
+            setStatusFilter(filters.status as any);
+            setDateFrom(filters.dateFrom);
+            setDateTo(filters.dateTo);
+            setCurrentPage(1); // Reset pagination when filters change
+          }}
           currentStatus={statusFilter}
+          currentDateFrom={dateFrom}
+          currentDateTo={dateTo}
         />
       )}
 
@@ -641,6 +703,22 @@ export default function PurchasesMobile() {
             setShowStockDistribution(false);
             mutate();
             handleBack();
+          }}
+          purchase={selectedPurchase}
+        />
+      )}
+
+      {/* Cost Adjustment Modal */}
+      {selectedPurchase && showCostAdjustment && (
+        <CostAdjustmentMobile
+          isOpen={showCostAdjustment}
+          onClose={() => setShowCostAdjustment(false)}
+          onSuccess={(updatedPurchase: PurchaseOrder) => {
+            setShowCostAdjustment(false);
+            // Actualizar el selectedPurchase con los nuevos datos
+            setSelectedPurchase(updatedPurchase);
+            // También refrescar la lista completa
+            mutate();
           }}
           purchase={selectedPurchase}
         />
@@ -671,8 +749,8 @@ export default function PurchasesMobile() {
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl font-black text-slate-900 leading-tight">Órdenes de Compra</h1>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {filteredPurchases.length} resultado{filteredPurchases.length !== 1 ? 's' : ''}
-                    {statusFilter !== 'ALL' && <span className="ml-1 text-slate-500">· filtrado</span>}
+                    {filteredPurchasesWithDates.length} resultado{filteredPurchasesWithDates.length !== 1 ? 's' : ''}
+                    {(statusFilter !== 'ALL' || dateFrom || dateTo) && <span className="ml-1 text-slate-500">· filtrado</span>}
                   </p>
                 </div>
                 
@@ -762,7 +840,7 @@ export default function PurchasesMobile() {
             </div>
 
             {/* Lista de órdenes */}
-            {filteredPurchases.length === 0 ? (
+            {filteredPurchasesWithDates.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
                   <ShoppingCart01Icon className="w-8 h-8 text-slate-300" />
@@ -771,7 +849,8 @@ export default function PurchasesMobile() {
                 <p className="text-xs text-slate-500">No hay órdenes de compra</p>
               </div>
             ) : (
-              filteredPurchases.map((purchase) => {
+              <>
+                {paginatedPurchases.map((purchase) => {
                 const statusInfo = statusConfig[purchase.status];
                 const StatusIcon = statusInfo.icon;
                 
@@ -819,7 +898,21 @@ export default function PurchasesMobile() {
                     </div>
                   </button>
                 );
-              })
+                })}
+                
+                {/* Botón Cargar Más */}
+                {hasMoreItems && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={loadMore}
+                      variant="outline"
+                      className="h-11 px-6 bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-xl"
+                    >
+                      Cargar más ({remainingItems} restantes)
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : (

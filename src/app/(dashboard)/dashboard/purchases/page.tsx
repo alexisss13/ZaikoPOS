@@ -14,9 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
-import { PurchaseModal } from '@/components/dashboard/PurchaseModal';
 import { NewPurchaseStepForm } from '@/components/dashboard/NewPurchaseStepForm';
 import { SupplierModal } from '@/components/dashboard/SupplierModal';
+import { CostAdjustmentModal } from '@/components/dashboard/CostAdjustmentModal';
 
 const PurchasesMobile = lazy(() => import('@/components/purchases/PurchasesMobile'));
 
@@ -40,6 +40,7 @@ interface PurchaseOrder {
     id: string;
     quantity: number;
     cost: number;
+    costModified?: boolean;
     variant: {
       name: string;
       product: {
@@ -88,6 +89,8 @@ export default function PurchasesPage() {
   const [showSupplierFilter, setShowSupplierFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showCostAdjustment, setShowCostAdjustment] = useState(false);
+  const [showDateFilter, setShowDateFilter] = useState(false);
 
   // useMemo debe estar ANTES del early return
   const filteredPurchases = useMemo(() => {
@@ -724,7 +727,54 @@ export default function PurchasesPage() {
                     </>
                   )}
                 </th>
-                <th className="px-5 py-3.5 font-semibold">Fecha</th>
+                <th className="px-5 py-3.5 font-semibold relative">
+                  <div className="flex items-center gap-2">
+                    <span>Fecha</span>
+                    <button
+                      onClick={() => setShowDateFilter(!showDateFilter)}
+                      className="p-1 rounded hover:bg-slate-100 transition-colors"
+                    >
+                      <FilterIcon className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                  </div>
+                  {showDateFilter && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setShowDateFilter(false)} />
+                      <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl p-4 z-40 min-w-[280px]">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 mb-1 block">Desde</label>
+                            <input
+                              type="date"
+                              value={dateFrom}
+                              onChange={(e) => {setDateFrom(e.target.value); setCurrentPage(1);}}
+                              className="w-full h-8 px-2 text-xs bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 mb-1 block">Hasta</label>
+                            <input
+                              type="date"
+                              value={dateTo}
+                              onChange={(e) => {setDateTo(e.target.value); setCurrentPage(1);}}
+                              className="w-full h-8 px-2 text-xs bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-slate-300"
+                            />
+                          </div>
+                          {(dateFrom || dateTo) && (
+                            <div className="pt-2 border-t border-slate-100">
+                              <button
+                                onClick={() => {setDateFrom(''); setDateTo(''); setCurrentPage(1);}}
+                                className="text-xs text-red-600 hover:text-red-700 font-bold"
+                              >
+                                Limpiar fechas
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </th>
                 <th className="px-5 py-3.5 font-semibold">Productos</th>
                 <th className="px-5 py-3.5 font-semibold">Total</th>
                 <th className="px-5 py-3.5 font-semibold">Creado por</th>
@@ -903,8 +953,15 @@ export default function PurchasesPage() {
                   {selectedPurchase.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm text-slate-900 truncate">
-                          {item.variant.product.title}
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="font-bold text-sm text-slate-900 truncate">
+                            {item.variant.product.title}
+                          </div>
+                          {item.costModified && (
+                            <span className="text-[8px] font-black px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                              COSTO MODIFICADO
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500">
                           {item.variant.name} {item.uom && `(${item.uom.abbreviation})`}
@@ -984,6 +1041,16 @@ export default function PurchasesPage() {
               
               {canManage && selectedPurchase.status === 'PENDING' && (
                 <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowCostAdjustment(true)}
+                    className="h-10 text-xs font-bold text-orange-600 hover:bg-orange-50 border-orange-200"
+                  >
+                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Ajustar Costos
+                  </Button>
                   <Button 
                     variant="outline"
                     onClick={() => handleCancel(selectedPurchase.id)}
@@ -1139,6 +1206,21 @@ export default function PurchasesPage() {
 
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* MODAL DE AJUSTE DE COSTOS */}
+      {selectedPurchase && (
+        <CostAdjustmentModal
+          isOpen={showCostAdjustment}
+          onClose={() => setShowCostAdjustment(false)}
+          onSuccess={(updatedPurchase) => {
+            mutate();
+            setShowCostAdjustment(false);
+            // Update the selected purchase with the new data
+            setSelectedPurchase(updatedPurchase);
+          }}
+          purchase={selectedPurchase}
+        />
       )}
 
     </div>

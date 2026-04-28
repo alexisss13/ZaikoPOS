@@ -24,6 +24,7 @@ export interface PurchaseOrder {
     id: string;
     quantity: number;
     cost: number;
+    costModified?: boolean;
     variant: {
       name: string;
       product: {

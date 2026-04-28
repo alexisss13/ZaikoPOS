@@ -67,6 +67,7 @@ enum AuditAction {
   OPEN_CASH
   CLOSE_CASH
   UPDATE_STOCK
+  UPDATE_PURCHASE_COSTS
   CREATE_USER
   DELETE_USER
   SYSTEM_ERROR
@@ -475,6 +476,7 @@ model PurchaseOrderItem {
   uomId           String?
   quantity        Int
   cost            Decimal @db.Decimal(12, 2)
+  costModified    Boolean @default(false)
 
   purchaseOrder PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   variant       ProductVariant @relation(fields: [variantId], references: [id])

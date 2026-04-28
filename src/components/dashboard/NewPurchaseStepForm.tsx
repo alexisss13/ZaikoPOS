@@ -80,11 +80,24 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
   }, [isOpen]);
 
   const filteredProducts = (Array.isArray(products) ? products : []).filter((product: any) => {
-    // Si hay búsqueda, mostrar todos los que coincidan
+    // Si hay búsqueda, buscar en título, slug del producto y SKU/barcode de variantes
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      return product.title.toLowerCase().includes(searchLower) ||
-             product.variants?.some((v: any) => v.name.toLowerCase().includes(searchLower));
+      
+      // Buscar en el producto principal
+      const productMatch = (
+        (product.title && product.title.toLowerCase().includes(searchLower)) ||
+        (product.slug && product.slug.toLowerCase().includes(searchLower))
+      );
+      
+      // Buscar en las variantes
+      const variantMatch = product.variants?.some((variant: any) => 
+        (variant.name && variant.name.toLowerCase().includes(searchLower)) ||
+        (variant.sku && variant.sku.toLowerCase().includes(searchLower)) ||
+        (variant.barcode && variant.barcode.toLowerCase().includes(searchLower))
+      );
+      
+      return productMatch || variantMatch;
     }
     
     // Si no hay búsqueda y no se activó "mostrar todos", filtrar por stock bajo
@@ -113,8 +126,8 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
       return;
     }
 
-    if (isNaN(costValue) || costValue < 0) {
-      toast.error('El costo debe ser mayor o igual a 0');
+    if (isNaN(costValue) || costValue <= 0) {
+      toast.error('El costo debe ser mayor a 0');
       return;
     }
 
@@ -220,8 +233,27 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
 
   const canGoNext = () => {
     if (step === 1) return formData.supplierId;
-    if (step === 2) return items.length > 0;
+    if (step === 2) {
+      // Validar que haya productos y que todos tengan cantidad > 0 y costo > 0
+      return items.length > 0 && items.every(item => item.quantity > 0 && item.cost > 0);
+    }
     return true;
+  };
+
+  const getValidationErrors = () => {
+    if (step !== 2) return [];
+    
+    const errors: string[] = [];
+    items.forEach(item => {
+      if (item.quantity <= 0) {
+        errors.push(`${item.productName} - ${item.variantName}: cantidad debe ser mayor a 0`);
+      }
+      if (item.cost <= 0) {
+        errors.push(`${item.productName} - ${item.variantName}: costo debe ser mayor a 0`);
+      }
+    });
+    
+    return errors;
   };
 
   return (
@@ -324,7 +356,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                   <div className="relative">
                     <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5} />
                     <Input 
-                      placeholder="Buscar producto..." 
+                      placeholder="Buscar por nombre, SKU o código de barras..." 
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 h-11 rounded-xl"
@@ -534,35 +566,96 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                   </h3>
 
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {items.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-sm text-slate-900 truncate">{item.productName}</div>
-                          <div className="text-xs text-slate-500">{item.variantName} {item.uomName && `(${item.uomName})`}</div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <div className="text-xs text-slate-500">Cant: {item.quantity}</div>
-                            <div className="text-xs font-bold text-slate-900">S/ {item.cost.toFixed(2)} c/u</div>
+                    {items.map((item, index) => {
+                      const hasQuantityError = item.quantity <= 0;
+                      const hasCostError = item.cost <= 0;
+                      
+                      return (
+                        <div key={index} className={`flex items-center justify-between p-3 rounded-xl border-2 transition-colors ${
+                          hasQuantityError || hasCostError ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm text-slate-900 truncate">{item.productName}</div>
+                            <div className="text-xs text-slate-500">{item.variantName} {item.uomName && `(${item.uomName})`}</div>
+                            {(hasQuantityError || hasCostError) && (
+                              <div className="text-[10px] text-red-600 mt-1">
+                                {hasQuantityError && hasCostError ? 'Cantidad y costo requeridos' : 
+                                 hasQuantityError ? 'Cantidad requerida' : 'Costo requerido'}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-sm font-black text-emerald-600 w-20 text-right">
-                            S/ {(item.quantity * item.cost).toFixed(2)}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const newItems = [...items];
+                                  newItems[index].quantity = value === '' ? 0 : parseFloat(value) || 0;
+                                  setItems(newItems);
+                                }}
+                                onFocus={(e) => {
+                                  if (e.target.value === '0') {
+                                    e.target.select();
+                                  }
+                                }}
+                                className={`w-16 h-8 text-xs text-center ${hasQuantityError ? 'border-red-300 bg-red-50' : ''}`}
+                                placeholder="0"
+                              />
+                              <span className="text-xs text-slate-500">×</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.cost || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const newItems = [...items];
+                                  newItems[index].cost = value === '' ? 0 : parseFloat(value) || 0;
+                                  setItems(newItems);
+                                }}
+                                onFocus={(e) => {
+                                  if (e.target.value === '0') {
+                                    e.target.select();
+                                  }
+                                }}
+                                className={`w-20 h-8 text-xs text-center ${hasCostError ? 'border-red-300 bg-red-50' : ''}`}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="text-sm font-black text-emerald-600 w-20 text-right">
+                              S/ {(item.quantity * item.cost).toFixed(2)}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeItem(index)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Delete02Icon className="w-4 h-4" strokeWidth={1.5} />
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Delete02Icon className="w-4 h-4" strokeWidth={1.5} />
-                          </Button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Mensaje de validación para paso 2 */}
+          {step === 2 && items.length > 0 && !canGoNext() && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+              <h4 className="text-sm font-bold text-red-800 mb-2">Corrige los siguientes errores:</h4>
+              <div className="space-y-1">
+                {getValidationErrors().map((error, index) => (
+                  <p key={index} className="text-xs text-red-700">• {error}</p>
+                ))}
+              </div>
             </div>
           )}
 

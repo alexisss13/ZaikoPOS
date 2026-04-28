@@ -135,19 +135,20 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      setOrderItems(orderItems.filter(item => item.id !== itemId));
-    } else {
-      setOrderItems(orderItems.map(item => 
-        item.id === itemId ? { ...item, quantity } : item
-      ));
-    }
+    // No eliminar automáticamente cuando sea 0, solo actualizar
+    setOrderItems(orderItems.map(item => 
+      item.id === itemId ? { ...item, quantity: Math.max(0, quantity) } : item
+    ));
   };
 
   const updateCost = (itemId: string, cost: number) => {
     setOrderItems(orderItems.map(item => 
-      item.id === itemId ? { ...item, cost } : item
+      item.id === itemId ? { ...item, cost: Math.max(0, cost) } : item
     ));
+  };
+
+  const removeItem = (itemId: string) => {
+    setOrderItems(orderItems.filter(item => item.id !== itemId));
   };
 
   const getTotalAmount = () => {
@@ -208,14 +209,48 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
 
   const canGoNext = () => {
     if (step === 1) return formData.supplierId;
-    if (step === 2) return orderItems.length > 0;
+    if (step === 2) {
+      // Validar que haya productos y que todos tengan cantidad > 0 y costo > 0
+      return orderItems.length > 0 && orderItems.every(item => item.quantity > 0 && item.cost > 0);
+    }
     return true;
   };
 
+  const getValidationErrors = () => {
+    if (step !== 2) return [];
+    
+    const errors: string[] = [];
+    orderItems.forEach(item => {
+      if (item.quantity <= 0) {
+        errors.push(`${item.productTitle} - ${item.variantName}: cantidad debe ser mayor a 0`);
+      }
+      if (item.cost <= 0) {
+        errors.push(`${item.productTitle} - ${item.variantName}: costo debe ser mayor a 0`);
+      }
+    });
+    
+    return errors;
+  };
+
   const filteredProducts = products.filter(product => {
-    // Si hay búsqueda, mostrar todos los que coincidan
+    // Si hay búsqueda, buscar en título, slug del producto y SKU/barcode de variantes
     if (searchTerm) {
-      return product && product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Buscar en el producto principal
+      const productMatch = (
+        (product.title && product.title.toLowerCase().includes(searchLower)) ||
+        (product.slug && product.slug.toLowerCase().includes(searchLower))
+      );
+      
+      // Buscar en las variantes
+      const variantMatch = product.variants?.some((variant: any) => 
+        (variant.name && variant.name.toLowerCase().includes(searchLower)) ||
+        (variant.sku && variant.sku.toLowerCase().includes(searchLower)) ||
+        (variant.barcode && variant.barcode.toLowerCase().includes(searchLower))
+      );
+      
+      return productMatch || variantMatch;
     }
     
     // Si no hay búsqueda y no se activó "mostrar todos", filtrar por stock bajo
@@ -353,7 +388,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                   <Input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar productos..."
+                    placeholder="Buscar por nombre, SKU o código de barras..."
                     className="h-12 rounded-xl"
                   />
                   {!searchTerm && (
@@ -379,38 +414,77 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                       Productos seleccionados ({orderItems.length})
                     </h3>
                     <div className="space-y-2">
-                      {orderItems.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-slate-900">{item.productTitle}</p>
-                            <p className="text-[10px] text-slate-500">{item.variantName}</p>
+                      {orderItems.map((item) => {
+                        const hasQuantityError = item.quantity <= 0;
+                        const hasCostError = item.cost <= 0;
+                        
+                        return (
+                          <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-colors ${
+                            hasQuantityError || hasCostError ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-transparent'
+                          }`}>
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-slate-900">{item.productTitle}</p>
+                              <p className="text-[10px] text-slate-500">{item.variantName}</p>
+                              {(hasQuantityError || hasCostError) && (
+                                <p className="text-[9px] text-red-600 mt-1">
+                                  {hasQuantityError && hasCostError ? 'Cantidad y costo requeridos' : 
+                                   hasQuantityError ? 'Cantidad requerida' : 'Costo requerido'}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '') {
+                                    updateQuantity(item.id, 0);
+                                  } else {
+                                    updateQuantity(item.id, parseInt(value) || 0);
+                                  }
+                                }}
+                                onFocus={(e) => {
+                                  if (e.target.value === '0') {
+                                    e.target.select();
+                                  }
+                                }}
+                                className={`w-16 h-8 text-xs text-center ${hasQuantityError ? 'border-red-300 bg-red-50' : ''}`}
+                                placeholder="0"
+                              />
+                              <span className="text-xs text-slate-500">×</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.cost || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '') {
+                                    updateCost(item.id, 0);
+                                  } else {
+                                    updateCost(item.id, parseFloat(value) || 0);
+                                  }
+                                }}
+                                onFocus={(e) => {
+                                  if (e.target.value === '0') {
+                                    e.target.select();
+                                  }
+                                }}
+                                className={`w-20 h-8 text-xs text-center ${hasCostError ? 'border-red-300 bg-red-50' : ''}`}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <button
+                              onClick={() => removeItem(item.id)}
+                              className="p-1 rounded text-red-500 hover:bg-red-50"
+                            >
+                              <Cancel01Icon className="w-4 h-4" />
+                            </button>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                              className="w-16 h-8 text-xs text-center"
-                            />
-                            <span className="text-xs text-slate-500">×</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.cost}
-                              onChange={(e) => updateCost(item.id, parseFloat(e.target.value) || 0)}
-                              className="w-20 h-8 text-xs text-center"
-                            />
-                          </div>
-                          <button
-                            onClick={() => updateQuantity(item.id, 0)}
-                            className="p-1 rounded text-red-500 hover:bg-red-50"
-                          >
-                            <Cancel01Icon className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
                       <span className="text-sm font-bold text-slate-700">Total</span>
@@ -482,6 +556,18 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                     <p className="text-sm text-slate-600">
                       No hay productos disponibles para crear órdenes de compra
                     </p>
+                  </div>
+                )}
+                
+                {/* Mensaje de validación */}
+                {orderItems.length > 0 && !canGoNext() && (
+                  <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                    <h4 className="text-sm font-bold text-red-800 mb-2">Corrige los siguientes errores:</h4>
+                    <div className="space-y-1">
+                      {getValidationErrors().map((error, index) => (
+                        <p key={index} className="text-xs text-red-700">• {error}</p>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

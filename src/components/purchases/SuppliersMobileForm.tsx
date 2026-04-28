@@ -28,6 +28,10 @@ export function SuppliersMobileForm({ onClose, onSuccess }: SuppliersMobileFormP
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const ITEMS_PER_PAGE = 5;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -36,6 +40,25 @@ export function SuppliersMobileForm({ onClose, onSuccess }: SuppliersMobileFormP
     ruc: '',
     address: '',
   });
+
+  // Filtrar proveedores por tab activo
+  const filteredSuppliers = suppliers.filter(supplier => 
+    activeTab === 'active' ? supplier.isActive : !supplier.isActive
+  );
+
+  // Paginación
+  const paginatedSuppliers = filteredSuppliers.slice(0, currentPage * ITEMS_PER_PAGE);
+  const hasMoreItems = filteredSuppliers.length > currentPage * ITEMS_PER_PAGE;
+  const remainingItems = filteredSuppliers.length - (currentPage * ITEMS_PER_PAGE);
+
+  const loadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+
+  const switchTab = (tab: 'active' | 'inactive') => {
+    setActiveTab(tab);
+    setCurrentPage(1); // Reset pagination when switching tabs
+  };
 
   useEffect(() => {
     loadSuppliers();
@@ -191,29 +214,63 @@ export function SuppliersMobileForm({ onClose, onSuccess }: SuppliersMobileFormP
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {view === 'list' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Tabs */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-1">
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  onClick={() => switchTab('active')}
+                  className={`h-10 rounded-xl font-bold text-sm transition-all ${
+                    activeTab === 'active'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Activos ({suppliers.filter(s => s.isActive).length})
+                </button>
+                <button
+                  onClick={() => switchTab('inactive')}
+                  className={`h-10 rounded-xl font-bold text-sm transition-all ${
+                    activeTab === 'inactive'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Inactivos ({suppliers.filter(s => !s.isActive).length})
+                </button>
+              </div>
+            </div>
+
             {isLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 h-20 animate-pulse" />
                 ))}
               </div>
-            ) : suppliers.length === 0 ? (
+            ) : filteredSuppliers.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                   <UserMultiple02Icon className="w-8 h-8 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Sin proveedores</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  {activeTab === 'active' ? 'Sin proveedores activos' : 'Sin proveedores inactivos'}
+                </h3>
                 <p className="text-sm text-slate-600 mb-4">
-                  No hay proveedores registrados
+                  {activeTab === 'active' 
+                    ? 'No hay proveedores activos registrados' 
+                    : 'No hay proveedores inactivos'
+                  }
                 </p>
-                <Button onClick={handleCreate} className="bg-slate-900 hover:bg-slate-800 text-white">
-                  <PlusSignIcon className="w-4 h-4 mr-2" />
-                  Crear primer proveedor
-                </Button>
+                {activeTab === 'active' && (
+                  <Button onClick={handleCreate} className="bg-slate-900 hover:bg-slate-800 text-white">
+                    <PlusSignIcon className="w-4 h-4 mr-2" />
+                    Crear primer proveedor
+                  </Button>
+                )}
               </div>
             ) : (
-              suppliers.map((supplier) => (
+              <>
+                {paginatedSuppliers.map((supplier) => (
                 <div
                   key={supplier.id}
                   className={`bg-white rounded-2xl border border-slate-200 p-4 ${
@@ -261,7 +318,21 @@ export function SuppliersMobileForm({ onClose, onSuccess }: SuppliersMobileFormP
                     </button>
                   </div>
                 </div>
-              ))
+                ))}
+                
+                {/* Botón Cargar Más */}
+                {hasMoreItems && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={loadMore}
+                      variant="outline"
+                      className="h-11 px-6 bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-xl"
+                    >
+                      Cargar más ({remainingItems} restantes)
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

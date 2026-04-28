@@ -6,16 +6,25 @@ import { Button } from '@/components/ui/button';
 
 interface FiltersMobileFormProps {
   onClose: () => void;
-  onApply: (filters: { status: string }) => void;
+  onApply: (filters: { status: string; dateFrom: string; dateTo: string }) => void;
   currentStatus: string;
+  currentDateFrom: string;
+  currentDateTo: string;
 }
 
-export function FiltersMobileForm({ onClose, onApply, currentStatus }: FiltersMobileFormProps) {
+export function FiltersMobileForm({ onClose, onApply, currentStatus, currentDateFrom, currentDateTo }: FiltersMobileFormProps) {
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
+  const [dateFrom, setDateFrom] = useState(currentDateFrom);
+  const [dateTo, setDateTo] = useState(currentDateTo);
 
   const handleApply = () => {
-    onApply({ status: selectedStatus });
+    onApply({ status: selectedStatus, dateFrom, dateTo });
     onClose();
+  };
+
+  const clearDateFilters = () => {
+    setDateFrom('');
+    setDateTo('');
   };
 
   const statusOptions = [
@@ -99,6 +108,64 @@ export function FiltersMobileForm({ onClose, onApply, currentStatus }: FiltersMo
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Filtros por Fecha */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-30">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-900">Rango de Fechas</p>
+                <p className="text-xs text-slate-500">Filtra por fecha de orden</p>
+              </div>
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={clearDateFilters}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-bold"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-700 mb-1 block">
+                  Desde
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full h-11 px-3 text-sm bg-white border border-slate-200 rounded-xl outline-none transition-all focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 mb-1 block">
+                  Hasta
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full h-11 px-3 text-sm bg-white border border-slate-200 rounded-xl outline-none transition-all focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+                />
+              </div>
+              {(dateFrom || dateTo) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700">
+                    <span className="font-bold">Filtro activo:</span> 
+                    {dateFrom && dateTo ? ` Del ${new Date(dateFrom).toLocaleDateString('es-PE')} al ${new Date(dateTo).toLocaleDateString('es-PE')}` :
+                     dateFrom ? ` Desde ${new Date(dateFrom).toLocaleDateString('es-PE')}` :
+                     ` Hasta ${new Date(dateTo).toLocaleDateString('es-PE')}`}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
