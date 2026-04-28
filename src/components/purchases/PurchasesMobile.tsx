@@ -457,7 +457,7 @@ export default function PurchasesMobile() {
 
     return (
       <div 
-        className="fixed inset-0 bg-white z-50 flex flex-col"
+        className="fixed inset-0 bg-white z-50 flex flex-col pb-30"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',

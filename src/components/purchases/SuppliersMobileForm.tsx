@@ -174,7 +174,7 @@ export function SuppliersMobileForm({ onClose, onSuccess }: SuppliersMobileFormP
   };
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+    <div className="fixed inset-0 bg-white z-50 flex flex-col pb-22">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
         <button
