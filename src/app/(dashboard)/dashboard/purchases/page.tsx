@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useAuth } from '@/context/auth-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { PurchaseModal } from '@/components/dashboard/PurchaseModal';
+import { NewPurchaseStepForm } from '@/components/dashboard/NewPurchaseStepForm';
 import { SupplierModal } from '@/components/dashboard/SupplierModal';
 
 const PurchasesMobile = lazy(() => import('@/components/purchases/PurchasesMobile'));
@@ -91,35 +92,37 @@ export default function PurchasesPage() {
   const filteredPurchases = useMemo(() => {
     if (!purchases) return [];
     
-    return purchases.filter(purchase => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        purchase.supplier?.name.toLowerCase().includes(searchLower) ||
-        purchase.items.some(item => 
-          item.variant.product.title.toLowerCase().includes(searchLower)
-        );
+    return purchases
+      .filter(purchase => {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+          purchase.supplier?.name.toLowerCase().includes(searchLower) ||
+          purchase.items.some(item => 
+            item.variant.product.title.toLowerCase().includes(searchLower)
+          );
 
-      const matchesStatus = statusFilter === 'ALL' || purchase.status === statusFilter;
-      
-      const matchesSupplier = supplierFilter === 'ALL' || purchase.supplier?.name === supplierFilter;
-      
-      let matchesDateFrom = true;
-      let matchesDateTo = true;
-      
-      if (dateFrom || dateTo) {
-        const purchaseDateStr = purchase.createdAt.split('T')[0];
+        const matchesStatus = statusFilter === 'ALL' || purchase.status === statusFilter;
         
-        if (dateFrom) {
-          matchesDateFrom = purchaseDateStr >= dateFrom;
-        }
+        const matchesSupplier = supplierFilter === 'ALL' || purchase.supplier?.name === supplierFilter;
         
-        if (dateTo) {
-          matchesDateTo = purchaseDateStr <= dateTo;
+        let matchesDateFrom = true;
+        let matchesDateTo = true;
+        
+        if (dateFrom || dateTo) {
+          const purchaseDateStr = purchase.createdAt.split('T')[0];
+          
+          if (dateFrom) {
+            matchesDateFrom = purchaseDateStr >= dateFrom;
+          }
+          
+          if (dateTo) {
+            matchesDateTo = purchaseDateStr <= dateTo;
+          }
         }
-      }
 
-      return matchesSearch && matchesStatus && matchesSupplier && matchesDateFrom && matchesDateTo;
-    });
+        return matchesSearch && matchesStatus && matchesSupplier && matchesDateFrom && matchesDateTo;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Ordenar por fecha descendente
   }, [purchases, searchTerm, statusFilter, supplierFilter, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filteredPurchases.length / ITEMS_PER_PAGE) || 1;
@@ -270,6 +273,36 @@ export default function PurchasesPage() {
     }
   };
 
+  const generatePurchaseOrderMessage = (purchase: PurchaseOrder): string => {
+    const supplierName = purchase.supplier?.name || 'Proveedor';
+    const orderDate = new Date(purchase.orderDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+    const total = Number(purchase.totalAmount).toFixed(2);
+    
+    let message = `*SOLICITUD DE COMPRA*\n\n`;
+    message += `*Fecha:* ${orderDate}\n`;
+    message += `*Proveedor:* ${supplierName}\n\n`;
+    message += `*PRODUCTOS SOLICITADOS:*\n`;
+    
+    purchase.items.forEach((item, index) => {
+      message += `${index + 1}. ${item.variant.product.title}\n`;
+      message += `   • Variante: ${item.variant.name}\n`;
+      message += `   • Cantidad: ${item.quantity} ${item.uom?.abbreviation || 'und'}\n`;
+      message += `   • Precio unitario: S/ ${Number(item.cost).toFixed(2)}\n`;
+      message += `   • Subtotal: S/ ${(item.quantity * Number(item.cost)).toFixed(2)}\n\n`;
+    });
+    
+    message += `*TOTAL: S/ ${total}*\n\n`;
+    
+    if (purchase.notes) {
+      message += `*Notas:* ${purchase.notes}\n\n`;
+    }
+    
+    message += `Por favor, confirme disponibilidad y tiempo de entrega.\n\n`;
+    message += `¡Gracias por su atención!`;
+    
+    return message;
+  };
+
   const exportToExcel = async () => {
     if (!filteredPurchases || filteredPurchases.length === 0) {
       alert('No hay órdenes para exportar');
@@ -357,12 +390,12 @@ export default function PurchasesPage() {
 
       // Preparar datos de la tabla
       const tableData = filteredPurchases.map(purchase => [
-        new Date(purchase.orderDate).toLocaleDateString('es-PE'),
+        new Date(purchase.orderDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }),
         purchase.supplier?.name || 'Sin proveedor',
         statusConfig[purchase.status].label,
         purchase.items.length.toString(),
         `S/ ${Number(purchase.totalAmount).toFixed(2)}`,
-        purchase.receivedDate ? new Date(purchase.receivedDate).toLocaleDateString('es-PE') : '-',
+        purchase.receivedDate ? new Date(purchase.receivedDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
         purchase.createdBy?.name || '-'
       ]);
 
@@ -398,6 +431,115 @@ export default function PurchasesPage() {
       
       alert('Archivo PDF generado correctamente');
       setShowExportMenu(false);
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al generar el archivo PDF');
+    }
+  };
+
+  const exportSinglePurchaseToPDF = async (purchase: PurchaseOrder) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      // Encabezado
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ORDEN DE COMPRA', 105, 15, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(purchase.supplier?.name || 'Sin proveedor', 105, 25, { align: 'center' });
+      doc.text(`Estado: ${statusConfig[purchase.status].label}`, 105, 32, { align: 'center' });
+
+      // Información general
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INFORMACIÓN GENERAL', 15, 50);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Fecha de Orden: ${new Date(purchase.orderDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}`, 15, 58);
+      
+      if (purchase.receivedDate) {
+        doc.text(`Fecha de Recepción: ${new Date(purchase.receivedDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}`, 15, 64);
+      }
+      
+      if (purchase.createdBy) {
+        doc.text(`Creado por: ${purchase.createdBy.name}`, 15, purchase.receivedDate ? 70 : 64);
+      }
+
+      // Productos
+      const startY = purchase.receivedDate ? 80 : 74;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('PRODUCTOS', 15, startY);
+
+      const tableData = purchase.items.map(item => [
+        item.variant.product.title,
+        item.variant.name,
+        `${item.quantity} ${item.uom?.abbreviation || 'und'}`,
+        `S/ ${Number(item.cost).toFixed(2)}`,
+        `S/ ${(item.quantity * Number(item.cost)).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: startY + 5,
+        head: [['Producto', 'Variante', 'Cantidad', 'Costo Unit.', 'Subtotal']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 25, halign: 'right' },
+          4: { cellWidth: 25, halign: 'right' }
+        }
+      });
+
+      // Total
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFillColor(16, 185, 129);
+      doc.rect(15, finalY, 180, 15, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL:', 20, finalY + 10);
+      doc.text(`S/ ${Number(purchase.totalAmount).toFixed(2)}`, 190, finalY + 10, { align: 'right' });
+
+      // Notas
+      if (purchase.notes) {
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('NOTAS:', 15, finalY + 25);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const splitNotes = doc.splitTextToSize(purchase.notes, 180);
+        doc.text(splitNotes, 15, finalY + 32);
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      doc.save(`orden-compra-${purchase.supplier?.name || 'sin-proveedor'}-${timestamp}.pdf`);
     } catch (error) {
       console.error('Error al exportar:', error);
       alert('Error al generar el archivo PDF');
@@ -678,7 +820,7 @@ export default function PurchasesPage() {
 
       </div>
 
-      <PurchaseModal 
+      <NewPurchaseStepForm 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => mutate()}
@@ -802,13 +944,42 @@ export default function PurchasesPage() {
 
             {/* Footer con acciones */}
             <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsDetailModalOpen(false)}
-                className="h-10 text-xs font-bold"
-              >
-                Cerrar
-              </Button>
+              <div className="flex items-center gap-4 shrink-0">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="h-10 text-xs font-bold"
+                >
+                  Cerrar
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => exportSinglePurchaseToPDF(selectedPurchase)}
+                  className="h-10 text-xs font-bold text-red-600 hover:bg-red-50 border-red-200"
+                >
+                  <DownloadCircle02Icon className="w-4 h-4 mr-1.5" />
+                  Exportar PDF
+                </Button>
+                
+                {selectedPurchase.supplier?.phone && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      const message = generatePurchaseOrderMessage(selectedPurchase);
+                      const phone = selectedPurchase.supplier!.phone!.replace(/[^\d]/g, '');
+                      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                      window.open(whatsappUrl, '_blank');
+                    }}
+                    className="h-10 text-xs font-bold text-green-600 hover:bg-green-50 border-green-200"
+                  >
+                    <svg className="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.309"/>
+                    </svg>
+                    WhatsApp
+                  </Button>
+                )}
+              </div>
               
               {canManage && selectedPurchase.status === 'PENDING' && (
                 <div className="flex gap-2">

@@ -64,11 +64,11 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
     }
   }, [isOpen]);
 
-  const filteredProducts = products?.filter((product: any) => {
+  const filteredProducts = (Array.isArray(products) ? products : []).filter((product: any) => {
     const searchLower = searchTerm.toLowerCase();
     return product.title.toLowerCase().includes(searchLower) ||
            product.variants?.some((v: any) => v.name.toLowerCase().includes(searchLower));
-  }) || [];
+  });
 
   const addItem = () => {
     if (!selectedVariantId) {
@@ -94,7 +94,8 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
     let productName = '';
     let uomName = null;
 
-    for (const product of products || []) {
+    const productsArray = Array.isArray(products) ? products : [];
+    for (const product of productsArray) {
       const variant = product.variants?.find((v: any) => v.id === selectedVariantId);
       if (variant) {
         variantName = variant.name;
@@ -337,7 +338,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
                     <div className="col-span-12 sm:col-span-4 space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700">Producto Seleccionado</Label>
                       <div className="h-10 px-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center text-xs font-bold text-emerald-700">
-                        {products?.find((p: any) => p.variants?.some((v: any) => v.id === selectedVariantId))?.title} - {products?.flatMap((p: any) => p.variants || []).find((v: any) => v.id === selectedVariantId)?.name}
+                        {(Array.isArray(products) ? products : []).find((p: any) => p.variants?.some((v: any) => v.id === selectedVariantId))?.title} - {(Array.isArray(products) ? products : []).flatMap((p: any) => p.variants || []).find((v: any) => v.id === selectedVariantId)?.name}
                       </div>
                     </div>
 

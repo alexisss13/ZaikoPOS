@@ -15,6 +15,8 @@ interface NewOrderMobileFormProps {
 
 interface OrderItem {
   id: string;
+  productId: string;
+  variantId: string;
   productTitle: string;
   variantName: string;
   quantity: number;
@@ -37,6 +39,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
   
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   useEffect(() => {
     // Cargar proveedores y productos
@@ -57,18 +60,26 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
         if (productsRes.ok) {
           const productsData = await productsRes.json();
           console.log('=== PRODUCTS DATA ===');
-          console.log('Products loaded:', productsData.length);
           
-          if (productsData.length > 0) {
-            console.log('First product structure:', productsData[0]);
-            if (productsData[0].variants && productsData[0].variants.length > 0) {
-              console.log('First variant structure:', productsData[0].variants[0]);
-            }
+          // Verificar si la respuesta es un array o un objeto con productos
+          let allProducts = [];
+          if (Array.isArray(productsData)) {
+            allProducts = productsData;
+            console.log('Products loaded (array):', allProducts.length);
+          } else if (productsData.products && Array.isArray(productsData.products)) {
+            allProducts = productsData.products;
+            console.log('Products loaded (object):', allProducts.length);
+          } else {
+            console.error('Unexpected products data format:', productsData);
+            allProducts = [];
           }
           
-          // NO filtrar por active aquí, solo asegurar que sea un array
-          // El filtrado se hará al mostrar las variantes
-          const allProducts = Array.isArray(productsData) ? productsData : [];
+          if (allProducts.length > 0) {
+            console.log('First product structure:', allProducts[0]);
+            if (allProducts[0].variants && allProducts[0].variants.length > 0) {
+              console.log('First variant structure:', allProducts[0].variants[0]);
+            }
+          }
           
           // Filtrar productos que tengan al menos una variante
           const productsWithVariants = allProducts.filter((p: any) => 
@@ -100,7 +111,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
     console.log('Variant:', variant);
     
     const existingIndex = orderItems.findIndex(
-      item => item.id === `${product.id}-${variant.id}`
+      item => item.variantId === variant.id
     );
     
     if (existingIndex >= 0) {
@@ -110,6 +121,8 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
     } else {
       const newItem: OrderItem = {
         id: `${product.id}-${variant.id}`,
+        productId: product.id,
+        variantId: variant.id,
         productTitle: product.title,
         variantName: variant.name,
         quantity: 1,
@@ -156,13 +169,12 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
     try {
       const payload = {
         supplierId: formData.supplierId,
-        orderDate: formData.orderDate,
+        orderDate: new Date(formData.orderDate + 'T12:00:00').toISOString(),
         notes: formData.notes || null,
         items: orderItems.map(item => {
-          const [productId, variantId] = item.id.split('-');
-          console.log('Item:', item.id, '-> productId:', productId, 'variantId:', variantId);
+          console.log('Item:', item.id, '-> variantId:', item.variantId);
           return {
-            variantId,  // Solo enviar variantId, no productId
+            variantId: item.variantId,  // Usar el variantId directo del item
             quantity: item.quantity,
             cost: item.cost,
           };
@@ -200,9 +212,23 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
     return true;
   };
 
-  const filteredProducts = products.filter(product =>
-    product && product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    // Si hay búsqueda, mostrar todos los que coincidan
+    if (searchTerm) {
+      return product && product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    
+    // Si no hay búsqueda y no se activó "mostrar todos", filtrar por stock bajo
+    if (!showAllProducts) {
+      return product.variants?.some((v: any) => {
+        const totalStock = v.stock?.reduce((sum: number, s: any) => sum + s.quantity, 0) || 0;
+        return totalStock <= v.minStock;
+      });
+    }
+    
+    // Mostrar todos
+    return product && product.title;
+  });
 
   console.log('Search term:', searchTerm);
   console.log('Total products:', products.length);
@@ -330,9 +356,20 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                     placeholder="Buscar productos..."
                     className="h-12 rounded-xl"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    {products.length} productos disponibles
-                  </p>
+                  {!searchTerm && (
+                    <div className="flex items-center justify-between text-xs mt-2">
+                      <span className="text-slate-500">
+                        {showAllProducts ? `${products.length} productos disponibles` : 'Mostrando productos con stock bajo'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllProducts(!showAllProducts)}
+                        className="text-slate-700 font-bold hover:text-slate-900 underline"
+                      >
+                        {showAllProducts ? 'Ver solo stock bajo' : 'Ver todos'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Productos seleccionados */}
@@ -388,31 +425,48 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                 {products.length > 0 && (
                   <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-30">
                     <h3 className="text-sm font-bold text-slate-900 mb-3">
-                      {searchTerm ? `Resultados (${filteredProducts.length})` : 'Todos los productos'}
+                      {searchTerm ? `Resultados (${filteredProducts.length})` : (showAllProducts ? 'Todos los productos' : 'Productos con stock bajo')}
                     </h3>
                     <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {(searchTerm ? filteredProducts : products).length === 0 ? (
+                      {filteredProducts.length === 0 ? (
                         <p className="text-xs text-slate-500 text-center py-4">
-                          No se encontraron productos
+                          {searchTerm ? 'No se encontraron productos' : 'No hay productos con stock bajo'}
                         </p>
                       ) : (
-                        (searchTerm ? filteredProducts : products).map((product) => {
+                        filteredProducts.map((product) => {
                           const variants = product.variants && Array.isArray(product.variants) ? product.variants : [];
                           if (variants.length === 0) return null;
                           
-                          return variants.map((variant: any) => (
-                            <button
-                              key={`${product.id}-${variant.id}`}
-                              onClick={() => addProduct(product, variant)}
-                              className="w-full p-3 text-left rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
-                            >
-                              <p className="text-xs font-bold text-slate-900">{product.title}</p>
-                              <p className="text-[10px] text-slate-500">{variant.name}</p>
-                              <p className="text-[10px] text-slate-400">
-                                Costo: S/ {Number(variant.cost || product.cost || 0).toFixed(2)}
-                              </p>
-                            </button>
-                          ));
+                          return variants.map((variant: any) => {
+                            const totalStock = variant.stock?.reduce((sum: number, s: any) => sum + s.quantity, 0) || 0;
+                            const isLowStock = totalStock <= variant.minStock;
+                            
+                            return (
+                              <button
+                                key={`${product.id}-${variant.id}`}
+                                onClick={() => addProduct(product, variant)}
+                                className="w-full p-3 text-left rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-xs font-bold text-slate-900">{product.title}</p>
+                                    <p className="text-[10px] text-slate-500">{variant.name}</p>
+                                    <p className="text-[10px] text-slate-400">
+                                      Costo: S/ {Number(variant.cost || product.cost || 0).toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <div className="text-right ml-2">
+                                    <p className={`text-xs font-bold ${isLowStock ? 'text-red-600' : 'text-emerald-600'}`}>
+                                      Stock: {totalStock}
+                                    </p>
+                                    <p className="text-[9px] text-slate-400">
+                                      Mín: {variant.minStock}
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          });
                         })
                       )}
                     </div>

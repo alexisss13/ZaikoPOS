@@ -36,6 +36,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
   
   const [formData, setFormData] = useState({
     name: '',
+    ruc: '',
     email: '',
     phone: '',
     representative: '',
@@ -47,6 +48,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
     if (editingSupplier) {
       setFormData({
         name: editingSupplier.name,
+        ruc: (editingSupplier as any).ruc || '',
         email: editingSupplier.email || '',
         phone: editingSupplier.phone || '',
         representative: editingSupplier.representative || '',
@@ -56,6 +58,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
     } else {
       setFormData({
         name: '',
+        ruc: '',
         email: '',
         phone: '',
         representative: '',
@@ -78,6 +81,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
     try {
       const payload = {
         name: formData.name,
+        ruc: formData.ruc || null,
         email: formData.email || null,
         phone: formData.phone || null,
         representative: formData.representative || null,
@@ -101,6 +105,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
       setEditingSupplier(null);
       setFormData({
         name: '',
+        ruc: '',
         email: '',
         phone: '',
         representative: '',
@@ -203,6 +208,20 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                 </label>
               </div>
 
+              {/* RUC */}
+              <div className="relative">
+                <input 
+                  name="ruc" 
+                  value={formData.ruc} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, ruc: e.target.value }))}
+                  placeholder=" " 
+                  className="peer w-full h-10 px-3 pt-4 pb-1 text-sm font-medium bg-white border border-slate-200 rounded-lg outline-none transition-all focus:ring-1 focus:ring-slate-300"
+                />
+                <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all pointer-events-none peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-bold peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-bold">
+                  RUC
+                </label>
+              </div>
+
               {/* Email y Teléfono */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
@@ -287,6 +306,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                       setEditingSupplier(null);
                       setFormData({
                         name: '',
+                        ruc: '',
                         email: '',
                         phone: '',
                         representative: '',
@@ -302,7 +322,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
                 <Button 
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800"
+                  className="flex-1 h-10 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white"
                 >
                   {isLoading && <Loading02Icon size={16} strokeWidth={2} className="mr-2 animate-spin" />}
                   {editingSupplier ? 'Actualizar' : 'Crear'}
@@ -443,7 +463,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
           <Button 
             variant="outline" 
             onClick={() => { onClose(); setEditingSupplier(null); }}
-            className="h-10 text-xs font-bold"
+            className="h-10 text-xs font-bold text-slate-700"
           >
             Cerrar
           </Button>

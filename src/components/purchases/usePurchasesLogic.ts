@@ -53,19 +53,21 @@ export function usePurchasesLogic() {
   const filteredPurchases = useMemo(() => {
     if (!purchases) return [];
     
-    return purchases.filter(purchase => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        purchase.supplier?.name.toLowerCase().includes(searchLower) ||
-        purchase.items.some(item => 
-          item.variant.product.title.toLowerCase().includes(searchLower)
-        );
+    return purchases
+      .filter(purchase => {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+          purchase.supplier?.name.toLowerCase().includes(searchLower) ||
+          purchase.items.some(item => 
+            item.variant.product.title.toLowerCase().includes(searchLower)
+          );
 
-      const matchesStatus = statusFilter === 'ALL' || purchase.status === statusFilter;
-      const matchesSupplier = supplierFilter === 'ALL' || purchase.supplier?.name === supplierFilter;
+        const matchesStatus = statusFilter === 'ALL' || purchase.status === statusFilter;
+        const matchesSupplier = supplierFilter === 'ALL' || purchase.supplier?.name === supplierFilter;
 
-      return matchesSearch && matchesStatus && matchesSupplier;
-    });
+        return matchesSearch && matchesStatus && matchesSupplier;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Ordenar por fecha descendente
   }, [purchases, searchTerm, statusFilter, supplierFilter]);
 
   const initializeStockDistribution = () => {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePurchasesLogic, PurchaseOrder } from './usePurchasesLogic';
+import { StockDistributionMobile } from './StockDistributionMobile';
 import {
   ShoppingCart01Icon,
   ArrowLeft01Icon,
@@ -22,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/auth-context';
+import { toast } from 'sonner';
 
 // Dynamic imports para formularios móviles - evita problemas de hooks
 const NewOrderMobileForm = dynamic(() => import('./NewOrderMobileForm').then(m => ({ default: m.NewOrderMobileForm })), { 
@@ -89,6 +91,7 @@ export default function PurchasesMobile() {
   const [showNewOrderForm, setShowNewOrderForm] = useState(false);
   const [showSuppliersForm, setShowSuppliersForm] = useState(false);
   const [showExportForm, setShowExportForm] = useState(false);
+  const [showStockDistribution, setShowStockDistribution] = useState(false);
 
   // Extract logic properties after all hooks are declared
   const {
@@ -194,13 +197,17 @@ export default function PurchasesMobile() {
 
   const generatePurchaseOrderMessage = (purchase: PurchaseOrder): string => {
     const supplierName = purchase.supplier?.name || 'Proveedor';
-    const orderDate = new Date(purchase.orderDate).toLocaleDateString('es-PE');
+    const orderDate = new Date(purchase.orderDate).toLocaleDateString('es-PE', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric'
+    });
     const total = Number(purchase.totalAmount).toFixed(2);
     
-    let message = `🛒 *SOLICITUD DE COMPRA*\n\n`;
-    message += `📅 *Fecha:* ${orderDate}\n`;
-    message += `🏢 *Proveedor:* ${supplierName}\n\n`;
-    message += `📦 *PRODUCTOS SOLICITADOS:*\n`;
+    let message = `*SOLICITUD DE COMPRA*\n\n`;
+    message += `*Fecha:* ${orderDate}\n`;
+    message += `*Proveedor:* ${supplierName}\n\n`;
+    message += `*PRODUCTOS SOLICITADOS:*\n`;
     
     purchase.items.forEach((item, index) => {
       message += `${index + 1}. ${item.variant.product.title}\n`;
@@ -210,16 +217,136 @@ export default function PurchasesMobile() {
       message += `   • Subtotal: S/ ${(item.quantity * Number(item.cost)).toFixed(2)}\n\n`;
     });
     
-    message += `💰 *TOTAL: S/ ${total}*\n\n`;
+    message += `*TOTAL: S/ ${total}*\n\n`;
     
     if (purchase.notes) {
-      message += `📝 *Notas:* ${purchase.notes}\n\n`;
+      message += `*Notas:* ${purchase.notes}\n\n`;
     }
     
     message += `Por favor, confirme disponibilidad y tiempo de entrega.\n\n`;
-    message += `¡Gracias por su atención! 🙏`;
+    message += `¡Gracias por su atención!`;
     
     return message;
+  };
+
+  const exportSinglePurchaseToPDF = async (purchase: PurchaseOrder) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      // Encabezado
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ORDEN DE COMPRA', 105, 15, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(purchase.supplier?.name || 'Sin proveedor', 105, 25, { align: 'center' });
+      doc.text(`Estado: ${statusConfig[purchase.status].label}`, 105, 32, { align: 'center' });
+
+      // Información general
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INFORMACIÓN GENERAL', 15, 50);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Fecha de Orden: ${new Date(purchase.orderDate).toLocaleDateString('es-PE', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric'
+      })}`, 15, 58);
+      
+      if (purchase.receivedDate) {
+        doc.text(`Fecha de Recepción: ${new Date(purchase.receivedDate).toLocaleDateString('es-PE', { 
+          day: '2-digit', 
+          month: 'long', 
+          year: 'numeric'
+        })}`, 15, 64);
+      }
+      
+      if (purchase.createdBy) {
+        doc.text(`Creado por: ${purchase.createdBy.name}`, 15, purchase.receivedDate ? 70 : 64);
+      }
+
+      // Productos
+      const startY = purchase.receivedDate ? 80 : 74;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('PRODUCTOS', 15, startY);
+
+      const tableData = purchase.items.map(item => [
+        item.variant.product.title,
+        item.variant.name,
+        `${item.quantity} ${item.uom?.abbreviation || 'und'}`,
+        `S/ ${Number(item.cost).toFixed(2)}`,
+        `S/ ${(item.quantity * Number(item.cost)).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: startY + 5,
+        head: [['Producto', 'Variante', 'Cantidad', 'Costo Unit.', 'Subtotal']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 25, halign: 'right' },
+          4: { cellWidth: 25, halign: 'right' }
+        }
+      });
+
+      // Total
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFillColor(16, 185, 129);
+      doc.rect(15, finalY, 180, 15, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL:', 20, finalY + 10);
+      doc.text(`S/ ${Number(purchase.totalAmount).toFixed(2)}`, 190, finalY + 10, { align: 'right' });
+
+      // Notas
+      if (purchase.notes) {
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('NOTAS:', 15, finalY + 25);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const splitNotes = doc.splitTextToSize(purchase.notes, 180);
+        doc.text(splitNotes, 15, finalY + 32);
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      doc.save(`orden-compra-${purchase.supplier?.name || 'sin-proveedor'}-${timestamp}.pdf`);
+      
+      haptic(20);
+      toast.success('PDF generado correctamente');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al generar el archivo PDF');
+    }
   };
 
   const exportToPDF = async () => {
@@ -326,14 +453,22 @@ export default function PurchasesMobile() {
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-600">Fecha de orden</span>
                 <span className="text-xs font-bold text-slate-900">
-                  {new Date(selectedPurchase.orderDate).toLocaleDateString('es-PE')}
+                  {new Date(selectedPurchase.orderDate).toLocaleDateString('es-PE', { 
+                    day: '2-digit', 
+                    month: 'long', 
+                    year: 'numeric'
+                  })}
                 </span>
               </div>
               {selectedPurchase.receivedDate && (
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-slate-600">Fecha de recepción</span>
                   <span className="text-xs font-bold text-slate-900">
-                    {new Date(selectedPurchase.receivedDate).toLocaleDateString('es-PE')}
+                    {new Date(selectedPurchase.receivedDate).toLocaleDateString('es-PE', { 
+                      day: '2-digit', 
+                      month: 'long', 
+                      year: 'numeric'
+                    })}
                   </span>
                 </div>
               )}
@@ -386,25 +521,70 @@ export default function PurchasesMobile() {
 
           {/* Acciones */}
           {selectedPurchase.status === 'PENDING' && canManage && (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* Botones principales en grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {selectedPurchase.supplier?.phone && (
+                  <Button
+                    onClick={() => shareViaWhatsApp(selectedPurchase)}
+                    className="h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.309"/>
+                    </svg>
+                    <span className="text-xs">WhatsApp</span>
+                  </Button>
+                )}
+                <Button
+                  onClick={() => exportSinglePurchaseToPDF(selectedPurchase)}
+                  className="h-11 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+                >
+                  <DownloadCircle02Icon className="w-4 h-4" />
+                  <span className="text-xs">PDF</span>
+                </Button>
+              </div>
+              
+              {/* Botones de acción secundarios */}
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => setShowStockDistribution(true)}
+                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
+                >
+                  <CheckmarkCircle02Icon className="w-4 h-4 mr-2" />
+                  Marcar como Recibida
+                </Button>
+                <Button
+                  onClick={handleCancelPurchase}
+                  variant="outline"
+                  className="w-full h-11 border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl"
+                >
+                  <CancelCircleIcon className="w-4 h-4 mr-2" />
+                  Cancelar Orden
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {selectedPurchase.status !== 'PENDING' && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => exportSinglePurchaseToPDF(selectedPurchase)}
+                className="h-11 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+              >
+                <DownloadCircle02Icon className="w-4 h-4" />
+                <span className="text-xs">Exportar PDF</span>
+              </Button>
               {selectedPurchase.supplier?.phone && (
                 <Button
                   onClick={() => shareViaWhatsApp(selectedPurchase)}
-                  className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl"
+                  className="h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.309"/>
                   </svg>
-                  Compartir por WhatsApp
+                  <span className="text-xs">WhatsApp</span>
                 </Button>
               )}
-              <Button
-                onClick={handleCancelPurchase}
-                className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl"
-              >
-                <CancelCircleIcon className="w-4 h-4 mr-2" />
-                Cancelar Orden
-              </Button>
             </div>
           )}
         </div>
@@ -449,6 +629,20 @@ export default function PurchasesMobile() {
           onClose={() => setShowFilters(false)}
           onApply={(filters) => setStatusFilter(filters.status as any)}
           currentStatus={statusFilter}
+        />
+      )}
+
+      {/* Stock Distribution Modal */}
+      {selectedPurchase && showStockDistribution && (
+        <StockDistributionMobile
+          isOpen={showStockDistribution}
+          onClose={() => setShowStockDistribution(false)}
+          onSuccess={() => {
+            setShowStockDistribution(false);
+            mutate();
+            handleBack();
+          }}
+          purchase={selectedPurchase}
         />
       )}
 
