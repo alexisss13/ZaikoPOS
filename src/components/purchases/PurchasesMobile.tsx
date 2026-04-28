@@ -457,7 +457,7 @@ export default function PurchasesMobile() {
 
     return (
       <div 
-        className="fixed inset-0 bg-white z-50 flex flex-col pb-30"
+        className="fixed inset-0 bg-white z-50 flex flex-col"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
@@ -484,7 +484,7 @@ export default function PurchasesMobile() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50 mb-30">
           {/* Info general */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="space-y-2">
@@ -902,7 +902,7 @@ export default function PurchasesMobile() {
                 
                 {/* Botón Cargar Más */}
                 {hasMoreItems && (
-                  <div className="flex justify-center pt-4">
+                  <div className="flex justify-center pt-4 mb-24">
                     <Button
                       onClick={loadMore}
                       variant="outline"
