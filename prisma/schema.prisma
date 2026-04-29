@@ -410,6 +410,10 @@ model ProductVariant {
   active   Boolean  @default(true)
   images   String[]
 
+  // Wholesale pricing fields
+  wholesalePrice    Decimal? @db.Decimal(10, 2)
+  wholesaleMinCount Int?
+
   uomId String?
   uom   UnitOfMeasure? @relation(fields: [uomId], references: [id])
 

@@ -1,12 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft01Icon, PackageIcon, Image01Icon, Upload02Icon, Cancel01Icon } from 'hugeicons-react';
+import { ArrowLeft01Icon, PackageIcon, Image01Icon, Upload02Icon, Cancel01Icon, PlusSignIcon } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { VariantManager } from './VariantManager';
+
+interface Variant {
+  id: string;
+  name: string;
+  attributes: Record<string, string>;
+  sku: string;
+  barcode: string;
+  price: string;
+  cost: string;
+  minStock: string;
+  images: string[];
+  wholesalePrice: string;
+  wholesaleMinCount: string;
+}
 
 interface ProductMobileFormProps {
   onClose: () => void;
@@ -29,21 +44,51 @@ export function ProductMobileForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   
+  // Tipo de producto
+  const [productType, setProductType] = useState<'simple' | 'variants'>('simple');
+  
+  // Información básica
   const [formData, setFormData] = useState({
     title: '',
     categoryId: '',
     supplierId: '',
-    basePrice: '',
-    cost: '',
-    wholesalePrice: '',
-    wholesaleMinCount: '',
-    minStock: '5',
-    sku: '',
-    barcode: '',
+    description: '',
   });
+  
+  // Variantes
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [variantTypes, setVariantTypes] = useState<string[]>([]);
+  
+  // Stock inicial
+  const [branchStocks, setBranchStocks] = useState<Record<string, Record<string, string>>>({});
   
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedBranchCode, setSelectedBranchCode] = useState<string>('');
+  
+  // Estados para funcionalidades adicionales
+  const [showWholesale, setShowWholesale] = useState<Record<string, boolean>>({});
+  const [isUploadingVariantImages, setIsUploadingVariantImages] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (productType === 'simple') {
+      // Crear variante estándar para producto simple
+      setVariants([{
+        id: 'standard',
+        name: 'Estándar',
+        attributes: {},
+        sku: '',
+        barcode: '',
+        price: '',
+        cost: '',
+        minStock: '5',
+        images: [],
+        wholesalePrice: '',
+        wholesaleMinCount: ''
+      }]);
+    } else {
+      setVariants([]);
+    }
+  }, [productType]);
 
   useEffect(() => {
     // Seleccionar la primera sucursal por defecto
@@ -52,6 +97,17 @@ export function ProductMobileForm({
     }
   }, [branches, selectedBranchCode]);
 
+  const filteredCategories = categories.filter((cat: any) => {
+    if (!selectedBranchCode) return false;
+    return cat.ecommerceCode === selectedBranchCode;
+  });
+
+  const updateVariant = (id: string, field: keyof Variant, value: any) => {
+    setVariants(variants.map(v => 
+      v.id === id ? { ...v, [field]: value } : v
+    ));
+  };
+
   useEffect(() => {
     if (productToEdit) {
       console.log('[PRODUCT_MOBILE_FORM] Product to edit:', productToEdit);
@@ -59,15 +115,56 @@ export function ProductMobileForm({
         title: productToEdit.title || '',
         categoryId: productToEdit.categoryId || '',
         supplierId: productToEdit.supplierId || '',
-        basePrice: productToEdit.basePrice != null ? productToEdit.basePrice.toString() : '',
-        cost: productToEdit.cost != null ? productToEdit.cost.toString() : '',
-        wholesalePrice: productToEdit.wholesalePrice != null ? productToEdit.wholesalePrice.toString() : '',
-        wholesaleMinCount: productToEdit.wholesaleMinCount != null ? productToEdit.wholesaleMinCount.toString() : '',
-        minStock: productToEdit.minStock != null ? productToEdit.minStock.toString() : '5',
-        sku: productToEdit.sku || '',
-        barcode: productToEdit.barcode || '',
+        description: productToEdit.description || '',
       });
       setImageUrls(productToEdit.images || []);
+      
+      // Cargar variantes existentes
+      if (productToEdit.variants && productToEdit.variants.length > 0) {
+        const loadedVariants = productToEdit.variants.map((v: any) => ({
+          id: v.id,
+          name: v.name,
+          attributes: v.attributes || {},
+          sku: v.sku || '',
+          barcode: v.barcode || '',
+          price: v.price?.toString() || '',
+          cost: v.cost?.toString() || '',
+          minStock: v.minStock?.toString() || '5',
+          images: v.images || [],
+          wholesalePrice: v.wholesalePrice?.toString() || '',
+          wholesaleMinCount: v.wholesaleMinCount?.toString() || ''
+        }));
+        setVariants(loadedVariants);
+        
+        // Determinar tipo de producto
+        if (loadedVariants.length === 1 && loadedVariants[0].name === 'Estándar') {
+          setProductType('simple');
+        } else {
+          setProductType('variants');
+          // Extraer tipos de variante de los atributos
+          const types = new Set<string>();
+          loadedVariants.forEach((v: Variant) => {
+            Object.keys(v.attributes).forEach(key => types.add(key));
+          });
+          setVariantTypes(Array.from(types));
+        }
+      } else {
+        // Si no hay variantes, crear una estándar con los datos del producto
+        setVariants([{
+          id: 'standard',
+          name: 'Estándar',
+          attributes: {},
+          sku: productToEdit.sku || '',
+          barcode: productToEdit.barcode || '',
+          price: productToEdit.basePrice?.toString() || '',
+          cost: productToEdit.cost?.toString() || '',
+          minStock: productToEdit.minStock?.toString() || '5',
+          images: productToEdit.images || [],
+          wholesalePrice: productToEdit.wholesalePrice?.toString() || '',
+          wholesaleMinCount: productToEdit.wholesaleMinCount?.toString() || ''
+        }]);
+        setProductType('simple');
+      }
       
       // Si el producto tiene una sucursal específica, seleccionarla
       if (productToEdit.branchOwnerId) {
@@ -79,10 +176,72 @@ export function ProductMobileForm({
     }
   }, [productToEdit, branches]);
 
-  const filteredCategories = categories.filter((cat: any) => {
-    if (!selectedBranchCode) return false;
-    return cat.ecommerceCode === selectedBranchCode;
-  });
+
+
+  const handleVariantImageUpload = async (variantId: string, files: FileList) => {
+    if (!files || files.length === 0) return;
+
+    const currentImages = variants.find(v => v.id === variantId)?.images || [];
+    if (currentImages.length + files.length > 4) {
+      toast.error('Máximo 4 imágenes por variante');
+      return;
+    }
+
+    setIsUploadingVariantImages(prev => ({ ...prev, [variantId]: true }));
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error('Error al subir imagen');
+        const data = await res.json();
+        return data.url;
+      });
+
+      const urls = await Promise.all(uploadPromises);
+      updateVariant(variantId, 'images', [...currentImages, ...urls]);
+      toast.success('Imágenes subidas correctamente');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al subir imágenes');
+    } finally {
+      setIsUploadingVariantImages(prev => ({ ...prev, [variantId]: false }));
+    }
+  };
+
+  const removeVariantImage = (variantId: string, imageIndex: number) => {
+    const variant = variants.find(v => v.id === variantId);
+    if (variant) {
+      const newImages = variant.images.filter((_, i) => i !== imageIndex);
+      updateVariant(variantId, 'images', newImages);
+    }
+  };
+
+  const validatePricing = (variant: Variant): string | null => {
+    const cost = parseFloat(variant.cost) || 0;
+    const price = parseFloat(variant.price) || 0;
+    const wholesalePrice = parseFloat(variant.wholesalePrice) || 0;
+
+    if (cost > price && price > 0) {
+      return `El costo (S/${cost}) no puede ser mayor al precio de venta (S/${price})`;
+    }
+
+    if (wholesalePrice > 0) {
+      if (wholesalePrice > price) {
+        return `El precio mayorista (S/${wholesalePrice}) no puede ser mayor al precio de venta (S/${price})`;
+      }
+      if (wholesalePrice <= cost && cost > 0) {
+        return `El precio mayorista (S/${wholesalePrice}) debe ser mayor al costo (S/${cost})`;
+      }
+    }
+
+    return null;
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -120,24 +279,41 @@ export function ProductMobileForm({
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.categoryId || !formData.basePrice) {
+    if (!formData.title || !formData.categoryId) {
       toast.error('Completa los campos requeridos');
+      return;
+    }
+
+    if (variants.length === 0 || variants.some(v => !v.name || !v.price)) {
+      toast.error('Completa la información de las variantes');
+      return;
+    }
+
+    // Validar precios antes de enviar
+    const pricingErrors = variants.map(validatePricing).filter(Boolean);
+    if (pricingErrors.length > 0) {
+      toast.error(pricingErrors[0]);
       return;
     }
 
     setIsSubmitting(true);
     try {
       const payload = {
-        title: formData.title,
-        categoryId: formData.categoryId,
-        supplierId: formData.supplierId || null,
-        basePrice: parseFloat(formData.basePrice),
-        cost: formData.cost && formData.cost.trim() !== '' ? parseFloat(formData.cost) : null,
-        wholesalePrice: formData.wholesalePrice && formData.wholesalePrice.trim() !== '' ? parseFloat(formData.wholesalePrice) : null,
-        wholesaleMinCount: formData.wholesaleMinCount && formData.wholesaleMinCount.trim() !== '' ? parseInt(formData.wholesaleMinCount) : null,
-        minStock: formData.minStock && formData.minStock.trim() !== '' ? parseInt(formData.minStock) : 5,
-        sku: formData.sku && formData.sku.trim() !== '' ? formData.sku : null,
-        barcode: formData.barcode && formData.barcode.trim() !== '' ? formData.barcode : null,
+        ...formData,
+        productType,
+        variants: variants.map(v => ({
+          name: v.name,
+          attributes: v.attributes,
+          sku: v.sku || null,
+          barcode: v.barcode || null,
+          price: parseFloat(v.price) || 0,
+          cost: parseFloat(v.cost) || 0,
+          minStock: parseInt(v.minStock) || 5,
+          images: v.images.length > 0 ? v.images : imageUrls,
+          wholesalePrice: parseFloat(v.wholesalePrice) || null,
+          wholesaleMinCount: parseInt(v.wholesaleMinCount) || null
+        })),
+        branchStocks,
         images: imageUrls,
         active: true,
       };
@@ -177,8 +353,25 @@ export function ProductMobileForm({
   };
 
   const canGoNext = () => {
-    if (step === 1) return formData.title && formData.categoryId;
-    if (step === 2) return formData.basePrice;
+    if (step === 1) return productType !== null;
+    if (step === 2) return formData.title && formData.categoryId;
+    if (step === 3) {
+      if (variants.length === 0) return false;
+      
+      // Validar que todas las variantes tengan nombre y precio
+      const hasValidVariants = variants.every(v => v.name && v.price);
+      if (!hasValidVariants) return false;
+
+      // Validar precios
+      const pricingErrors = variants.map(validatePricing).filter(Boolean);
+      if (pricingErrors.length > 0) {
+        toast.error(pricingErrors[0]);
+        return false;
+      }
+
+      return true;
+    }
+    if (step === 4) return true;
     return true;
   };
 
@@ -196,9 +389,19 @@ export function ProductMobileForm({
           <h2 className="text-lg font-black text-slate-900">
             {productToEdit ? 'Editar Producto' : 'Nuevo Producto'}
           </h2>
-          <p className="text-xs text-slate-500">Paso {step} de 3</p>
+          <p className="text-xs text-slate-500">
+            Paso {step} de {productToEdit ? 3 : 4} - {
+              step === 1 && !productToEdit ? 'Tipo de producto' :
+              step === 1 && productToEdit ? 'Información básica' :
+              step === 2 && !productToEdit ? 'Información básica' :
+              step === 2 && productToEdit ? 'Variantes' :
+              step === 3 && !productToEdit ? 'Variantes' :
+              step === 3 && productToEdit ? 'Imágenes' :
+              'Stock inicial'
+            }
+          </p>
         </div>
-        {step < 3 && (
+        {((step < 4 && !productToEdit) || (step < 3 && productToEdit)) && (
           <Button
             onClick={() => setStep(step + 1)}
             disabled={!canGoNext()}
@@ -207,7 +410,7 @@ export function ProductMobileForm({
             Continuar
           </Button>
         )}
-        {step === 3 && (
+        {((step === 4 && !productToEdit) || (step === 3 && productToEdit)) && (
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
@@ -222,14 +425,70 @@ export function ProductMobileForm({
       <div className="h-1 bg-slate-100">
         <div 
           className="h-full bg-slate-900 transition-all duration-300"
-          style={{ width: `${(step / 3) * 100}%` }}
+          style={{ width: `${(step / (productToEdit ? 3 : 4)) * 100}%` }}
         />
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Step 1: Información básica */}
-        {step === 1 && (
+        {/* Step 1: Tipo de producto (solo para productos nuevos) */}
+        {step === 1 && !productToEdit && (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <PackageIcon className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 mb-2">¿Qué tipo de producto vas a crear?</h3>
+              <p className="text-slate-600 text-sm">Selecciona el tipo que mejor describa tu producto</p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => setProductType('simple')}
+                className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
+                  productType === 'simple'
+                    ? 'border-slate-900 bg-slate-50'
+                    : 'border-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+                    <PackageIcon className="w-5 h-5 text-slate-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-md font-bold text-slate-900">Producto Simple</h4>
+                    <p className="text-xs text-slate-600">Sin variaciones. Ej: Laptop, Mesa</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setProductType('variants')}
+                className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
+                  productType === 'variants'
+                    ? 'border-slate-900 bg-slate-50'
+                    : 'border-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+                    <div className="grid grid-cols-2 gap-0.5 w-5 h-5">
+                      <div className="bg-slate-600 rounded-sm"></div>
+                      <div className="bg-slate-400 rounded-sm"></div>
+                      <div className="bg-slate-400 rounded-sm"></div>
+                      <div className="bg-slate-600 rounded-sm"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-md font-bold text-slate-900">Con Variantes</h4>
+                    <p className="text-xs text-slate-600">Con opciones. Ej: Camiseta (tallas, colores)</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 1/2: Información básica */}
+        {((step === 1 && productToEdit) || (step === 2 && !productToEdit)) && (
           <div className="space-y-4">
             <div>
               <Label htmlFor="title" className="text-sm font-bold text-slate-700 mb-2 block">
@@ -298,169 +557,291 @@ export function ProductMobileForm({
                 ))}
               </select>
             </div>
+            <div>
+              <Label htmlFor="description" className="text-sm font-bold text-slate-700 mb-2 block">
+                Descripción (opcional)
+              </Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe las características principales..."
+                className="w-full h-20 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm resize-none"
+              />
+            </div>
           </div>
         )}
 
-        {/* Step 2: Precios */}
-        {step === 2 && (
+        {/* Step 2/3: Variantes */}
+        {((step === 2 && productToEdit) || (step === 3 && !productToEdit)) && (
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="basePrice" className="text-sm font-bold text-slate-700 mb-2 block">
-                Precio de venta *
-              </Label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">S/</span>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.basePrice}
-                  onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                  placeholder="0.00"
-                  className="h-14 pl-10 text-lg font-bold rounded-xl"
-                />
-              </div>
-            </div>
+            {productType === 'simple' ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-900">Variante Estándar</h3>
+                {variants.map((variant) => (
+                  <div key={variant.id} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
+                    <div>
+                      <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                        Precio de venta *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">S/</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variant.price}
+                          onChange={(e) => updateVariant(variant.id, 'price', e.target.value)}
+                          placeholder="0.00"
+                          className="h-12 pl-10 rounded-xl"
+                        />
+                      </div>
+                    </div>
 
-            <div>
-              <Label htmlFor="cost" className="text-sm font-bold text-slate-700 mb-2 block">
-                Costo (opcional)
-              </Label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">S/</span>
-                <Input
-                  id="cost"
-                  type="number"
-                  step="0.01"
-                  value={formData.cost}
-                  onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                  placeholder="0.00"
-                  className="h-12 pl-10 rounded-xl"
-                />
-              </div>
-            </div>
+                    <div>
+                      <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                        Costo (opcional)
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">S/</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variant.cost}
+                          onChange={(e) => updateVariant(variant.id, 'cost', e.target.value)}
+                          placeholder="0.00"
+                          className="h-12 pl-10 rounded-xl"
+                        />
+                      </div>
+                    </div>
 
-            <div>
-              <Label htmlFor="wholesalePrice" className="text-sm font-bold text-slate-700 mb-2 block">
-                Precio por mayor (opcional)
-              </Label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">S/</span>
-                <Input
-                  id="wholesalePrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.wholesalePrice}
-                  onChange={(e) => setFormData({ ...formData, wholesalePrice: e.target.value })}
-                  placeholder="0.00"
-                  className="h-12 pl-10 rounded-xl"
-                />
-              </div>
-            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                          SKU (opcional)
+                        </Label>
+                        <Input
+                          value={variant.sku}
+                          onChange={(e) => updateVariant(variant.id, 'sku', e.target.value)}
+                          placeholder="LAP-HP-001"
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
 
-            {formData.wholesalePrice && (
-              <div>
-                <Label htmlFor="wholesaleMinCount" className="text-sm font-bold text-slate-700 mb-2 block">
-                  Cantidad mínima para precio por mayor
-                </Label>
-                <Input
-                  id="wholesaleMinCount"
-                  type="number"
-                  value={formData.wholesaleMinCount}
-                  onChange={(e) => setFormData({ ...formData, wholesaleMinCount: e.target.value })}
-                  placeholder="10"
-                  className="h-12 rounded-xl"
-                />
+                      <div>
+                        <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                          Stock mínimo
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={variant.minStock}
+                          onChange={(e) => updateVariant(variant.id, 'minStock', e.target.value)}
+                          placeholder="5"
+                          className="h-12 rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sección mayorista colapsable */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowWholesale(prev => ({ ...prev, [variant.id]: !prev[variant.id] }))}
+                        className="flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors"
+                      >
+                        <div className={`w-4 h-4 border-2 border-slate-300 rounded flex items-center justify-center transition-colors ${
+                          showWholesale[variant.id] ? 'bg-slate-900 border-slate-900' : ''
+                        }`}>
+                          {showWholesale[variant.id] && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        </div>
+                        ¿Es mayorista?
+                      </button>
+                      
+                      {showWholesale[variant.id] && (
+                        <div className="mt-3 space-y-3 p-3 bg-slate-50 rounded-xl">
+                          <div>
+                            <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                              Precio mayorista
+                            </Label>
+                            <div className="relative">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">S/</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={variant.wholesalePrice}
+                                onChange={(e) => updateVariant(variant.id, 'wholesalePrice', e.target.value)}
+                                placeholder="0.00"
+                                className="h-12 pl-10 rounded-xl"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                              Cantidad mínima
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={variant.wholesaleMinCount}
+                              onChange={(e) => updateVariant(variant.id, 'wholesaleMinCount', e.target.value)}
+                              placeholder="10"
+                              className="h-12 rounded-xl"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sección de imágenes */}
+                    <div>
+                      <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                        Imágenes (máximo 4)
+                      </Label>
+                      
+                      {variant.images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {variant.images.map((url, index) => (
+                            <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
+                              <img src={url} alt={`Imagen ${index + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => removeVariantImage(variant.id, index)}
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                              >
+                                <Cancel01Icon className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {variant.images.length < 4 && (
+                        <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-2 pb-2">
+                            {isUploadingVariantImages[variant.id] ? (
+                              <div className="text-slate-400 text-xs">Subiendo...</div>
+                            ) : (
+                              <>
+                                <Upload02Icon className="w-5 h-5 text-slate-400 mb-1" />
+                                <p className="text-xs text-slate-500 font-medium">Subir imágenes</p>
+                              </>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => e.target.files && handleVariantImageUpload(variant.id, e.target.files)}
+                            className="hidden"
+                            disabled={isUploadingVariantImages[variant.id]}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <VariantManager
+                variants={variants}
+                variantTypes={variantTypes}
+                onVariantsChange={setVariants}
+                onVariantTypesChange={setVariantTypes}
+                onComplete={() => setStep(productToEdit ? 3 : 4)}
+                isEditing={!!productToEdit}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Step 3: Imágenes (solo para editar) o Step 4: Stock inicial */}
+        {((step === 3 && productToEdit) || (step === 4 && !productToEdit)) && (
+          <div className="space-y-4">
+            {(step === 3 && productToEdit) && (
+              <>
+                <div>
+                  <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                    Imágenes (opcional)
+                  </Label>
+                  
+                  {imageUrls.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {imageUrls.map((url, index) => (
+                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
+                          <img src={url} alt={`Imagen ${index + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                          >
+                            <Cancel01Icon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-colors bg-slate-50">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      {isUploadingImage ? (
+                        <div className="text-slate-400 text-sm">Subiendo...</div>
+                      ) : (
+                        <>
+                          <Upload02Icon className="w-8 h-8 text-slate-400 mb-2" />
+                          <p className="text-xs text-slate-500 font-medium">Toca para subir imágenes</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={isUploadingImage}
+                    />
+                  </label>
+                </div>
+              </>
             )}
 
-            <div>
-              <Label htmlFor="minStock" className="text-sm font-bold text-slate-700 mb-2 block">
-                Stock mínimo
-              </Label>
-              <Input
-                id="minStock"
-                type="number"
-                value={formData.minStock}
-                onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                placeholder="5"
-                className="h-12 rounded-xl"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Códigos e imágenes */}
-        {step === 3 && (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="sku" className="text-sm font-bold text-slate-700 mb-2 block">
-                SKU (opcional)
-              </Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="Ej: LAP-HP-001"
-                className="h-12 rounded-xl"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="barcode" className="text-sm font-bold text-slate-700 mb-2 block">
-                Código de barras (opcional)
-              </Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                placeholder="Ej: 7501234567890"
-                className="h-12 rounded-xl"
-              />
-            </div>
-
-            <div>
-              <Label className="text-sm font-bold text-slate-700 mb-2 block">
-                Imágenes (opcional)
-              </Label>
-              
-              {imageUrls.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
-                      <img src={url} alt={`Imagen ${index + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
-                      >
-                        <Cancel01Icon className="w-3 h-3" />
-                      </button>
+            {(step === 4 && !productToEdit) && (
+              <>
+                <h3 className="text-lg font-bold text-slate-900">Stock Inicial por Sucursal</h3>
+                
+                {variants.map((variant) => (
+                  <div key={variant.id} className="bg-white border border-slate-200 rounded-2xl p-4">
+                    <h4 className="text-sm font-bold text-slate-900 mb-3">{variant.name}</h4>
+                    
+                    <div className="space-y-3">
+                      {branches.map((branch: any) => (
+                        <div key={branch.id}>
+                          <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                            {branch.name}
+                          </Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={branchStocks[variant.id]?.[branch.id] || '0'}
+                            onChange={(e) => setBranchStocks(prev => ({
+                              ...prev,
+                              [variant.id]: {
+                                ...prev[variant.id],
+                                [branch.id]: e.target.value
+                              }
+                            }))}
+                            placeholder="0"
+                            className="h-10 rounded-xl"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-colors bg-slate-50">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  {isUploadingImage ? (
-                    <div className="text-slate-400 text-sm">Subiendo...</div>
-                  ) : (
-                    <>
-                      <Upload02Icon className="w-8 h-8 text-slate-400 mb-2" />
-                      <p className="text-xs text-slate-500 font-medium">Toca para subir imágenes</p>
-                    </>
-                  )}
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={isUploadingImage}
-                />
-              </label>
-            </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>

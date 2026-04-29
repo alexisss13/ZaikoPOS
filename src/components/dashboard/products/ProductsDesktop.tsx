@@ -2,24 +2,24 @@
 
 import dynamic from 'next/dynamic';
 import { memo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ImageWithSpinner } from '@/components/ui/ImageWithSpinner';
 import Barcode from 'react-barcode';
 import { SearchBar } from './SearchBar';
 import { ProductTableRow } from './ProductTableRow';
 import { FilterDropdown } from './FilterDropdown';
 import {
   DashboardSquare01Icon, ArrowDataTransferHorizontalIcon, Store01Icon, UnavailableIcon,
-  FilterIcon, PackageIcon, ArrowLeft01Icon, ArrowRight01Icon, Search01Icon, Tag01Icon,
-  File01Icon, Download01Icon, BarCode01Icon, PlusSignIcon, Tick01Icon,
+  PackageIcon, ArrowLeft01Icon, ArrowRight01Icon, Search01Icon, Tag01Icon,
+  File01Icon, Download01Icon, BarCode01Icon, PlusSignIcon,
 } from 'hugeicons-react';
 import { toast } from 'sonner';
 import type { useProductsLogic } from './useProductsLogic';
 import type { Product } from './types';
 
-const ProductModal = dynamic(() => import('@/components/dashboard/ProductModal').then(m => ({ default: m.ProductModal })), { ssr: false });
+const ProductModal = dynamic(() => import('@/components/dashboard/products/NewProductStepForm').then(m => ({ default: m.NewProductStepForm })), { ssr: false });
 const CategoryModal = dynamic(() => import('@/components/dashboard/CategoryModal').then(m => ({ default: m.CategoryModal })), { ssr: false });
 const ImportProductsModal = dynamic(() => import('@/components/dashboard/ImportProductsModal').then(m => ({ default: m.ImportProductsModal })), { ssr: false });
 const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/BarcodeGeneratorModal').then(m => ({ default: m.BarcodeGeneratorModal })), { ssr: false });
@@ -27,6 +27,7 @@ const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/Barco
 type Logic = ReturnType<typeof useProductsLogic>;
 
 function ProductsDesktopComponent({ logic }: { logic: Logic }) {
+  const router = useRouter();
   const {
     canCreate, branches, categories, isLoading,
     mutate, mutateCategories, visibleCodes, getBranchByCode,
@@ -57,10 +58,8 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
 
   // ⚡ Memoizar handlers para evitar re-renders
   const handleEdit = useCallback((product: Product) => {
-    setSelectedProduct(product);
-    setCanEditSelected(true);
-    setIsModalOpen(true);
-  }, [setSelectedProduct, setCanEditSelected, setIsModalOpen]);
+    router.push(`/dashboard/products/new?edit=${product.id}`);
+  }, [router]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('🛑 ¿Dar de baja este producto? No aparecerá en ventas, pero podrás reactivarlo desde el filtro "Inactivos".')) return;
@@ -115,7 +114,7 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
                 {showExportMenu && (<><div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} /><div className="absolute right-0 top-12 w-40 bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"><button onClick={() => exportToExcel(() => setShowExportMenu(false))} className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"><Download01Icon className="w-3.5 h-3.5" />Excel</button><button onClick={() => exportToPDF(() => setShowExportMenu(false))} className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"><Download01Icon className="w-3.5 h-3.5" />PDF</button></div></>)}
               </div>
               <Button onClick={() => setIsBarcodeModalOpen(true)} variant="ghost" className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"><BarCode01Icon className="w-3.5 h-3.5 mr-1.5" /><span className="font-bold">Códigos</span></Button>
-              <Button onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0"><PlusSignIcon className="w-4 h-4 mr-1.5" /><span className="font-bold">Nuevo Producto</span></Button>
+              <Button onClick={() => router.push('/dashboard/products/new')} className="h-10 text-sm bg-slate-900 hover:bg-slate-800 text-white px-5 shadow-md rounded-full transition-all shrink-0"><PlusSignIcon className="w-4 h-4 mr-1.5" /><span className="font-bold">Nuevo Producto</span></Button>
             </>
           )}
         </div>
@@ -207,7 +206,6 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
         </div>
       </div>
       {/* MODALES */}
-      {isModalOpen && <ProductModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSuccess={() => mutate()} productToEdit={selectedProduct} canEdit={canEditSelected} onDelete={handleDelete} onPrintBarcode={(p: any) => setBarcodeProduct(p)} />}
       {isImportModalOpen && <ImportProductsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onSuccess={() => mutate()} categories={categories || []} suppliers={logic.suppliers || []} branches={branches || []} />}
       {isBarcodeModalOpen && <BarcodeGeneratorModal isOpen={isBarcodeModalOpen} onClose={() => setIsBarcodeModalOpen(false)} products={logic.products || []} />}
       {isCategoryModalOpen && <CategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSuccess={() => { mutate(); mutateCategories(); }} categories={categories || []} branches={branches || []} />}

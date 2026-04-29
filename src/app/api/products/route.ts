@@ -254,27 +254,54 @@ export async function POST(req: Request) {
     // Asegurar que las imágenes se guarden correctamente
     const images = Array.isArray(body.images) ? body.images : [];
 
-    // Generar código de barras automáticamente si no se proporciona
-    let barcode = body.barcode || null;
-    if (!barcode) {
-      // Generar un código de barras único basado en timestamp y random
-      const timestamp = Date.now().toString().slice(-8);
-      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      barcode = `${timestamp}${random}`;
-    }
+    // Crear producto con variantes
+    const variantsData = body.variants || [{
+      name: 'Estándar',
+      attributes: {},
+      sku: body.sku || null,
+      barcode: body.barcode || null,
+      price: body.basePrice ? parseFloat(body.basePrice) : 0,
+      cost: body.cost ? parseFloat(body.cost) : 0,
+      minStock: body.minStock ? parseInt(body.minStock) : 5,
+      images: images
+    }];
 
-    // Crear producto con variante por defecto
+    // Generar códigos de barras únicos para variantes sin barcode
+    const processedVariants = variantsData.map((variant: any) => {
+      let barcode = variant.barcode || null;
+      if (!barcode) {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        barcode = `${timestamp}${random}`;
+      }
+
+      return {
+        name: variant.name,
+        attributes: variant.attributes || {},
+        sku: variant.sku || null,
+        barcode: barcode,
+        price: variant.price ? parseFloat(variant.price) : 0,
+        cost: variant.cost ? parseFloat(variant.cost) : 0,
+        minStock: variant.minStock ? parseInt(variant.minStock) : 5,
+        active: true,
+        images: variant.images || images,
+        wholesalePrice: variant.wholesalePrice ? parseFloat(variant.wholesalePrice) : null,
+        wholesaleMinCount: variant.wholesaleMinCount ? parseInt(variant.wholesaleMinCount) : null,
+      };
+    });
+
+    // Crear producto con variantes
     const newProduct = await prisma.product.create({
       data: {
         businessId,
-        branchOwnerId, // Asignar la sucursal dueña
+        branchOwnerId,
         title: body.title,
         description: body.description || '',
         slug: baseSlug,
         categoryId: body.categoryId,
         supplierId: body.supplierId || null,
-        images, // Guardar las imágenes
-        basePrice: body.basePrice ? parseFloat(body.basePrice) : 0,
+        images,
+        basePrice: variantsData[0]?.price ? parseFloat(variantsData[0].price) : 0,
         wholesalePrice: body.wholesalePrice ? parseFloat(body.wholesalePrice) : null,
         wholesaleMinCount: body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null,
         discountPercentage: body.discountPercentage ? parseInt(body.discountPercentage) : 0,
@@ -284,16 +311,7 @@ export async function POST(req: Request) {
         active: body.active ?? true,
         type: body.type || 'STANDARD',
         variants: {
-          create: {
-            name: 'Estándar',
-            sku: body.sku || null,
-            barcode: barcode,
-            price: body.basePrice ? parseFloat(body.basePrice) : 0,
-            cost: body.cost ? parseFloat(body.cost) : 0,
-            minStock: body.minStock ? parseInt(body.minStock) : 5,
-            active: true,
-            images, // También guardar las imágenes en la variante
-          }
+          create: processedVariants
         }
       },
       include: {
@@ -305,13 +323,50 @@ export async function POST(req: Request) {
 
     // Crear stock inicial y movimientos si se proporcionaron
     if (body.branchStocks && userId) {
+      for (const [variantIndex, variant] of newProduct.variants.entries()) {
+        const variantStocks = body.branchStocks[processedVariants[variantIndex].name] || 
+                             body.branchStocks[variant.id] || 
+                             body.branchStocks;
+        
+        if (variantStocks && typeof variantStocks === 'object') {
+          for (const [branchId, stockValue] of Object.entries(variantStocks)) {
+            const quantity = parseInt(stockValue as string);
+            
+            if (quantity > 0) {
+              // Crear registro de stock
+              await prisma.stock.create({
+                data: {
+                  branchId,
+                  variantId: variant.id,
+                  quantity,
+                }
+              });
+
+              // Registrar movimiento de entrada
+              await prisma.stockMovement.create({
+                data: {
+                  variantId: variant.id,
+                  branchId,
+                  userId,
+                  type: 'INPUT',
+                  quantity,
+                  previousStock: 0,
+                  currentStock: quantity,
+                  reason: 'Stock inicial al crear producto',
+                }
+              });
+            }
+          }
+        }
+      }
+    } else if (body.branchStocks && userId) {
+      // Compatibilidad con formato anterior
       const variantId = newProduct.variants[0].id;
       
       for (const [branchId, stockValue] of Object.entries(body.branchStocks)) {
         const quantity = parseInt(stockValue as string);
         
         if (quantity > 0) {
-          // Crear registro de stock
           await prisma.stock.create({
             data: {
               branchId,
@@ -320,7 +375,6 @@ export async function POST(req: Request) {
             }
           });
 
-          // Registrar movimiento de entrada
           await prisma.stockMovement.create({
             data: {
               variantId,

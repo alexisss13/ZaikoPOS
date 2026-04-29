@@ -24,8 +24,8 @@ const ProductsDesktop = dynamic(
   { ssr: false, loading: () => <ProductsLoadingSkeleton /> }
 );
 
-// Lazy-load modales desktop
-const ProductModal = dynamic(() => import('@/components/dashboard/ProductModal').then(m => ({ default: m.ProductModal })), { ssr: false });
+// Lazy-load formulario paso a paso para PC
+const NewProductStepForm = dynamic(() => import('@/components/dashboard/products/NewProductStepForm').then(m => ({ default: m.NewProductStepForm })), { ssr: false });
 const CategoryModal = dynamic(() => import('@/components/dashboard/CategoryModal').then(m => ({ default: m.CategoryModal })), { ssr: false });
 const ImportProductsModal = dynamic(() => import('@/components/dashboard/ImportProductsModal').then(m => ({ default: m.ImportProductsModal })), { ssr: false });
 const BarcodeGeneratorModal = dynamic(() => import('@/components/dashboard/BarcodeGeneratorModal').then(m => ({ default: m.BarcodeGeneratorModal })), { ssr: false });
@@ -266,7 +266,7 @@ export default function ProductsPage() {
           branches={branches}
         />
       )}
-      {isModalOpen && !isMobile && <ProductModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSuccess={() => mutate()} productToEdit={selectedProduct} canEdit={canEditSelected} onDelete={handleDelete} onPrintBarcode={(p: any) => logic.setBarcodeProduct(p)} />}
+      {isModalOpen && !isMobile && <NewProductStepForm onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSuccess={() => mutate()} categories={categories} suppliers={suppliers} branches={branches} />}
       
       {isCategoryModalOpen && isMobile && (
         <CategoryMobileForm

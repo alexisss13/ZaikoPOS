@@ -25,6 +25,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             active: true,
             images: true,
             attributes: true,
+            wholesalePrice: true,
+            wholesaleMinCount: true,
             uomId: true,
             uom: {
               select: {
@@ -88,7 +90,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const isSuperOrOwner = role === 'SUPER_ADMIN' || role === 'OWNER';
   const canManageGlobal = isSuperOrOwner || permissions.canManageGlobalProducts;
   const canEdit = isSuperOrOwner || permissions.canEditProducts || canManageGlobal;
-  const canViewCosts = isSuperOrOwner || permissions.canViewCosts;
 
   if (!canEdit) return NextResponse.json({ error: 'Denegado. No tienes permiso para editar.' }, { status: 403 });
 
@@ -96,41 +97,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const body = await req.json();
 
-    const product = await prisma.product.findUnique({ where: { id }, include: { category: true } });
+    const product = await prisma.product.findUnique({ 
+      where: { id }, 
+      include: { 
+        category: true,
+        variants: true
+      } 
+    });
+    
     if (!product || (product.businessId !== businessId && product.businessId !== null)) {
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    }
-
-    if (!isSuperOrOwner && !canManageGlobal) {
-      const myBranch = userBranchId ? await prisma.branch.findUnique({ where: { id: userBranchId } }) : null;
-      const isGlobalProduct = !product.category?.ecommerceCode;
-      const isMyCatalogProduct = product.category?.ecommerceCode === myBranch?.ecommerceCode;
-
-      // Verificar si tiene stock en mi sucursal a través de las variantes
-      const hasStockInMyBranch = await prisma.stock.findFirst({
-        where: { 
-          branchId: userBranchId!,
-          quantity: { gt: 0 },
-          variant: { productId: id }
-        }
-      });
-
-      if (!isGlobalProduct && !isMyCatalogProduct && !hasStockInMyBranch) {
-        return NextResponse.json({ error: 'No tienes permiso de Catálogo Global para editar este producto de otra marca.' }, { status: 403 });
-      }
-    }
-
-    let finalSlug = product.slug;
-    if (body.title && body.title !== product.title) {
-      const formattedSlug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const existing = await prisma.product.findUnique({ where: { slug: formattedSlug } });
-      finalSlug = existing ? `${formattedSlug}-${Math.random().toString(36).substring(2, 6)}` : formattedSlug;
-    }
-
-    if (body.branchStocks) {
-      // Los stocks ahora se manejan a nivel de variante, no de producto
-      // Este código necesita ser actualizado cuando se implemente el sistema de variantes
-      // Por ahora, se omite esta funcionalidad
     }
 
     // Determinar branchOwnerId si cambió la categoría
@@ -152,69 +128,170 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
+    let finalSlug = product.slug;
+    if (body.title && body.title !== product.title) {
+      const formattedSlug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const existing = await prisma.product.findUnique({ where: { slug: formattedSlug } });
+      finalSlug = existing ? `${formattedSlug}-${Math.random().toString(36).substring(2, 6)}` : formattedSlug;
+    }
+
     // Asegurar que las imágenes se guarden correctamente
     const images = body.images !== undefined 
       ? (Array.isArray(body.images) ? body.images : []) 
       : product.images;
 
+    // Actualizar producto
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
-        title: body.title,
+        title: body.title || product.title,
         description: body.description ?? product.description,
         slug: finalSlug,
         categoryId: body.categoryId || product.categoryId,
         branchOwnerId,
         images,
-        basePrice: body.basePrice !== undefined ? parseFloat(body.basePrice) : product.basePrice,
-        
+        basePrice: body.variants && body.variants.length > 0 ? parseFloat(body.variants[0].price) : product.basePrice,
         wholesalePrice: body.wholesalePrice !== undefined ? (body.wholesalePrice ? parseFloat(body.wholesalePrice) : null) : product.wholesalePrice,
         wholesaleMinCount: body.wholesaleMinCount !== undefined ? (body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null) : product.wholesaleMinCount,
-        discountPercentage: body.discountPercentage !== undefined ? parseInt(body.discountPercentage) : product.discountPercentage,
-        
-        tags: body.tags !== undefined ? (body.tags ? body.tags.split(',').map((t: string) => t.trim()) : []) : product.tags,
-        groupTag: body.groupTag !== undefined ? (body.groupTag || null) : product.groupTag,
         isAvailable: body.active !== undefined ? body.active : product.isAvailable,
         active: body.active !== undefined ? body.active : product.active,
         supplierId: body.supplierId !== undefined ? (body.supplierId || null) : product.supplierId,
-      },
+      }
+    });
+
+    // Actualizar variantes si se proporcionaron
+    if (body.variants && Array.isArray(body.variants)) {
+      for (const variantData of body.variants) {
+        // Buscar variante existente por ID o por nombre
+        let existingVariant = null;
+        if (variantData.id && variantData.id !== 'standard') {
+          existingVariant = await prisma.productVariant.findUnique({
+            where: { id: variantData.id }
+          });
+        } else {
+          existingVariant = await prisma.productVariant.findFirst({
+            where: { 
+              productId: id, 
+              name: variantData.name || 'Estándar'
+            }
+          });
+        }
+
+        const variantUpdateData = {
+          name: variantData.name || 'Estándar',
+          attributes: variantData.attributes || {},
+          sku: variantData.sku || null,
+          barcode: variantData.barcode || null,
+          price: parseFloat(variantData.price) || 0,
+          cost: parseFloat(variantData.cost) || 0,
+          minStock: parseInt(variantData.minStock) || 5,
+          images: variantData.images || images,
+          wholesalePrice: variantData.wholesalePrice ? parseFloat(variantData.wholesalePrice) : null,
+          wholesaleMinCount: variantData.wholesaleMinCount ? parseInt(variantData.wholesaleMinCount) : null,
+          active: true
+        };
+
+        if (existingVariant) {
+          // Actualizar variante existente
+          await prisma.productVariant.update({
+            where: { id: existingVariant.id },
+            data: variantUpdateData
+          });
+        } else {
+          // Crear nueva variante
+          await prisma.productVariant.create({
+            data: {
+              ...variantUpdateData,
+              productId: id
+            }
+          });
+        }
+      }
+    }
+
+    // Manejar stock inicial si se proporciona
+    if (body.branchStocks && userId) {
+      for (const [variantKey, stockData] of Object.entries(body.branchStocks)) {
+        if (typeof stockData === 'object' && stockData !== null) {
+          // Buscar la variante correspondiente
+          let variant = null;
+          if (variantKey === 'standard' || variantKey === 'Estándar') {
+            variant = await prisma.productVariant.findFirst({
+              where: { productId: id, name: 'Estándar' }
+            });
+          } else {
+            variant = await prisma.productVariant.findUnique({
+              where: { id: variantKey }
+            });
+          }
+
+          if (variant) {
+            for (const [branchId, stockValue] of Object.entries(stockData as Record<string, string>)) {
+              const quantity = parseInt(stockValue);
+              
+              if (quantity >= 0) {
+                // Verificar si ya existe stock para esta variante y sucursal
+                const existingStock = await prisma.stock.findUnique({
+                  where: {
+                    branchId_variantId: {
+                      branchId,
+                      variantId: variant.id
+                    }
+                  }
+                });
+
+                if (existingStock) {
+                  // Actualizar stock existente
+                  await prisma.stock.update({
+                    where: { id: existingStock.id },
+                    data: { quantity }
+                  });
+                } else if (quantity > 0) {
+                  // Crear nuevo stock solo si la cantidad es mayor a 0
+                  await prisma.stock.create({
+                    data: {
+                      branchId,
+                      variantId: variant.id,
+                      quantity
+                    }
+                  });
+
+                  // Registrar movimiento de entrada
+                  await prisma.stockMovement.create({
+                    data: {
+                      variantId: variant.id,
+                      branchId,
+                      userId,
+                      type: 'INPUT',
+                      quantity,
+                      previousStock: 0,
+                      currentStock: quantity,
+                      reason: 'Stock inicial al editar producto',
+                    }
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Obtener producto actualizado con todas las relaciones
+    const finalProduct = await prisma.product.findUnique({
+      where: { id },
       include: {
         category: true,
         supplier: true,
-        variants: true,
+        variants: {
+          include: {
+            stock: true
+          }
+        }
       }
     });
 
-    // Actualizar la variante estándar con los nuevos datos
-    const standardVariant = await prisma.productVariant.findFirst({
-      where: { productId: id, name: 'Estándar' }
-    });
-
-    if (standardVariant) {
-      const variantUpdateData: any = {
-        sku: body.sku !== undefined ? (body.sku || null) : standardVariant.sku,
-        barcode: body.barcode !== undefined ? (body.barcode || null) : standardVariant.barcode,
-        price: body.basePrice !== undefined ? parseFloat(body.basePrice) : standardVariant.price,
-        images,
-      };
-
-      // Solo actualizar cost si se envió en el body Y no es null
-      if (body.cost !== undefined && body.cost !== null) {
-        variantUpdateData.cost = parseFloat(body.cost);
-      }
-
-      // Solo actualizar minStock si se envió en el body
-      if (body.minStock !== undefined) {
-        variantUpdateData.minStock = body.minStock !== null ? parseInt(body.minStock) : standardVariant.minStock;
-      }
-
-      await prisma.productVariant.update({
-        where: { id: standardVariant.id },
-        data: variantUpdateData
-      });
-    }
-
-    return NextResponse.json(updatedProduct);
+    return NextResponse.json(finalProduct);
   } catch (error: unknown) {
     console.error('[PRODUCT_UPDATE_ERROR]', error);
     const errorMessage = error instanceof Error ? error.message : 'Error al actualizar producto';
