@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MobileProductList } from '@/components/dashboard/products/MobileProductList';
 import { SearchBar } from '@/components/dashboard/products/SearchBar';
 import { ProductsLoadingSkeleton } from '@/components/dashboard/products/ProductsLoadingSkeleton';
+import { KardexModal } from '@/components/dashboard/products/KardexModal';
+import { KardexMobileModal } from '@/components/dashboard/products/KardexMobileModal';
 import { memo, useTransition } from 'react';
 import {
   Cancel01Icon, DashboardSquare01Icon, ArrowDataTransferHorizontalIcon, Store01Icon,
@@ -53,6 +55,8 @@ export default function ProductsPage() {
     handleSearchChange, handleOpenEdit, handleDelete, openKardexModal,
     scrollRef, isPulling, isRefreshing,
     handleTouchStart, handleTouchMove, handleTouchEnd,
+    isKardexModalOpen, setIsKardexModalOpen, kardexProduct, kardexMovements,
+    exportKardexToExcel, exportKardexToPDF,
     exportToExcel, exportToPDF,
   } = logic;
 
@@ -292,6 +296,27 @@ export default function ProductsPage() {
         />
       )}
       {isBarcodeModalOpen && !isMobile && <BarcodeGeneratorModal isOpen={isBarcodeModalOpen} onClose={() => setIsBarcodeModalOpen(false)} products={logic.products || []} />}
+
+      {/* Kardex Modal */}
+      {isMobile ? (
+        <KardexMobileModal
+          isOpen={isKardexModalOpen}
+          onClose={() => setIsKardexModalOpen(false)}
+          product={kardexProduct}
+          movements={kardexMovements}
+          onExportExcel={() => exportKardexToExcel(kardexProduct, kardexMovements)}
+          onExportPDF={() => exportKardexToPDF(kardexProduct, kardexMovements)}
+        />
+      ) : (
+        <KardexModal
+          isOpen={isKardexModalOpen}
+          onClose={() => setIsKardexModalOpen(false)}
+          product={kardexProduct}
+          movements={kardexMovements}
+          onExportExcel={() => exportKardexToExcel(kardexProduct, kardexMovements)}
+          onExportPDF={() => exportKardexToPDF(kardexProduct, kardexMovements)}
+        />
+      )}
     </div>
   );
 }

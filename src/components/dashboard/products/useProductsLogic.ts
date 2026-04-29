@@ -163,11 +163,30 @@ export function useProductsLogic() {
   const openKardexModal = useCallback(async (product: Product) => {
     setKardexProduct(product); setIsKardexModalOpen(true);
     try {
-      const variantId = product.variants?.[0]?.id;
-      if (!variantId) { setKardexMovements([]); return; }
+      // Obtener el producto completo con variantes si no las tiene
+      let productWithVariants = product;
+      if (!product.variants || product.variants.length === 0) {
+        const response = await fetch(`/api/products/${product.id}`);
+        if (response.ok) {
+          productWithVariants = await response.json();
+        }
+      }
+      
+      const variantId = productWithVariants.variants?.[0]?.id;
+      if (!variantId) { 
+        console.log('[KARDEX] No variant found for product:', product.id);
+        setKardexMovements([]); 
+        return; 
+      }
+      
+      console.log('[KARDEX] Fetching movements for variant:', variantId);
       const data = await fetch(`/api/inventory/movements?variantId=${variantId}`).then(r => r.json());
+      console.log('[KARDEX] Movements received:', data.length);
       setKardexMovements(data || []);
-    } catch { setKardexMovements([]); }
+    } catch (error) { 
+      console.error('[KARDEX] Error fetching movements:', error);
+      setKardexMovements([]); 
+    }
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {

@@ -54,6 +54,7 @@ export function ProductMobileForm({
 
   useEffect(() => {
     if (productToEdit) {
+      console.log('[PRODUCT_MOBILE_FORM] Product to edit:', productToEdit);
       setFormData({
         title: productToEdit.title || '',
         categoryId: productToEdit.categoryId || '',
@@ -67,8 +68,16 @@ export function ProductMobileForm({
         barcode: productToEdit.barcode || '',
       });
       setImageUrls(productToEdit.images || []);
+      
+      // Si el producto tiene una sucursal específica, seleccionarla
+      if (productToEdit.branchOwnerId) {
+        const ownerBranch = branches.find((b: any) => b.id === productToEdit.branchOwnerId);
+        if (ownerBranch) {
+          setSelectedBranchCode(ownerBranch.ecommerceCode || ownerBranch.id);
+        }
+      }
     }
-  }, [productToEdit]);
+  }, [productToEdit, branches]);
 
   const filteredCategories = categories.filter((cat: any) => {
     if (!selectedBranchCode) return false;

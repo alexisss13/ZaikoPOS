@@ -14,8 +14,8 @@ export interface Product {
   active: boolean;
   images?: string[];
   branchOwnerId?: string | null;
-  category?: { name: string; ecommerceCode: string | null };
-  supplier?: { name: string };
+  category?: { id: string; name: string; ecommerceCode?: string | null };
+  supplier?: { id: string; name: string };
   variants?: any[];
   branchStocks?: { branchId: string; quantity: number }[];
 }

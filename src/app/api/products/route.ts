@@ -66,7 +66,7 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    // 🔥 QUERY ULTRA OPTIMIZADA - Sin joins innecesarios
+    // 🔥 QUERY ULTRA OPTIMIZADA - Con campos necesarios para edición
     const products = await prisma.product.findMany({
       where: role === 'SUPER_ADMIN' ? { active: true } : { businessId: businessId || '', active: true },
       select: {
@@ -76,14 +76,22 @@ export async function GET(req: Request) {
         images: true,
         basePrice: true,
         wholesalePrice: true,
+        wholesaleMinCount: true,
         active: true,
         branchOwnerId: true,
         categoryId: true,
+        supplierId: true,
         category: { 
           select: { 
             id: true,
             name: true, 
           } 
+        },
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+          }
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -106,6 +114,7 @@ export async function GET(req: Request) {
         name: true,
         sku: true,
         barcode: true,
+        cost: true,
         minStock: true,
       },
       take: productIds.length, // Solo 1 por producto
@@ -158,15 +167,20 @@ export async function GET(req: Request) {
         images: product.images.slice(0, 1),
         basePrice: product.basePrice,
         wholesalePrice: product.wholesalePrice,
+        wholesaleMinCount: product.wholesaleMinCount,
         active: product.active,
         branchOwnerId: product.branchOwnerId,
         categoryId: product.categoryId,
+        supplierId: product.supplierId,
         category: product.category,
+        supplier: product.supplier,
         branchStocks,
         minStock: variant?.minStock || 5,
+        cost: variant?.cost || 0,
         barcode: variant?.barcode || null,
         sku: variant?.sku || null,
         code: variant?.barcode || variant?.sku || product.id.slice(0, 8),
+        variants: variant ? [variant] : [], // Incluir la variante para el kardex
       };
     });
     
