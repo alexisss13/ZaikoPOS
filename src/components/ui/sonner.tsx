@@ -39,7 +39,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       duration={isMobile ? 2500 : 4000} // Duración más corta en móvil (2.5s)
       gap={8}
       visibleToasts={isMobile ? 3 : 5} // Menos toasts visibles en móvil
-      swipeDirection={isMobile ? "right" : undefined} // Habilitar swipe hacia la derecha en móvil
+      swipeDirections={isMobile ? ["right"] : undefined} // Habilitar swipe hacia la derecha en móvil
       toastOptions={{
         style: isMobile ? {
           width: 'calc(100vw - 2rem)',
