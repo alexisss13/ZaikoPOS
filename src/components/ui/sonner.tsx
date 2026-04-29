@@ -35,7 +35,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       offset={isMobile ? "16px" : "16px"}
       expand={true}
       richColors={true}
-      closeButton={true} // Mostrar botón X en todos los dispositivos
+      closeButton={false} // Sin botón X, solo swipe para eliminar
       duration={isMobile ? 2500 : 4000} // Duración más corta en móvil (2.5s)
       gap={8}
       visibleToasts={isMobile ? 3 : 5} // Menos toasts visibles en móvil
@@ -53,13 +53,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast: isMobile 
             ? "!z-[9999] group toast !bg-white !text-slate-900 !border-2 !border-slate-200 !shadow-2xl !rounded-2xl !p-4 !font-sans !relative !overflow-hidden !cursor-pointer"
             : "!z-[9999] group toast !bg-white !text-slate-900 !border-2 !border-slate-200 !shadow-xl !rounded-xl !p-4 !font-sans",
-          title: "!text-sm !font-bold !text-slate-900 !pr-8", // Espacio para el botón X
-          description: "!text-xs !text-slate-500 !mt-1 !pr-8",
+          title: "!text-sm !font-bold !text-slate-900", // Sin espacio extra ya que no hay botón X
+          description: "!text-xs !text-slate-500 !mt-1",
           actionButton: "!bg-slate-900 !text-white !text-xs !font-bold !rounded-lg !px-3 !py-1.5 !mt-2",
           cancelButton: "!bg-slate-100 !text-slate-600 !text-xs !font-bold !rounded-lg !px-3 !py-1.5 !mt-2",
-          closeButton: isMobile 
-            ? "!absolute !top-2 !right-2 !bg-slate-100 !text-slate-600 !hover:bg-slate-200 !hover:text-slate-900 !rounded-full !w-7 !h-7 !flex !items-center !justify-center !text-xs !font-bold !transition-colors !z-10 !border !border-slate-300"
-            : "!bg-slate-100 !text-slate-600 !hover:bg-slate-200 !hover:text-slate-900 !rounded-lg",
           success: "!bg-emerald-50 !border-emerald-500 !text-emerald-900",
           error: "!bg-red-50 !border-red-500 !text-red-900",
           warning: "!bg-amber-50 !border-amber-500 !text-amber-900",
