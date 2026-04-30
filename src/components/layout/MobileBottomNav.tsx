@@ -151,6 +151,13 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           isActive: pathname === '/dashboard/inventory',
           category: 'Inventario'
         },
+        { 
+          href: '/dashboard/combos', 
+          label: 'Combos', 
+          icon: 'hgi-package', 
+          isActive: pathname === '/dashboard/combos',
+          category: 'Inventario'
+        },
         // Categoría: Ventas
         { 
           href: '/dashboard/cash-sessions', 
@@ -176,11 +183,11 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           category: 'Finanzas'
         },
         { 
-          href: '#', 
+          href: '/dashboard/reports', 
           label: 'Reportes', 
           icon: 'hgi-file-01', 
-          isActive: false,
-          category: 'Próximamente'
+          isActive: pathname === '/dashboard/reports',
+          category: 'Finanzas'
         },
         { 
           href: '#', 
@@ -215,6 +222,13 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
       // Para items futuros, mostrar mensaje
       return;
     }
+    
+    // Para reportes en móvil, abrir el componente móvil
+    if (item.href === '/dashboard/reports') {
+      // Aquí se podría abrir el componente móvil de reportes
+      // Por ahora redirigimos normalmente
+    }
+    
     setIsDrawerOpen(false);
   };
 
