@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { 
   UserGroupIcon, 
-  ClockIcon, 
+  Clock01Icon, 
   DollarCircleIcon, 
   GiftIcon,
   QrCode01Icon,
@@ -35,7 +35,7 @@ export function HRMobile() {
       id: 'attendance' as HRSection,
       title: 'Asistencias',
       description: 'Control de asistencias',
-      icon: ClockIcon,
+      icon: Clock01Icon,
       color: 'bg-emerald-500'
     },
     {
@@ -122,7 +122,7 @@ export function HRMobile() {
             variant="outline"
             className="h-12 rounded-xl flex items-center justify-center gap-2"
           >
-            <ClockIcon className="w-4 h-4" />
+            <Clock01Icon className="w-4 h-4" />
             Ver Asistencias
           </Button>
         </div>

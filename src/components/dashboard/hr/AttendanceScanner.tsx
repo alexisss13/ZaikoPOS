@@ -5,7 +5,7 @@ import {
   ArrowLeft01Icon, 
   QrCode01Icon, 
   BarCode01Icon,
-  ClockIcon,
+  Clock01Icon,
   UserIcon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
@@ -81,7 +81,7 @@ export function AttendanceScanner({ onClose }: AttendanceScannerProps) {
         </button>
         <div className="flex items-center gap-2 flex-1">
           <div className="p-1.5 bg-emerald-100 rounded-lg">
-            <ClockIcon className="w-4 h-4 text-emerald-600" />
+            <Clock01Icon className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-black text-slate-900">Marcar Asistencia</h2>
@@ -158,7 +158,7 @@ export function AttendanceScanner({ onClose }: AttendanceScannerProps) {
             disabled={loading || !inputValue.trim()}
             className="h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl"
           >
-            <ClockIcon className="w-5 h-5 mr-2" />
+            <Clock01Icon className="w-5 h-5 mr-2" />
             Marcar Entrada
           </Button>
           <Button
@@ -166,7 +166,7 @@ export function AttendanceScanner({ onClose }: AttendanceScannerProps) {
             disabled={loading || !inputValue.trim()}
             className="h-14 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl"
           >
-            <ClockIcon className="w-5 h-5 mr-2" />
+            <Clock01Icon className="w-5 h-5 mr-2" />
             Marcar Salida
           </Button>
         </div>

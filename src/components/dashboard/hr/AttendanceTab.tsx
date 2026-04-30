@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  ClockIcon, 
+  Clock01Icon, 
   Search01Icon,
   FilterIcon,
   PlusSignIcon,
   Calendar01Icon,
   UserIcon,
   CheckmarkCircle01Icon,
-  AlertTriangleIcon,
-  XmarkIcon
+  Alert01Icon,
+  CancelCircleIcon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,10 +90,10 @@ export function AttendanceTab() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'PRESENT': return CheckmarkCircle01Icon;
-      case 'LATE': return AlertTriangleIcon;
-      case 'ABSENT': return XmarkIcon;
+      case 'LATE': return Alert01Icon;
+      case 'ABSENT': return CancelCircleIcon;
       case 'EXCUSED': return UserIcon;
-      default: return ClockIcon;
+      default: return Clock01Icon;
     }
   };
 
@@ -108,7 +108,7 @@ export function AttendanceTab() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-emerald-100 rounded-xl">
-            <ClockIcon className="w-5 h-5 text-emerald-600" />
+            <Clock01Icon className="w-5 h-5 text-emerald-600" />
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-900">Control de Asistencias</h2>
@@ -169,7 +169,7 @@ export function AttendanceTab() {
                 <p className="text-2xl font-black text-slate-900">{stat.value}</p>
               </div>
               <div className={`p-2 rounded-xl bg-${stat.color}-100`}>
-                <ClockIcon className={`w-4 h-4 text-${stat.color}-600`} />
+                <Clock01Icon className={`w-4 h-4 text-${stat.color}-600`} />
               </div>
             </div>
           </div>
@@ -191,7 +191,7 @@ export function AttendanceTab() {
           </div>
         ) : filteredAttendances.length === 0 ? (
           <div className="p-8 text-center">
-            <ClockIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <Clock01Icon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-600">No hay registros de asistencia para esta fecha</p>
           </div>
         ) : (

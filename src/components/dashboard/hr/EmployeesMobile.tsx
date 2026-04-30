@@ -9,7 +9,7 @@ import {
   QrCode01Icon,
   BarCode01Icon,
   DollarCircleIcon,
-  ClockIcon,
+  Clock01Icon,
   Edit02Icon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
@@ -297,7 +297,7 @@ export function EmployeesMobile({ onClose }: EmployeesMobileProps) {
                     )}
                     {employee.workingHours && (
                       <div className="flex items-center gap-1 text-slate-500 mt-1">
-                        <ClockIcon className="w-3 h-3" />
+                        <Clock01Icon className="w-3 h-3" />
                         <span className="text-xs">{employee.workingHours}h/día</span>
                       </div>
                     )}

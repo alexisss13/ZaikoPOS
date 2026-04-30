@@ -7,9 +7,9 @@ import {
   PlusSignIcon,
   UserIcon,
   CheckmarkCircle01Icon,
-  ClockIcon,
-  XmarkIcon,
-  AlertTriangleIcon
+  Clock01Icon,
+  CancelCircleIcon,
+  Alert02Icon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -223,15 +223,15 @@ export function AdvancesTab() {
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return { label: 'Pendiente', icon: ClockIcon, color: 'orange' };
+        return { label: 'Pendiente', icon: Clock01Icon, color: 'orange' };
       case 'APPROVED':
         return { label: 'Aprobado', icon: CheckmarkCircle01Icon, color: 'emerald' };
       case 'REJECTED':
-        return { label: 'Rechazado', icon: XmarkIcon, color: 'red' };
+        return { label: 'Rechazado', icon: CancelCircleIcon, color: 'red' };
       case 'PAID':
         return { label: 'Pagado', icon: CheckmarkCircle01Icon, color: 'blue' };
       default:
-        return { label: status, icon: AlertTriangleIcon, color: 'slate' };
+        return { label: status, icon: Alert02Icon, color: 'slate' };
     }
   };
 
@@ -275,7 +275,7 @@ export function AdvancesTab() {
               <p className="text-2xl font-black text-orange-600">S/ {totalPending.toFixed(2)}</p>
             </div>
             <div className="p-2 rounded-xl bg-orange-100">
-              <ClockIcon className="w-4 h-4 text-orange-600" />
+              <Clock01Icon className="w-4 h-4 text-orange-600" />
             </div>
           </div>
         </div>

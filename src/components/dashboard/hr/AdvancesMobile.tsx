@@ -6,8 +6,8 @@ import {
   DollarCircleIcon,
   UserIcon,
   CheckmarkCircle01Icon,
-  ClockIcon,
-  XmarkIcon,
+  Clock01Icon,
+  CancelCircleIcon,
   FilterIcon,
   PlusSignIcon
 } from 'hugeicons-react';
@@ -95,15 +95,15 @@ export function AdvancesMobile({ onClose }: AdvancesMobileProps) {
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return { label: 'Pendiente', icon: ClockIcon, color: 'orange', bgColor: 'bg-orange-100', textColor: 'text-orange-700' };
+        return { label: 'Pendiente', icon: Clock01Icon, color: 'orange', bgColor: 'bg-orange-100', textColor: 'text-orange-700' };
       case 'APPROVED':
         return { label: 'Aprobado', icon: CheckmarkCircle01Icon, color: 'emerald', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700' };
       case 'REJECTED':
-        return { label: 'Rechazado', icon: XmarkIcon, color: 'red', bgColor: 'bg-red-100', textColor: 'text-red-700' };
+        return { label: 'Rechazado', icon: CancelCircleIcon, color: 'red', bgColor: 'bg-red-100', textColor: 'text-red-700' };
       case 'PAID':
         return { label: 'Pagado', icon: CheckmarkCircle01Icon, color: 'blue', bgColor: 'bg-blue-100', textColor: 'text-blue-700' };
       default:
-        return { label: status, icon: ClockIcon, color: 'slate', bgColor: 'bg-slate-100', textColor: 'text-slate-700' };
+        return { label: status, icon: Clock01Icon, color: 'slate', bgColor: 'bg-slate-100', textColor: 'text-slate-700' };
     }
   };
 
@@ -208,7 +208,7 @@ export function AdvancesMobile({ onClose }: AdvancesMobileProps) {
                 variant="outline"
                 className="w-full h-12 rounded-xl border-red-200 text-red-600 hover:bg-red-50"
               >
-                <XmarkIcon className="w-4 h-4 mr-2" />
+                <CancelCircleIcon className="w-4 h-4 mr-2" />
                 Rechazar Adelanto
               </Button>
             </>

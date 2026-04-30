@@ -6,11 +6,11 @@ import {
   GiftIcon,
   UserIcon,
   CheckmarkCircle01Icon,
-  ClockIcon,
+  Clock01Icon,
   FilterIcon,
   PlusSignIcon,
-  TrophyIcon,
-  TargetIcon,
+  Award01Icon,
+  Target02Icon,
   Edit02Icon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
@@ -89,11 +89,11 @@ export function BonusesMobile({ onClose }: BonusesMobileProps) {
   const getBonusTypeInfo = (type: string) => {
     switch (type) {
       case 'PUNCTUALITY':
-        return { label: 'Puntualidad', icon: ClockIcon, color: 'emerald' };
+        return { label: 'Puntualidad', icon: Clock01Icon, color: 'emerald' };
       case 'PERFORMANCE':
-        return { label: 'Rendimiento', icon: TrophyIcon, color: 'purple' };
+        return { label: 'Rendimiento', icon: Award01Icon, color: 'purple' };
       case 'SALES_TARGET':
-        return { label: 'Meta de Ventas', icon: TargetIcon, color: 'blue' };
+        return { label: 'Meta de Ventas', icon: Target02Icon, color: 'blue' };
       case 'MANUAL':
         return { label: 'Manual', icon: Edit02Icon, color: 'orange' };
       default:

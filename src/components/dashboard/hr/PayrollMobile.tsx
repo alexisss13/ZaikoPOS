@@ -6,7 +6,7 @@ import {
   DollarCircleIcon,
   UserIcon,
   CheckmarkCircle01Icon,
-  ClockIcon,
+  Clock01Icon,
   FilterIcon,
   Calendar01Icon
 } from 'hugeicons-react';
@@ -147,7 +147,7 @@ export function PayrollMobile({ onClose }: PayrollMobileProps) {
           {/* Hours */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <ClockIcon className="w-4 h-4 text-slate-600" />
+              <Clock01Icon className="w-4 h-4 text-slate-600" />
               <h3 className="font-bold text-slate-900">Horas Trabajadas</h3>
             </div>
             <div className="space-y-2">
@@ -220,7 +220,7 @@ export function PayrollMobile({ onClose }: PayrollMobileProps) {
                 </>
               ) : (
                 <>
-                  <ClockIcon className="w-4 h-4" />
+                  <Clock01Icon className="w-4 h-4" />
                   <span className="text-sm font-bold">Pendiente de Pago</span>
                 </>
               )}

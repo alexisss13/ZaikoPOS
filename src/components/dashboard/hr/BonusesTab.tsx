@@ -7,9 +7,9 @@ import {
   PlusSignIcon,
   UserIcon,
   CheckmarkCircle01Icon,
-  ClockIcon,
-  TrophyIcon,
-  TargetIcon,
+  Clock01Icon,
+  Award01Icon,
+  Target02Icon,
   Edit02Icon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
@@ -232,11 +232,11 @@ export function BonusesTab() {
   const getBonusTypeInfo = (type: string) => {
     switch (type) {
       case 'PUNCTUALITY':
-        return { label: 'Puntualidad', icon: ClockIcon, color: 'emerald' };
+        return { label: 'Puntualidad', icon: Clock01Icon, color: 'emerald' };
       case 'PERFORMANCE':
-        return { label: 'Rendimiento', icon: TrophyIcon, color: 'purple' };
+        return { label: 'Rendimiento', icon: Award01Icon, color: 'purple' };
       case 'SALES_TARGET':
-        return { label: 'Meta de Ventas', icon: TargetIcon, color: 'blue' };
+        return { label: 'Meta de Ventas', icon: Target02Icon, color: 'blue' };
       case 'MANUAL':
         return { label: 'Manual', icon: Edit02Icon, color: 'orange' };
       default:
@@ -283,7 +283,7 @@ export function BonusesTab() {
               <p className="text-2xl font-black text-orange-600">S/ {totalPending.toFixed(2)}</p>
             </div>
             <div className="p-2 rounded-xl bg-orange-100">
-              <ClockIcon className="w-4 h-4 text-orange-600" />
+              <Clock01Icon className="w-4 h-4 text-orange-600" />
             </div>
           </div>
         </div>
@@ -438,7 +438,7 @@ export function BonusesTab() {
                             </>
                           ) : (
                             <>
-                              <ClockIcon className="w-3 h-3" />
+                              <Clock01Icon className="w-3 h-3" />
                               Pendiente
                             </>
                           )}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { 
   UserGroupIcon, 
-  ClockIcon, 
+  Clock01Icon, 
   DollarCircleIcon, 
   GiftIcon,
   Search01Icon,
@@ -44,7 +44,7 @@ export default function HRPage() {
       id: 'attendance' as HRTab,
       title: 'Asistencias',
       description: 'Control de asistencias',
-      icon: ClockIcon,
+      icon: Clock01Icon,
       color: 'bg-emerald-500'
     },
     {

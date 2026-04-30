@@ -10,7 +10,7 @@ import {
   UserIcon,
   Download01Icon,
   CheckmarkCircle01Icon,
-  ClockIcon
+  Clock01Icon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,7 +130,7 @@ export function PayrollTab() {
               <p className="text-2xl font-black text-red-600">S/ {totalPending.toFixed(2)}</p>
             </div>
             <div className="p-2 rounded-xl bg-red-100">
-              <ClockIcon className="w-4 h-4 text-red-600" />
+              <Clock01Icon className="w-4 h-4 text-red-600" />
             </div>
           </div>
         </div>
@@ -317,7 +317,7 @@ export function PayrollTab() {
                           </>
                         ) : (
                           <>
-                            <ClockIcon className="w-3 h-3" />
+                            <Clock01Icon className="w-3 h-3" />
                             Pendiente
                           </>
                         )}

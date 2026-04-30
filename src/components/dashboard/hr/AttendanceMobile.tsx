@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { 
   ArrowLeft01Icon, 
-  ClockIcon,
+  Clock01Icon,
   Calendar01Icon,
   UserIcon,
   CheckmarkCircle01Icon,
-  AlertTriangleIcon,
-  XmarkIcon,
+  Alert02Icon,
+  CancelCircleIcon,
   FilterIcon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
@@ -75,13 +75,13 @@ export function AttendanceMobile({ onClose }: AttendanceMobileProps) {
       case 'PRESENT':
         return { label: 'Presente', icon: CheckmarkCircle01Icon, color: 'emerald' };
       case 'LATE':
-        return { label: 'Tardanza', icon: AlertTriangleIcon, color: 'orange' };
+        return { label: 'Tardanza', icon: Alert02Icon, color: 'orange' };
       case 'ABSENT':
-        return { label: 'Ausente', icon: XmarkIcon, color: 'red' };
+        return { label: 'Ausente', icon: CancelCircleIcon, color: 'red' };
       case 'EXCUSED':
         return { label: 'Justificado', icon: UserIcon, color: 'blue' };
       default:
-        return { label: status, icon: ClockIcon, color: 'slate' };
+        return { label: status, icon: Clock01Icon, color: 'slate' };
     }
   };
 
@@ -104,7 +104,7 @@ export function AttendanceMobile({ onClose }: AttendanceMobileProps) {
         </button>
         <div className="flex items-center gap-2 flex-1">
           <div className="p-1.5 bg-emerald-100 rounded-lg">
-            <ClockIcon className="w-4 h-4 text-emerald-600" />
+            <Clock01Icon className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-black text-slate-900">Asistencias</h2>
@@ -162,14 +162,14 @@ export function AttendanceMobile({ onClose }: AttendanceMobileProps) {
           </div>
           <div className="bg-white rounded-xl p-3 text-center">
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <AlertTriangleIcon className="w-4 h-4 text-orange-600" />
+              <Alert02Icon className="w-4 h-4 text-orange-600" />
             </div>
             <p className="text-lg font-black text-slate-900">{stats.late}</p>
             <p className="text-xs text-slate-600">Tarde</p>
           </div>
           <div className="bg-white rounded-xl p-3 text-center">
             <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <XmarkIcon className="w-4 h-4 text-red-600" />
+              <CancelCircleIcon className="w-4 h-4 text-red-600" />
             </div>
             <p className="text-lg font-black text-slate-900">{stats.absent}</p>
             <p className="text-xs text-slate-600">Ausentes</p>
@@ -192,7 +192,7 @@ export function AttendanceMobile({ onClose }: AttendanceMobileProps) {
           </div>
         ) : attendances.length === 0 ? (
           <div className="text-center py-12">
-            <ClockIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <Clock01Icon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-600">No hay registros de asistencia</p>
           </div>
         ) : (
@@ -253,13 +253,13 @@ export function AttendanceMobile({ onClose }: AttendanceMobileProps) {
                     <div className="flex gap-3 mt-3 pt-3 border-t border-slate-100">
                       {attendance.hoursWorked && (
                         <div className="flex items-center gap-1 text-slate-600">
-                          <ClockIcon className="w-3 h-3" />
+                          <Clock01Icon className="w-3 h-3" />
                           <span className="text-xs font-bold">{attendance.hoursWorked}h trabajadas</span>
                         </div>
                       )}
                       {attendance.isLate && attendance.lateMinutes && (
                         <div className="flex items-center gap-1 text-orange-600">
-                          <AlertTriangleIcon className="w-3 h-3" />
+                          <Alert02Icon className="w-3 h-3" />
                           <span className="text-xs font-bold">{attendance.lateMinutes} min tarde</span>
                         </div>
                       )}
