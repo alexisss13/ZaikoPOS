@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { status, notes } = body;
 
@@ -22,7 +23,7 @@ export async function PUT(
     }
 
     const advance = await prisma.advance.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         user: {
