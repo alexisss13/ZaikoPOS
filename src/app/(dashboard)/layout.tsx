@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { FirstBranchOnboarding } from '@/components/onboarding/FirstBranchOnboarding';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -178,6 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter(); 
   const { role, name, image, logout, userId, branchId } = useAuth();
+  const { needsOnboarding, isLoading: onboardingLoading, reason } = useOnboarding();
 
   const { data: currentBranch } = useSWR<Branch>(branchId && branchId !== 'NONE' ? `/api/branches/${branchId}` : null, fetcher);
 
@@ -185,18 +188,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     userId ? `/api/notifications?userId=${userId}` : null, fetcher, { refreshInterval: 15000 }
   );
 
-  // ⚡ PREFETCH: Cargar datos críticos en background para páginas comunes
-  useSWR('/api/products', fetcher, { 
+  const { data: businesses } = useSWR(role === 'OWNER' || role === 'SUPER_ADMIN' ? '/api/businesses' : null, fetcher);
+  const currentBusiness = businesses?.[0];
+
+  // ⚡ PREFETCH: Cargar datos críticos en background para páginas comunes (solo si NO necesita onboarding)
+  useSWR(!needsOnboarding ? '/api/products' : null, fetcher, { 
     revalidateOnFocus: false, 
     revalidateOnReconnect: false,
     dedupingInterval: 5000,
   });
-  useSWR('/api/branches', fetcher, { 
+  useSWR(!needsOnboarding ? '/api/branches' : null, fetcher, { 
     revalidateOnFocus: false, 
     revalidateOnReconnect: false,
     dedupingInterval: 10000,
   });
-  useSWR('/api/categories', fetcher, { 
+  useSWR(!needsOnboarding ? '/api/categories' : null, fetcher, { 
     revalidateOnFocus: false, 
     revalidateOnReconnect: false,
     dedupingInterval: 10000,
@@ -222,6 +228,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/dashboard/inventory?tab=transfers');
     }
   };
+
+  // ⚡ CRITICAL: Mostrar loading mientras se verifica onboarding
+  // Esto previene que el dashboard intente cargar datos antes de saber si necesita onboarding
+  if (onboardingLoading) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white font-semibold">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ⚡ CRITICAL: Mostrar onboarding ANTES de renderizar el dashboard
+  // Esto previene errores 500 cuando no hay sucursales
+  if (needsOnboarding && reason === 'no-branches') {
+    return (
+      <FirstBranchOnboarding 
+        userName={name || 'Usuario'} 
+        businessName={currentBusiness?.tradeName}
+        onBranchCreated={() => {
+          // Revalidar datos para salir del onboarding
+          mutate('/api/branches');
+          window.location.reload();
+        }}
+      />
+    );
+  }
 
   const tiMenuItems = [
     { href: '/dashboard', label: 'Resumen', icon: Home01Icon },

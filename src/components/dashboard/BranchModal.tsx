@@ -46,7 +46,7 @@ interface SimpleBusiness {
 }
 
 export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: BranchModalProps) {
-  const { role: currentUserRole } = useAuth();
+  const { role: currentUserRole, userId } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false); 
   
@@ -54,7 +54,11 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showBranding, setShowBranding] = useState(false);
   
-  const { data: businesses } = useSWR(currentUserRole === 'SUPER_ADMIN' ? '/api/businesses' : null, fetcher);
+  // Cargar businesses para SUPER_ADMIN y OWNER
+  const { data: businesses } = useSWR(
+    currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'OWNER' ? '/api/businesses' : null, 
+    fetcher
+  );
   
   const [formData, setFormData] = useState({
     name: '', address: '', phone: '', customRuc: '', customLegalName: '', customAddress: '', 
@@ -91,16 +95,21 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
       if (branchToEdit.customRuc) setShowAdvanced(true);
       if (branchToEdit.logos || branchToEdit.brandColors) setShowBranding(true);
     } else if (isOpen) {
+      // Para OWNER, auto-seleccionar su business
+      const defaultBusinessId = currentUserRole === 'OWNER' && businesses?.[0]?.id 
+        ? businesses[0].id 
+        : 'NONE';
+      
       setFormData({ 
         name: '', address: '', phone: '', customRuc: '', customLegalName: '', customAddress: '', 
         logoIsotipo: '', logoIsotipoWhite: '', logoImagotipo: '', logoImagotipoWhite: '', logoAlternate: '',
         colorPrimary: '#0f172a', colorSecondary: '#3b82f6', colorOptional: '#ffffff', 
-        businessId: 'NONE', ecommerceCode: '',
+        businessId: defaultBusinessId, ecommerceCode: '',
       });
       setShowAdvanced(false);
       setShowBranding(false);
     }
-  }, [branchToEdit, isOpen]);
+  }, [branchToEdit, isOpen, currentUserRole, businesses]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -151,7 +160,8 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (currentUserRole === 'SUPER_ADMIN' && (!formData.businessId || formData.businessId === 'NONE')) {
+    // Validar que se haya seleccionado un negocio (tanto SUPER_ADMIN como OWNER)
+    if ((currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'OWNER') && (!formData.businessId || formData.businessId === 'NONE')) {
       toast.error('Debes seleccionar el negocio al que pertenece la sucursal.');
       return;
     }
@@ -253,8 +263,8 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
               </div>
             </div>
 
-            {/* SUPER ADMIN: ASIGNACIÓN */}
-            {currentUserRole === 'SUPER_ADMIN' && (
+            {/* ASIGNACIÓN DE NEGOCIO (SUPER_ADMIN y OWNER) */}
+            {(currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'OWNER') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
                 <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5 uppercase tracking-wide">
                   <Tag01Icon size={16} strokeWidth={2} className="text-slate-400" /> Vínculo de Sistema
@@ -263,7 +273,11 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">Pertenece a la Empresa <span className="text-red-500">*</span></Label>
-                    <Select value={formData.businessId} onValueChange={(v) => setFormData(p => ({...p, businessId: v}))} disabled={!!branchToEdit}>
+                    <Select 
+                      value={formData.businessId} 
+                      onValueChange={(v) => setFormData(p => ({...p, businessId: v}))} 
+                      disabled={!!branchToEdit || currentUserRole === 'OWNER'}
+                    >
                       <SelectTrigger className={`h-10 text-sm rounded-xl focus-visible:ring-1 focus-visible:ring-slate-300 transition-all ${formData.businessId !== 'NONE' ? 'bg-white border-slate-200 shadow-sm font-bold text-slate-900' : 'bg-slate-50 border-transparent text-slate-500'}`}>
                         <SelectValue placeholder="Seleccionar Negocio" />
                       </SelectTrigger>
@@ -274,19 +288,24 @@ export function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: Branch
                         ))}
                       </SelectContent>
                     </Select>
+                    {currentUserRole === 'OWNER' && (
+                      <p className="text-[10px] text-slate-400 font-medium">Tu negocio está pre-seleccionado automáticamente.</p>
+                    )}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">E-commerce (Catálogo)</Label>
-                    <input 
-                      name="ecommerceCode" 
-                      value={formData.ecommerceCode} 
-                      onChange={handleChange} 
-                      placeholder="Auto-generado si se omite" 
-                      className={`${getInputClass(formData.ecommerceCode)} font-mono tracking-wide`}
-                    />
-                    <p className="text-[10px] text-slate-400 font-medium">Modifícalo si es una división específica (Ej: JUGUETES).</p>
-                  </div>
+                  {currentUserRole === 'SUPER_ADMIN' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700">E-commerce (Catálogo)</Label>
+                      <input 
+                        name="ecommerceCode" 
+                        value={formData.ecommerceCode} 
+                        onChange={handleChange} 
+                        placeholder="Auto-generado si se omite" 
+                        className={`${getInputClass(formData.ecommerceCode)} font-mono tracking-wide`}
+                      />
+                      <p className="text-[10px] text-slate-400 font-medium">Modifícalo si es una división específica (Ej: JUGUETES).</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

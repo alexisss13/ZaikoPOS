@@ -99,6 +99,51 @@ async function main() {
 
   console.log(`✅ ${uoms.length} unidades de medida creadas`);
   console.log('------------------------------------------------');
+
+  // ==========================================
+  // 5. CREACIÓN DE NEGOCIO Y SUCURSAL POR DEFECTO
+  // ==========================================
+  console.log('🏢 Creando negocio y sucursal por defecto...');
+  
+  const defaultBusiness = await prisma.business.upsert({
+    where: { ruc: '00000000000' },
+    update: {},
+    create: {
+      ruc: '00000000000',
+      businessName: 'Mi Negocio',
+      tradeName: 'Mi Negocio',
+      address: 'Dirección por defecto',
+      phone: '000000000',
+      email: 'contacto@minegocio.com',
+      isActive: true,
+    }
+  });
+
+  console.log(`✅ Negocio creado: ${defaultBusiness.tradeName}`);
+
+  const defaultBranch = await prisma.branch.upsert({
+    where: { code: 'MAIN' },
+    update: {},
+    create: {
+      code: 'MAIN',
+      name: 'Sucursal Principal',
+      address: 'Dirección principal',
+      phone: '000000000',
+      businessId: defaultBusiness.id,
+      isActive: true,
+    }
+  });
+
+  console.log(`✅ Sucursal creada: ${defaultBranch.name}`);
+  
+  // Asignar la sucursal al usuario TI
+  await prisma.user.update({
+    where: { id: tiUser.id },
+    data: { branchId: defaultBranch.id }
+  });
+
+  console.log(`✅ Usuario TI asignado a sucursal principal`);
+  console.log('------------------------------------------------');
 }
 
 main()

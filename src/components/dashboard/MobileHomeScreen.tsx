@@ -45,6 +45,9 @@ export function MobileHomeScreen() {
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/dashboard/stats?range=today');
+      if (!response.ok) {
+        throw new Error('Error al cargar estadísticas');
+      }
       const data = await response.json();
       setStats({
         todaySales: data.totalRevenue || 0,
@@ -58,6 +61,17 @@ export function MobileHomeScreen() {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
+      // Establecer valores por defecto en caso de error
+      setStats({
+        todaySales: 0,
+        todayTransactions: 0,
+        lowStockCount: 0,
+        currentCash: 0,
+        hasCashOpen: false,
+        totalRevenue: 0,
+        totalProfit: 0,
+        profitMargin: 0,
+      });
     } finally {
       setLoading(false);
     }

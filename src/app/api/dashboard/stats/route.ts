@@ -24,6 +24,33 @@ export async function GET(req: NextRequest) {
 
     const isOwner = user.role === 'OWNER' || user.role === 'SUPER_ADMIN';
 
+    // Si el usuario no tiene sucursal asignada y no es owner, retornar datos vacíos
+    if (!isOwner && !user.branchId) {
+      return NextResponse.json({
+        totalSales: 0,
+        totalRevenue: 0,
+        totalCost: 0,
+        totalProfit: 0,
+        profitMargin: 0,
+        totalOrders: 0,
+        averageTicket: 0,
+        topProducts: [],
+        salesByBranch: [],
+        salesByPaymentMethod: {},
+        lowStockProducts: [],
+        recentSales: [],
+        todayVsYesterday: {
+          revenue: 0,
+          orders: 0,
+          profit: 0,
+          revenueChange: 0,
+          ordersChange: 0,
+          profitChange: 0
+        },
+        message: 'No tienes una sucursal asignada. Contacta al administrador.'
+      });
+    }
+
     // Calcular fechas según el rango (Asegurar que concuerden con America/Lima en el frontend)
     const now = new Date();
     let startDate = new Date();
@@ -240,29 +267,36 @@ export async function GET(req: NextRequest) {
         ? {} 
         : { branchId: user.branchId || '' };
 
-    const lowStockProducts = await prisma.stock.findMany({
-      where: stockCondition,
-      include: {
-        variant: {
-          include: {
-            product: true
-          }
+    let formattedLowStock: any[] = [];
+    try {
+      const lowStockProducts = await prisma.stock.findMany({
+        where: stockCondition,
+        include: {
+          variant: {
+            include: {
+              product: true
+            }
+          },
+          branch: true
         },
-        branch: true
-      },
-      take: 20
-    });
+        take: 20
+      });
 
-    const formattedLowStock = lowStockProducts
-      .filter(stock => stock.quantity <= stock.variant.minStock)
-      .slice(0, 10)
-      .map((stock, index) => ({
-        id: `${stock.id}-${index}`,
-        name: stock.variant.product.title + (stock.variant.name !== 'Estándar' ? ` - ${stock.variant.name}` : ''),
-        stock: stock.quantity,
-        minStock: stock.variant.minStock,
-        branchName: stock.branch.name
-      }));
+      formattedLowStock = lowStockProducts
+        .filter(stock => stock.quantity <= stock.variant.minStock)
+        .slice(0, 10)
+        .map((stock, index) => ({
+          id: `${stock.id}-${index}`,
+          name: stock.variant.product.title + (stock.variant.name !== 'Estándar' ? ` - ${stock.variant.name}` : ''),
+          stock: stock.quantity,
+          minStock: stock.variant.minStock,
+          branchName: stock.branch.name
+        }));
+    } catch (stockError) {
+      console.error('[STATS_STOCK_ERROR]', stockError);
+      // Continuar sin datos de stock bajo
+      formattedLowStock = [];
+    }
 
     // Ventas recientes
     const recentSales = sales.slice(0, 10).map(sale => ({
@@ -274,32 +308,42 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
-      totalSales,
-      totalRevenue,
-      totalCost,
-      totalProfit,
-      profitMargin,
-      totalOrders,
-      averageTicket,
-      topProducts,
-      salesByBranch,
-      salesByPaymentMethod,
-      lowStockProducts: formattedLowStock,
-      recentSales,
+      totalSales: totalSales || 0,
+      totalRevenue: totalRevenue || 0,
+      totalCost: totalCost || 0,
+      totalProfit: totalProfit || 0,
+      profitMargin: profitMargin || 0,
+      totalOrders: totalOrders || 0,
+      averageTicket: averageTicket || 0,
+      topProducts: topProducts || [],
+      salesByBranch: salesByBranch || [],
+      salesByPaymentMethod: salesByPaymentMethod || {},
+      lowStockProducts: formattedLowStock || [],
+      recentSales: recentSales || [],
       todayVsYesterday: {
-        revenue: totalRevenue,
-        orders: totalOrders,
-        profit: totalProfit,
-        revenueChange,
-        ordersChange,
-        profitChange
+        revenue: totalRevenue || 0,
+        orders: totalOrders || 0,
+        profit: totalProfit || 0,
+        revenueChange: revenueChange || 0,
+        ordersChange: ordersChange || 0,
+        profitChange: profitChange || 0
       }
     });
 
   } catch (error: unknown) {
     console.error('[STATS_GET_ERROR]', error);
+    
+    // Log más detallado del error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json(
-      { error: 'Error al obtener estadísticas' },
+      { 
+        error: 'Error al obtener estadísticas',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      },
       { status: 500 }
     );
   }

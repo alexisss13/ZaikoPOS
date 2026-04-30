@@ -3,6 +3,7 @@
 
 import useSWR from 'swr';
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   PlusSignIcon, MoreVerticalIcon, Search01Icon, Store01Icon, Building02Icon, MapPinIcon, Call02Icon, Invoice01Icon, Delete02Icon, Edit02Icon, ArrowLeft01Icon, ArrowRight01Icon, LayoutGridIcon
 } from 'hugeicons-react';
@@ -50,6 +51,7 @@ const getMainLogo = (branch: Branch): string | null => {
 
 export default function BranchesPage() {
   const { role: currentUserRole } = useAuth();
+  const searchParams = useSearchParams();
   const { data: branches, isLoading, mutate } = useSWR<Branch[]>('/api/branches', fetcher);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +61,17 @@ export default function BranchesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<BranchData | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [isFromOnboarding, setIsFromOnboarding] = useState(false);
+
+  // Auto-abrir modal si viene el parámetro create=true (desde onboarding)
+  useEffect(() => {
+    const shouldCreate = searchParams?.get('create');
+    if (shouldCreate === 'true' && !isModalOpen) {
+      setIsModalOpen(true);
+      setSelectedBranch(null);
+      setIsFromOnboarding(true); // Marcar que viene del onboarding
+    }
+  }, [searchParams, isModalOpen]);
 
   const filteredBranches = useMemo(() => {
     // 🔥 CORRECCIÓN AQUÍ: Validación estricta de array
@@ -85,7 +98,7 @@ export default function BranchesPage() {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, rucFilter]);
 
-  const handleOpenNew = () => { setSelectedBranch(null); setIsModalOpen(true); };
+  const handleOpenNew = () => { setSelectedBranch(null); setIsModalOpen(true); setIsFromOnboarding(false); };
   
   const handleOpenEdit = (branch: Branch, e?: React.MouseEvent) => {
     if(e) e.stopPropagation();
@@ -104,6 +117,19 @@ export default function BranchesPage() {
     });
     setIsModalOpen(true);
     setOpenDropdownId(null);
+    setIsFromOnboarding(false);
+  };
+
+  const handleModalSuccess = () => {
+    mutate();
+    
+    // Si venimos del onboarding, redirigir al dashboard después de crear
+    if (isFromOnboarding) {
+      toast.success('¡Sucursal creada! Redirigiendo al dashboard...', { duration: 2000 });
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
+    }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -345,7 +371,7 @@ export default function BranchesPage() {
 
       </div>
 
-      <BranchModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => mutate()} branchToEdit={selectedBranch} />
+      <BranchModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleModalSuccess} branchToEdit={selectedBranch} />
     </div>
   );
 }

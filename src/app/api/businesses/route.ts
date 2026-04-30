@@ -4,22 +4,44 @@ import { hash } from 'bcryptjs';
 
 export async function GET(req: Request) {
   const role = req.headers.get('x-user-role');
-  if (role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const userId = req.headers.get('x-user-id');
+  
+  // SUPER_ADMIN puede ver todos los negocios
+  if (role === 'SUPER_ADMIN') {
+    try {
+      const businesses = await prisma.business.findMany({
+        include: {
+          _count: { select: { branches: true, users: true } },
+          users: { where: { role: 'OWNER' }, take: 1 }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      return NextResponse.json(businesses);
+    } catch (error: unknown) {
+      return NextResponse.json({ error: 'Error al obtener negocios' }, { status: 500 });
+    }
   }
-
-  try {
-    const businesses = await prisma.business.findMany({
-      include: {
-        _count: { select: { branches: true, users: true } },
-        users: { where: { role: 'OWNER' }, take: 1 }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    return NextResponse.json(businesses);
-  } catch (error: unknown) {
-    return NextResponse.json({ error: 'Error al obtener negocios' }, { status: 500 });
+  
+  // OWNER solo puede ver su propio negocio
+  if (role === 'OWNER' && userId) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { business: true }
+      });
+      
+      if (!user || !user.business) {
+        return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
+      }
+      
+      // Retornar como array para mantener consistencia con la respuesta de SUPER_ADMIN
+      return NextResponse.json([user.business]);
+    } catch (error: unknown) {
+      return NextResponse.json({ error: 'Error al obtener negocio' }, { status: 500 });
+    }
   }
+  
+  return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 }
 
 export async function POST(req: Request) {
