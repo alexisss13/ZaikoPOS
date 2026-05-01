@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import { ExpandableSidebar } from '@/components/layout/ExpandableSidebar';
 
 import {
   UserCircleIcon,
@@ -33,8 +34,9 @@ import {
   ShoppingBag01Icon,
   Notification01Icon,
   Logout01Icon,
-  CalculatorIcon,
-  Analytics01Icon
+  Calculator01Icon,
+  Analytics01Icon,
+  CheckListIcon
 } from 'hugeicons-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -269,11 +271,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const shopMenuItems = [
     { href: '/dashboard', label: 'Resumen', icon: Home01Icon },
     { href: '/dashboard/products', label: 'Productos', icon: PackageIcon },
-    { href: '/dashboard/combos', label: 'Combos', icon: PackageIcon },
+    { href: '/dashboard/combos', label: 'Combos', icon: CheckListIcon },
     { href: '/dashboard/inventory', label: 'Inventario', icon: PackageDeliveredIcon },
     { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: UserAccountIcon },
     { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart01Icon },
-    { href: '/dashboard/accounting', label: 'Contabilidad', icon: CalculatorIcon },
+    { href: '/dashboard/accounting', label: 'Contabilidad', icon: Calculator01Icon },
     { href: '/dashboard/reports', label: 'Reportes', icon: Analytics01Icon },
   ];
 
@@ -299,139 +301,65 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // 🚀 FONDO DEL "APP SHELL" GRIS CLARO
     <div className="flex h-screen w-full bg-slate-100 sm:py-2 sm:pl-1 sm:pr-2 lg:py-3 lg:pl-1 lg:pr-3 gap-2 lg:gap-3 font-sans overflow-hidden">
       
-      {/* 🚀 SIDEBAR INVISIBLE (Integrado al fondo bg-slate-100) */}
-      <TooltipProvider delayDuration={0}>
-        <aside className="w-[64px] h-full flex flex-col items-center py-4 shrink-0 hidden lg:flex relative z-40 bg-transparent border-none">
-          
-          {/* Top Logo Dinámico */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 border border-slate-200 mb-6 cursor-default shadow-sm overflow-hidden">
-                {TopLogo}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
-              {tooltipLabelLogo}
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Navigation Links */}
-          <nav className="flex flex-col gap-2 w-full px-2 flex-1 items-center">
-            {menuItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>
-                    <Link href={item.href} className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${isActive ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-white hover:shadow-sm hover:text-slate-900'}`}>
-                      <Icon size={isActive ? 20 : 18} strokeWidth={2} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
-                    {item.label}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </nav>
-
-          {/* Bottom Action Area */}
-          <div className="flex flex-col gap-3 w-full px-2 items-center mt-auto">
-            
-            {role !== 'SUPER_ADMIN' && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/dashboard/pos" className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors shadow-sm ${pathname === '/dashboard/pos' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white'}`}>
-                    <ShoppingBag01Icon size={16} strokeWidth={2} />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
-                  Ir al POS
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            <div className="relative flex w-full justify-center">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button onClick={() => setShowNotifs(!showNotifs)} className="relative flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-white hover:shadow-sm hover:text-slate-900 transition-all outline-none">
-                    <Notification01Icon size={20} strokeWidth={2} />
-                    {unreadCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full shadow-sm ring-2 ring-slate-100" />}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
-                  Notificaciones
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Panel de Notificaciones Flotante */}
-              {showNotifs && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-                  <div className="absolute left-[4.5rem] bottom-0 w-80 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-left-4">
-                    <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
-                      {unreadCount > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">{unreadCount} Nuevas</span>}
-                    </div>
-                    <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
-                      {loadingNotifs ? (
-                        <div className="p-6 text-center text-xs text-slate-400">
-                          <Loading02Icon className="animate-spin mx-auto mb-2" size={20} strokeWidth={2} /> Cargando...
-                        </div>
-                      ) : notifications?.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-slate-400">
-                          <Notification01Icon className="text-slate-300 mx-auto mb-2" size={24} strokeWidth={2} /> Sin notificaciones
-                        </div>
-                      ) : (
-                        notifications?.map(n => (
-                          <button key={n.id} onClick={() => handleNotificationClick(n)} className={`w-full p-3 rounded-xl border text-left flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.read ? 'bg-white border-slate-300 shadow-sm hover:border-slate-400' : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-100'}`}>
-                            <div className="flex justify-between items-start gap-2 w-full">
-                              <span className={`text-xs leading-tight ${!n.read ? 'font-bold text-slate-900' : 'font-semibold text-slate-600'}`}>{n.title}</span>
-                              <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap shrink-0">{new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 leading-snug">{n.message}</p>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="w-6 h-px bg-slate-300 my-1" />
-
-            {/* Perfil */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={() => setIsProfileModalOpen(true)} className="relative w-9 h-9 rounded-full overflow-hidden ring-2 ring-transparent hover:ring-slate-300 transition-all shadow-sm bg-white flex items-center justify-center">
-                  {image ? <img src={image} className="w-full h-full object-cover" alt="User" /> : <UserCircleIcon className="text-slate-400" size={32} strokeWidth={2} />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
-                Mi Perfil
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Logout */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={handleLogout} className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:bg-white hover:shadow-sm hover:text-red-500 transition-colors">
-                  <Logout01Icon size={20} strokeWidth={2} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-bold text-xs bg-slate-800 text-white border-none shadow-xl ml-2">
-                Cerrar Sesión
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </aside>
-      </TooltipProvider>
+      {/* 🚀 SIDEBAR EXPANDIBLE */}
+      <ExpandableSidebar
+        role={role}
+        currentBranch={currentBranch}
+        onProfileClick={() => setIsProfileModalOpen(true)}
+        onLogout={handleLogout}
+      />
 
       {/* ========================================================
           🚀 TARJETA PRINCIPAL DE CONTENIDO (APP CANVAS)
           ======================================================== */}
       <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] lg:overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
+        
+        {/* Notificaciones Desktop - Botón flotante */}
+        <div className="hidden lg:block absolute top-4 right-4 z-50">
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifs(!showNotifs)} 
+              className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
+            >
+              <Notification01Icon size={20} strokeWidth={2} />
+              {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount}</span>}
+            </button>
+
+            {/* Panel de Notificaciones Flotante */}
+            {showNotifs && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
+                <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-4">
+                  <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
+                    {unreadCount > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">{unreadCount} Nuevas</span>}
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
+                    {loadingNotifs ? (
+                      <div className="p-6 text-center text-xs text-slate-400">
+                        <Loading02Icon className="animate-spin mx-auto mb-2" size={20} strokeWidth={2} /> Cargando...
+                      </div>
+                    ) : notifications?.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-400">
+                        <Notification01Icon className="text-slate-300 mx-auto mb-2" size={24} strokeWidth={2} /> Sin notificaciones
+                      </div>
+                    ) : (
+                      notifications?.map(n => (
+                        <button key={n.id} onClick={() => handleNotificationClick(n)} className={`w-full p-3 rounded-xl border text-left flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.read ? 'bg-white border-slate-300 shadow-sm hover:border-slate-400' : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-100'}`}>
+                          <div className="flex justify-between items-start gap-2 w-full">
+                            <span className={`text-xs leading-tight ${!n.read ? 'font-bold text-slate-900' : 'font-semibold text-slate-600'}`}>{n.title}</span>
+                            <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap shrink-0">{new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-snug">{n.message}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
         
         {/* 🚀 CONTENIDO DE LAS PÁGINAS */}
         {/* El fondo del canvas ahora es blanco para todas las páginas que se renderizan dentro */}

@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     };
 
     // Filtros de negocio y sucursal
-    if (role !== 'SUPER_ADMIN') {
+    if (role !== 'SUPER_ADMIN' && businessId) {
       where.OR = [
         { businessId },
         { businessId: null }

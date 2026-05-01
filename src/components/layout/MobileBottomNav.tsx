@@ -189,12 +189,27 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
           isActive: pathname === '/dashboard/reports',
           category: 'Finanzas'
         },
+        // Categoría: Administración
         { 
-          href: '#', 
-          label: 'Configuración', 
-          icon: 'hgi-settings-01', 
-          isActive: false,
-          category: 'Próximamente'
+          href: '/dashboard/users', 
+          label: 'Personal', 
+          icon: 'hgi-user-multiple', 
+          isActive: pathname === '/dashboard/users',
+          category: 'Administración'
+        },
+        { 
+          href: '/dashboard/branches', 
+          label: 'Sucursales', 
+          icon: 'hgi-store-01', 
+          isActive: pathname === '/dashboard/branches',
+          category: 'Administración'
+        },
+        { 
+          href: '/dashboard/hr', 
+          label: 'Recursos Humanos', 
+          icon: 'hgi-user-account', 
+          isActive: pathname === '/dashboard/hr',
+          category: 'Administración'
         }
       ];
     }

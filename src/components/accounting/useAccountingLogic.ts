@@ -61,19 +61,34 @@ export function useAccountingLogic() {
   const canManage = isSuperOrOwner || role === 'MANAGER';
 
   // ── Data fetching ──
-  const { data: accounts, isLoading: isLoadingAccounts, mutate: mutateAccounts } = useSWR<Account[]>(
+  const { data: accountsData, isLoading: isLoadingAccounts, mutate: mutateAccounts } = useSWR<Account[] | { error: string }>(
     canManage ? '/api/accounting/accounts' : null,
     fetcher,
     { revalidateOnFocus: false, revalidateOnReconnect: false }
   );
 
-  const { data: journalResponse, isLoading: isLoadingJournal, mutate: mutateJournal } = useSWR<{ entries: JournalEntry[], pagination: any }>(
+  // Validar que accounts sea un array
+  const accounts = useMemo(() => {
+    if (!accountsData) return [];
+    if (Array.isArray(accountsData)) return accountsData;
+    // Si es un objeto con error, retornar array vacío
+    console.error('Accounts API error:', accountsData);
+    return [];
+  }, [accountsData]);
+
+  const { data: journalResponse, isLoading: isLoadingJournal, mutate: mutateJournal } = useSWR<{ entries: JournalEntry[], pagination: any } | { error: string }>(
     canManage ? '/api/accounting/journal-entries' : null,
     fetcher,
     { revalidateOnFocus: false, revalidateOnReconnect: false }
   );
 
-  const journalEntries = journalResponse?.entries;
+  const journalEntries = useMemo(() => {
+    if (!journalResponse) return undefined;
+    if ('entries' in journalResponse) return journalResponse.entries;
+    // Si es un objeto con error, retornar undefined
+    console.error('Journal API error:', journalResponse);
+    return undefined;
+  }, [journalResponse]);
 
   const isLoading = isLoadingAccounts || isLoadingJournal;
 

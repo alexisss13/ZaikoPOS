@@ -11,9 +11,9 @@ import { SearchBar } from './SearchBar';
 import { ProductTableRow } from './ProductTableRow';
 import { FilterDropdown } from './FilterDropdown';
 import {
-  DashboardSquare01Icon, ArrowDataTransferHorizontalIcon, Store01Icon, UnavailableIcon,
+  DashboardSquare01Icon, ArrowDataTransferHorizontalIcon, Store01Icon, ThumbsDownIcon,
   PackageIcon, ArrowLeft01Icon, ArrowRight01Icon, Search01Icon, Tag01Icon,
-  File01Icon, Download01Icon, BarCode01Icon, PlusSignIcon,
+  Xls02Icon, Download01Icon, BarCode01Icon, PlusSignIcon, File01Icon
 } from 'hugeicons-react';
 import { toast } from 'sonner';
 import type { useProductsLogic } from './useProductsLogic';
@@ -108,7 +108,7 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
           {canCreate && (
             <>
               <Button onClick={() => setIsCategoryModalOpen(true)} variant="ghost" className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"><Tag01Icon className="w-3.5 h-3.5 mr-1.5" /><span className="font-bold">Categorías</span></Button>
-              <Button onClick={() => setIsImportModalOpen(true)} variant="ghost" className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"><File01Icon className="w-3.5 h-3.5 mr-1.5" /><span className="font-bold">Importar</span></Button>
+              <Button onClick={() => setIsImportModalOpen(true)} variant="ghost" className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"><Xls02Icon className="w-3.5 h-3.5 mr-1.5" /><span className="font-bold">Importar</span></Button>
               <div className="relative">
                 <Button onClick={() => setShowExportMenu(!showExportMenu)} variant="ghost" className="h-9 text-xs bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-4 rounded-lg transition-all shrink-0 border border-transparent hover:border-slate-200"><Download01Icon className="w-3.5 h-3.5 mr-1.5" /><span className="font-bold">Exportar</span></Button>
                 {showExportMenu && (<><div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} /><div className="absolute right-0 top-12 w-40 bg-white border border-slate-200 shadow-xl rounded-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"><button onClick={() => exportToExcel(() => setShowExportMenu(false))} className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors flex items-center gap-2"><Download01Icon className="w-3.5 h-3.5" />Excel</button><button onClick={() => exportToPDF(() => setShowExportMenu(false))} className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"><Download01Icon className="w-3.5 h-3.5" />PDF</button></div></>)}
@@ -137,7 +137,7 @@ function ProductsDesktopComponent({ logic }: { logic: Logic }) {
               );
             })}
             <div className="w-px h-5 bg-slate-200 mx-2 shrink-0" />
-            <button onClick={() => { setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL'); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'INACTIVE' ? 'bg-red-100 text-red-800 shadow-sm' : 'text-slate-500 hover:text-red-700 hover:bg-red-50'}`}><UnavailableIcon className="w-3.5 h-3.5" /> Inactivos</button>
+            <button onClick={() => { setCodeFilter('INACTIVE'); setCurrentPage(1); setCategoryFilter('ALL'); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${codeFilter === 'INACTIVE' ? 'bg-red-100 text-red-800 shadow-sm' : 'text-slate-500 hover:text-red-700 hover:bg-red-50'}`}><ThumbsDownIcon className="w-3.5 h-3.5" /> Inactivos</button>
           </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-3 shrink-0 py-1 pl-2 sm:border-l sm:border-slate-100">

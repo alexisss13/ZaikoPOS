@@ -56,10 +56,20 @@ export default function CashSessionsPage() {
   const { isMobile } = useResponsive();
   const canView = role === 'OWNER' || role === 'MANAGER' || role === 'SUPER_ADMIN';
 
-  const { data: sessions, isLoading, mutate } = useSWR<CashSession[]>(
+  const { data: sessionsData, isLoading, mutate } = useSWR<CashSession[] | { error: string }>(
     canView ? '/api/cash-sessions' : null,
     fetcher
   );
+
+  // Validar que sessions sea un array
+  const sessions = useMemo(() => {
+    if (!sessionsData) return [];
+    if (Array.isArray(sessionsData)) return sessionsData;
+    // Si es un objeto con error, retornar array vacío
+    console.error('Cash sessions API error:', sessionsData);
+    toast.error('error' in sessionsData ? sessionsData.error : 'Error al cargar sesiones');
+    return [];
+  }, [sessionsData]);
 
   const [selectedSession, setSelectedSession] = useState<CashSession | null>(null);
   const [declaredCash, setDeclaredCash] = useState('');
