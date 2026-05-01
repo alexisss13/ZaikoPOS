@@ -11,8 +11,19 @@ export async function GET(req: Request) {
   }
 
   try {
+    const where: any = {};
+    
+    if (role !== 'SUPER_ADMIN') {
+      if (businessId) {
+        where.businessId = businessId;
+      } else {
+        // Si no hay businessId, no devolver nada
+        return NextResponse.json({ purchases: [] });
+      }
+    }
+    
     const purchases = await prisma.purchaseOrder.findMany({
-      where: role === 'SUPER_ADMIN' ? {} : { businessId: businessId || '' },
+      where,
       include: {
         supplier: {
           select: {

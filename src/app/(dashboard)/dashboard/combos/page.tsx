@@ -87,12 +87,12 @@ export default function CombosPage() {
       });
 
       const res = await fetch(`/api/combos?${params}`);
+      const data = await res.json();
+      
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Error al cargar combos');
+        throw new Error(data.error || 'Error al cargar combos');
       }
       
-      const data = await res.json();
       if (Array.isArray(data.combos)) {
         setCombos(data.combos);
       } else {

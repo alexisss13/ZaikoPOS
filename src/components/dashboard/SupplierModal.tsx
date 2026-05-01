@@ -336,7 +336,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
           <div className="bg-white p-5 rounded-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-slate-900">
-                Proveedores Existentes ({suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).length})
+                Proveedores Existentes ({Array.isArray(suppliers) ? suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).length : 0})
               </h3>
               
               {/* Filtro por estado */}
@@ -365,7 +365,7 @@ export function SupplierModal({ isOpen, onClose, onSuccess, suppliers }: Supplie
             </div>
             
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).length === 0 ? (
+              {!Array.isArray(suppliers) || suppliers.filter(s => statusFilter === 'ACTIVE' ? s.isActive : !s.isActive).length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-sm">
                   {statusFilter === 'ACTIVE' ? 'No hay proveedores activos' : 'No hay proveedores inactivos'}
                 </div>

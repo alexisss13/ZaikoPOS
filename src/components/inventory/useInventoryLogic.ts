@@ -107,7 +107,7 @@ export function useInventoryLogic() {
   }, [searchParams]);
 
   const filteredMovements = useMemo(() => {
-    if (!movements) return [];
+    if (!movements || !Array.isArray(movements)) return [];
     
     return movements.filter(movement => {
       const searchLower = searchTerm.toLowerCase();

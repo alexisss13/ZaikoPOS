@@ -94,7 +94,7 @@ export default function PurchasesPage() {
 
   // useMemo debe estar ANTES del early return
   const filteredPurchases = useMemo(() => {
-    if (!purchases) return [];
+    if (!purchases || !Array.isArray(purchases)) return [];
     
     return purchases
       .filter(purchase => {

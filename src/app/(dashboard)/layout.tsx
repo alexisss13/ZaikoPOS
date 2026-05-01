@@ -54,8 +54,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Determinar si el usuario puede gestionar personal
-  const canManageUsers = role === 'SUPER_ADMIN' || role === 'OWNER' || role === 'MANAGER';
+  
 
   useEffect(() => {
     if (userData) {
@@ -132,32 +131,7 @@ function ProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           </div>
           <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-700">Nueva Contraseña <span className="text-slate-400 font-normal">(Opcional)</span></Label><input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••" minLength={6} className={getInputClass(formData.password)} /></div>
           
-          {canManageUsers && (
-            <div className="pt-3 border-t border-slate-200 space-y-2">
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  onClose();
-                  router.push('/dashboard/users');
-                }}
-                className="w-full h-10 text-xs font-bold text-slate-700 hover:bg-slate-50 border-slate-300"
-              >
-                <UserMultipleIcon size={16} strokeWidth={2} /> <span className="ml-2">Gestionar Personal</span>
-              </Button>
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  onClose();
-                  router.push('/dashboard/branches');
-                }}
-                className="w-full h-10 text-xs font-bold text-slate-700 hover:bg-slate-50 border-slate-300"
-              >
-                <Store01Icon size={16} strokeWidth={2} /> <span className="ml-2">Gestionar Sucursales</span>
-              </Button>
-            </div>
-          )}
+          
 
           <div className="flex justify-end gap-3 pt-5 border-t border-slate-200 mt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading} className="h-10 text-xs font-bold text-slate-600">Cancelar</Button>
@@ -307,59 +281,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         currentBranch={currentBranch}
         onProfileClick={() => setIsProfileModalOpen(true)}
         onLogout={handleLogout}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        loadingNotifs={loadingNotifs}
+        showNotifs={showNotifs}
+        setShowNotifs={setShowNotifs}
+        onNotificationClick={handleNotificationClick}
       />
 
       {/* ========================================================
           🚀 TARJETA PRINCIPAL DE CONTENIDO (APP CANVAS)
           ======================================================== */}
       <div className="flex flex-col flex-1 min-w-0 bg-white lg:rounded-[1.5rem] lg:overflow-hidden relative shadow-[0_0_15px_rgba(0,0,0,0.03)] border lg:border-slate-200">
-        
-        {/* Notificaciones Desktop - Botón flotante */}
-        <div className="hidden lg:block absolute top-4 right-4 z-50">
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotifs(!showNotifs)} 
-              className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
-            >
-              <Notification01Icon size={20} strokeWidth={2} />
-              {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount}</span>}
-            </button>
-
-            {/* Panel de Notificaciones Flotante */}
-            {showNotifs && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-4">
-                  <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
-                    {unreadCount > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">{unreadCount} Nuevas</span>}
-                  </div>
-                  <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1.5 bg-slate-50/50">
-                    {loadingNotifs ? (
-                      <div className="p-6 text-center text-xs text-slate-400">
-                        <Loading02Icon className="animate-spin mx-auto mb-2" size={20} strokeWidth={2} /> Cargando...
-                      </div>
-                    ) : notifications?.length === 0 ? (
-                      <div className="p-6 text-center text-xs text-slate-400">
-                        <Notification01Icon className="text-slate-300 mx-auto mb-2" size={24} strokeWidth={2} /> Sin notificaciones
-                      </div>
-                    ) : (
-                      notifications?.map(n => (
-                        <button key={n.id} onClick={() => handleNotificationClick(n)} className={`w-full p-3 rounded-xl border text-left flex flex-col gap-1.5 transition-colors cursor-pointer ${!n.read ? 'bg-white border-slate-300 shadow-sm hover:border-slate-400' : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-100'}`}>
-                          <div className="flex justify-between items-start gap-2 w-full">
-                            <span className={`text-xs leading-tight ${!n.read ? 'font-bold text-slate-900' : 'font-semibold text-slate-600'}`}>{n.title}</span>
-                            <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap shrink-0">{new Date(n.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 leading-snug">{n.message}</p>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
         
         {/* 🚀 CONTENIDO DE LAS PÁGINAS */}
         {/* El fondo del canvas ahora es blanco para todas las páginas que se renderizan dentro */}

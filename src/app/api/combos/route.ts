@@ -6,6 +6,8 @@ export async function GET(req: Request) {
   const role = req.headers.get('x-user-role');
   const userBranchId = req.headers.get('x-branch-id');
 
+  console.log('[COMBOS_GET] Headers:', { businessId, role, userBranchId });
+
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -14,21 +16,34 @@ export async function GET(req: Request) {
     const categoryId = searchParams.get('categoryId') || '';
     const active = searchParams.get('active');
 
+    console.log('[COMBOS_GET] Params:', { page, limit, search, categoryId, active });
+
     const skip = (page - 1) * limit;
 
     // Construir filtros
     const where: any = {
       type: 'COMBO',
-      active: active !== null ? active === 'true' : true,
     };
 
-    // Filtros de negocio y sucursal
-    if (role !== 'SUPER_ADMIN' && businessId) {
-      where.OR = [
-        { businessId },
-        { businessId: null }
-      ];
+    // Solo filtrar por active si se proporciona el parámetro
+    if (active !== null && active !== undefined) {
+      where.active = active === 'true';
     }
+
+    // Filtros de negocio y sucursal
+    if (role !== 'SUPER_ADMIN') {
+      if (businessId) {
+        where.OR = [
+          { businessId },
+          { businessId: null }
+        ];
+      } else {
+        // Si no hay businessId, solo devolver combos sin negocio asignado
+        where.businessId = null;
+      }
+    }
+
+    console.log('[COMBOS_GET] Where:', JSON.stringify(where, null, 2));
 
     if (search) {
       where.title = {
@@ -94,7 +109,8 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error('[COMBOS_GET_ERROR]', error);
-    return NextResponse.json({ error: 'Error al obtener combos' }, { status: 500 });
+    console.error('[COMBOS_GET_ERROR] Stack:', error instanceof Error ? error.stack : 'No stack');
+    return NextResponse.json({ error: 'Error al obtener combos', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 
