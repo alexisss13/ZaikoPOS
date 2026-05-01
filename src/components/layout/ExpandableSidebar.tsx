@@ -88,7 +88,7 @@ export function ExpandableSidebar({
 
   // Menús por rol
   const tiMenuItems: MenuItem[] = [
-    { href: '/dashboard', label: 'Resumen', icon: Home01Icon, category: 'Principal' },
+    { href: '/dashboard', label: 'Inicio', icon: Home01Icon, category: 'Principal' },
     { href: '/dashboard/businesses', label: 'Clientes', icon: Building01Icon, category: 'Principal' },
     { href: '/dashboard/branches', label: 'Sucursales', icon: Store01Icon, category: 'Principal' },
     { href: '/dashboard/users', label: 'Usuarios', icon: UserMultipleIcon, category: 'Gestión' },
@@ -96,7 +96,7 @@ export function ExpandableSidebar({
   ];
 
   const shopMenuItems: MenuItem[] = [
-    { href: '/dashboard', label: 'Resumen', icon: Home01Icon, category: 'Principal' },
+    { href: '/dashboard', label: 'Inicio', icon: Home01Icon, category: 'Principal' },
     { href: '/dashboard/products', label: 'Productos', icon: PackageIcon, category: 'Inventario' },
     { href: '/dashboard/combos', label: 'Combos', icon: PackageIcon, category: 'Inventario' },
     { href: '/dashboard/inventory', label: 'Inventario', icon: PackageDeliveredIcon, category: 'Inventario' },

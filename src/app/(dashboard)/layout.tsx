@@ -235,7 +235,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const tiMenuItems = [
-    { href: '/dashboard', label: 'Resumen', icon: Home01Icon },
+    { href: '/dashboard', label: 'Inicio', icon: Home01Icon },
     { href: '/dashboard/businesses', label: 'Clientes', icon: Building01Icon },
     { href: '/dashboard/branches', label: 'Sucursales', icon: Store01Icon },
     { href: '/dashboard/users', label: 'Usuarios', icon: UserMultipleIcon },
@@ -243,7 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ];
 
   const shopMenuItems = [
-    { href: '/dashboard', label: 'Resumen', icon: Home01Icon },
+    { href: '/dashboard', label: 'Inicio', icon: Home01Icon },
     { href: '/dashboard/products', label: 'Productos', icon: PackageIcon },
     { href: '/dashboard/combos', label: 'Combos', icon: CheckListIcon },
     { href: '/dashboard/inventory', label: 'Inventario', icon: PackageDeliveredIcon },

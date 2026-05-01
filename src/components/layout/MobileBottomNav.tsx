@@ -19,7 +19,8 @@ import {
   ShoppingCart01Icon,
   CalculatorIcon,
   File01Icon,
-  Settings01Icon
+  Settings01Icon,
+  Logout03Icon
 } from 'hugeicons-react';
 
 // Mapeo de iconos
@@ -38,6 +39,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'hgi-calculator': CalculatorIcon,
   'hgi-file-01': File01Icon,
   'hgi-settings-01': Settings01Icon,
+  'hgi-logout-03': Logout03Icon,
 };
 
 interface BottomNavItem {
@@ -62,6 +64,15 @@ interface DrawerItem {
 export function MobileBottomNav({ role }: MobileBottomNavProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
 
   // Definir las 4 tabs principales del bottom nav
   const getBottomNavItems = (): BottomNavItem[] => {
@@ -391,6 +402,44 @@ export function MobileBottomNav({ role }: MobileBottomNavProps) {
                   </div>
                 </div>
               ))}
+
+              {/* Sección de Cuenta - Separada al final */}
+              <div className="mt-8 pt-6 border-t-2 border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">
+                  Cuenta
+                </h4>
+                <div className="space-y-3">
+                  {/* Mi Perfil */}
+                  <button
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      // TODO: Navegar a perfil cuando exista la página
+                      alert('Página de perfil próximamente');
+                    }}
+                    className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                  >
+                    <div className="p-3 rounded-xl bg-slate-100 text-slate-600">
+                      <UserAccountIcon className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600">
+                      Mi Perfil
+                    </span>
+                  </button>
+
+                  {/* Cerrar Sesión */}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-red-200 hover:border-red-300 hover:bg-red-50 transition-all"
+                  >
+                    <div className="p-3 rounded-xl bg-red-100 text-red-600">
+                      <Logout03Icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-medium text-red-600">
+                      Cerrar Sesión
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </>

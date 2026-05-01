@@ -27,11 +27,19 @@ export async function GET(req: NextRequest) {
     // Si el usuario no tiene sucursal asignada y no es owner, retornar datos vacíos
     if (!isOwner && !user.branchId) {
       return NextResponse.json({
+        // Datos para el dashboard moderno
+        todaySales: 0,
+        todayProfit: 0,
+        profitMargin: 0,
+        salesChange: 0,
+        profitChange: 0,
+        cashSessionStatus: null,
+        
+        // Datos para compatibilidad
         totalSales: 0,
         totalRevenue: 0,
         totalCost: 0,
         totalProfit: 0,
-        profitMargin: 0,
         totalOrders: 0,
         averageTicket: 0,
         topProducts: [],
@@ -308,11 +316,19 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
+      // Datos para el dashboard moderno (Store)
+      todaySales: totalRevenue || 0,
+      todayProfit: totalProfit || 0,
+      profitMargin: profitMargin || 0,
+      salesChange: revenueChange || 0,
+      profitChange: profitChange || 0,
+      cashSessionStatus: null, // TODO: Implementar estado de caja
+      
+      // Datos para el dashboard TI y móvil (mantener compatibilidad)
       totalSales: totalSales || 0,
       totalRevenue: totalRevenue || 0,
       totalCost: totalCost || 0,
       totalProfit: totalProfit || 0,
-      profitMargin: profitMargin || 0,
       totalOrders: totalOrders || 0,
       averageTicket: averageTicket || 0,
       topProducts: topProducts || [],
