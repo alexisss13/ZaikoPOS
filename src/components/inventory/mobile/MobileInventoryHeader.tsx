@@ -1,4 +1,4 @@
-import { CircleArrowUp02Icon, ArrowDataTransferHorizontalIcon, MoreHorizontalIcon, Download01Icon, ContractsIcon } from 'hugeicons-react';
+import { PlusSignIcon, PackageMovingIcon,ArrowDataTransferHorizontalIcon, MoreHorizontalIcon, Download01Icon, ContractsIcon } from 'hugeicons-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
@@ -52,7 +52,7 @@ export function MobileInventoryHeader({ logic, canManage, onRefresh }: MobileInv
                   onClick={() => setShowMenu(!showMenu)}
                   className="h-10 px-3 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-700 text-white text-xs font-bold hover:bg-slate-800 active:scale-95 transition-all"
                 >
-                  <CircleArrowUp02Icon className="w-3.5 h-3.5" strokeWidth={2} />
+                  <PlusSignIcon className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
 
                 {showMenu && (
@@ -66,7 +66,7 @@ export function MobileInventoryHeader({ logic, canManage, onRefresh }: MobileInv
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       >
-                        <CircleArrowUp02Icon className="w-4 h-4 text-slate-400" />
+                        <PackageMovingIcon className="w-4 h-4 text-slate-400" />
                         Movimiento
                       </button>
                       <button
