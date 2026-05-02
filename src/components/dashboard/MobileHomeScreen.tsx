@@ -8,7 +8,7 @@ import {
   PackageIcon,
   ShoppingCart01Icon,
   Analytics01Icon,
-  PackageDeliveredIcon,
+  ContractsIcon,
   ArrowRight01Icon,
   DollarCircleIcon,
   ChartUpIcon,
@@ -61,7 +61,7 @@ export function MobileHomeScreen() {
     { title: 'Productos', desc: 'Gestionar inventario', icon: PackageIcon, href: '/dashboard/products', color: 'from-blue-500 to-blue-600', img: '/vendedorapos.png' },
     { title: 'Compras', desc: 'Registrar compras', icon: ShoppingCart01Icon, href: '/dashboard/purchases', color: 'from-purple-500 to-purple-600', img: '/vendedoracompras.jpg' },
     { title: 'Reportes', desc: 'Ver estadísticas', icon: Analytics01Icon, href: '/dashboard/reports', color: 'from-orange-500 to-orange-600', img: '/vendedora.jpg' },
-    { title: 'Inventario', desc: 'Control de stock', icon: PackageDeliveredIcon, href: '/dashboard/inventory', color: 'from-cyan-500 to-cyan-600', img: '/vendedorainventario.png' },
+    { title: 'Inventario', desc: 'Control de stock', icon: ContractsIcon, href: '/dashboard/inventory', color: 'from-cyan-500 to-cyan-600', img: '/vendedorainventario.png' },
   ];
 
   if (isLoading) {

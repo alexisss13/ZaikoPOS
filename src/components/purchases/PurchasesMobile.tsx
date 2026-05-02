@@ -738,16 +738,10 @@ export default function PurchasesMobile() {
       )}
 
       {/* Contenido principal - maneja loading internamente sin early returns */}
-      <div className="flex-1 overflow-y-auto space-y-2.5 pb-24">
+      <div className="flex-1 overflow-y-auto bg-slate-50/30 px-4 pt-4 pb-24">
         {isLoading ? (
           // Loading state
           <>
-            <div className="flex items-center gap-2 mb-5">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-black text-slate-900 leading-tight">Órdenes de Compra</h1>
-                <p className="text-xs text-slate-400 mt-0.5">Cargando...</p>
-              </div>
-            </div>
             <div className="space-y-2">
               {[1, 2, 3].map(i => (
                 <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 h-32 animate-pulse" />
@@ -756,96 +750,106 @@ export default function PurchasesMobile() {
           </>
         ) : currentView === 'list' ? (
           <>
-            {/* Header móvil */}
-            <div className="flex flex-col gap-3 mb-5">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl font-black text-slate-900 leading-tight">Órdenes de Compra</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {filteredPurchasesWithDates.length} resultado{filteredPurchasesWithDates.length !== 1 ? 's' : ''}
-                    {(statusFilter !== 'ALL' || dateFrom || dateTo) && <span className="ml-1 text-slate-500">· filtrado</span>}
-                  </p>
+            {/* Header móvil con formato consistente */}
+            <div className="bg-white border-b border-slate-200 p-4 -mx-4 -mt-4 mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="p-2 bg-slate-100 rounded-xl">
+                    <ShoppingCart01Icon className="w-5 h-5 text-slate-600" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl font-black text-slate-900 leading-tight">Órdenes de Compra</h1>
+                    <p className="text-xs text-slate-500 font-semibold">
+                      {filteredPurchasesWithDates.length} orden{filteredPurchasesWithDates.length !== 1 ? 'es' : ''}
+                      {(statusFilter !== 'ALL' || dateFrom || dateTo) && ' · filtrado'}
+                    </p>
+                  </div>
                 </div>
                 
-                <button 
-                  onClick={() => setShowFilters(true)} 
-                  className="relative h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-                >
-                  <SlidersHorizontalIcon className="w-4 h-4" />
-                  {statusFilter !== 'ALL' && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">•</span>
-                  )}
-                </button>
-                
-                {canManage && (
-                  <Button 
-                    onClick={() => setShowNewOrderForm(true)} 
-                    className="h-10 w-10 p-0 bg-slate-900 hover:bg-slate-800 text-white shadow-md rounded-xl shrink-0"
-                  >
-                    <PlusSignIcon className="w-5 h-5" />
-                  </Button>
-                )}
-                
-                <div className="relative">
+                <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => setShowMenu(v => !v)} 
-                    className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+                    onClick={() => setShowFilters(true)} 
+                    className="relative h-10 w-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
                   >
-                    <MoreHorizontalIcon className="w-4 h-4" />
+                    <SlidersHorizontalIcon className="w-4 h-4" strokeWidth={2} />
+                    {statusFilter !== 'ALL' && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="w-2 h-2 bg-white rounded-full" />
+                      </span>
+                    )}
                   </button>
-                  {showMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                      <div className="absolute right-0 top-12 w-44 bg-white border border-slate-200 shadow-xl rounded-2xl p-1.5 z-50">
-                        {canManage && (
+                  
+                  {canManage && (
+                    <Button 
+                      onClick={() => setShowNewOrderForm(true)} 
+                      className="h-10 px-3 bg-slate-900 hover:bg-slate-800 text-white shadow-md rounded-xl shrink-0 text-xs font-bold"
+                    >
+                      <PlusSignIcon className="w-4 h-4 mr-1.5" strokeWidth={2} />
+                      Nueva
+                    </Button>
+                  )}
+                  
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowMenu(v => !v)} 
+                      className="h-10 w-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
+                    >
+                      <MoreHorizontalIcon className="w-4 h-4" strokeWidth={2} />
+                    </button>
+                    {showMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+                        <div className="absolute right-0 top-12 w-44 bg-white border border-slate-200 shadow-xl rounded-2xl p-1.5 z-50">
+                          {canManage && (
+                            <button 
+                              onClick={() => { setShowMenu(false); setShowSuppliersForm(true); }} 
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                              <UserMultiple02Icon className="w-4 h-4 text-slate-400" /> 
+                              Proveedores
+                            </button>
+                          )}
+                          <div className="h-px bg-slate-100 mx-2 my-1" />
                           <button 
-                            onClick={() => { setShowMenu(false); setShowSuppliersForm(true); }} 
+                            onClick={() => { setShowMenu(false); setShowExportForm(true); }} 
                             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            <UserMultiple02Icon className="w-4 h-4 text-slate-400" /> 
-                            Proveedores
+                            <DownloadCircle02Icon className="w-4 h-4 text-slate-400" /> 
+                            Exportar
                           </button>
-                        )}
-                        <div className="h-px bg-slate-100 mx-2 my-1" />
-                        <button 
-                          onClick={() => { setShowMenu(false); setShowExportForm(true); }} 
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          <DownloadCircle02Icon className="w-4 h-4 text-slate-400" /> 
-                          Exportar
-                        </button>
-                      </div>
-                    </>
-                  )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Search bar */}
               <div className="relative">
-                <Search01Icon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <Search01Icon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" strokeWidth={2} />
                 <Input
                   placeholder="Buscar proveedor, producto..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-4 h-9 bg-white border-slate-200 rounded-xl text-sm shadow-sm"
+                  className="pl-9 pr-4 h-9 bg-slate-50 border-slate-200 rounded-xl text-sm"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => { haptic(8); setSearchTerm(''); }}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 active:scale-95 transition-all"
                   >
-                    <Cancel01Icon className="w-4 h-4 text-slate-400" />
+                    <Cancel01Icon className="w-4 h-4 text-slate-400" strokeWidth={2} />
                   </button>
                 )}
               </div>
 
               {/* Active filter chips */}
               {statusFilter !== 'ALL' && (
-                <div className="flex gap-1.5 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap mt-3">
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-full">
                     {statusConfig[statusFilter].label}
                     <button onClick={() => setStatusFilter('ALL')}>
-                      <Cancel01Icon className="w-3 h-3" />
+                      <Cancel01Icon className="w-3 h-3" strokeWidth={2} />
                     </button>
                   </span>
                 </div>

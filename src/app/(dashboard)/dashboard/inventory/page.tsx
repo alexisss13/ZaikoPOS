@@ -63,20 +63,24 @@ export default function InventoryPage() {
 
   // ── MOBILE ──
   return (
-    <div className="flex flex-col h-full w-full gap-3">
-      <MobileInventoryHeader 
-        logic={logic}
-        canManage={canManage}
-        onRefresh={handleRefresh}
-      />
+    <div className="flex flex-col h-full w-full bg-slate-50/30">
+      {/* Header móvil estilo HR - separado del contenido */}
+      <div className="bg-white border-b border-slate-200 p-4 space-y-4">
+        <MobileInventoryHeader 
+          logic={logic}
+          canManage={canManage}
+          onRefresh={handleRefresh}
+        />
 
-      <MobileInventoryTabs
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        pendingCount={transfers?.filter(t => t.status === 'PENDING').length || 0}
-      />
+        <MobileInventoryTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          pendingCount={transfers?.filter(t => t.status === 'PENDING').length || 0}
+        />
+      </div>
 
-      <div className="flex-1 overflow-y-auto pb-24">
+      {/* Content con fondo gris */}
+      <div className="flex-1 overflow-y-auto p-4 pb-24">
         {activeTab === 'kardex' ? (
           <MobileKardexList
             movements={paginatedMovements}

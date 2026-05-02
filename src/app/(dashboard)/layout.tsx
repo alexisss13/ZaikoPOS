@@ -27,7 +27,7 @@ import {
   Building01Icon,
   SecurityCheckIcon,
   PackageIcon,
-  PackageDeliveredIcon,
+  ContractsIcon,
   UserAccountIcon,
   ShoppingCart01Icon,
   Globe02Icon,
@@ -246,7 +246,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Inicio', icon: Home01Icon },
     { href: '/dashboard/products', label: 'Productos', icon: PackageIcon },
     { href: '/dashboard/combos', label: 'Combos', icon: CheckListIcon },
-    { href: '/dashboard/inventory', label: 'Inventario', icon: PackageDeliveredIcon },
+    { href: '/dashboard/inventory', label: 'Inventario', icon: ContractsIcon },
     { href: '/dashboard/cash-sessions', label: 'Corte de Turnos', icon: UserAccountIcon },
     { href: '/dashboard/purchases', label: 'Compras', icon: ShoppingCart01Icon },
     { href: '/dashboard/accounting', label: 'Contabilidad', icon: Calculator01Icon },
@@ -296,7 +296,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         
         {/* 🚀 CONTENIDO DE LAS PÁGINAS */}
         {/* El fondo del canvas ahora es blanco para todas las páginas que se renderizan dentro */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 md:px-8 relative z-10 custom-scrollbar bg-slate-50/30 pb-[5.5rem] lg:pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 md:px-8 relative z-10 scrollbar-hide bg-slate-50/30 pb-[5.5rem] lg:pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           
           {/* Notificaciones Móvil */}
           {showNotifs && (

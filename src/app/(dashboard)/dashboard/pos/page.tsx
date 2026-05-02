@@ -155,8 +155,8 @@ export default function PosPage() {
           {/* Título y botones */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
-              <div className="p-2 bg-emerald-100 rounded-xl">
-                <Store01Icon className="w-5 h-5 text-emerald-600" strokeWidth={2} />
+              <div className="p-2 bg-slate-100 rounded-xl">
+                <Store01Icon className="w-5 h-5 text-slate-600" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-black text-slate-900 leading-tight">Punto de Venta</h1>

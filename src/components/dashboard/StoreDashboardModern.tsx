@@ -8,7 +8,7 @@ import {
   PackageIcon,
   ShoppingCart01Icon,
   Analytics01Icon,
-  PackageDeliveredIcon,
+  ContractsIcon,
   ChartUpIcon,
   ChartDownIcon,
   ArrowRight01Icon,
@@ -61,7 +61,7 @@ export default function StoreDashboardModern() {
     { title: 'Productos', desc: 'Gestionar inventario', icon: PackageIcon, href: '/dashboard/products', color: 'bg-blue-500', img: '/vendedorapos.jpg' },
     { title: 'Compras', desc: 'Registrar compras', icon: ShoppingCart01Icon, href: '/dashboard/purchases', color: 'bg-purple-500', img: '/vendedoracompras.jpg' },
     { title: 'Reportes', desc: 'Ver estadísticas', icon: Analytics01Icon, href: '/dashboard/reports', color: 'bg-orange-500', img: '/vendedora.jpg' },
-    { title: 'Inventario', desc: 'Control de stock', icon: PackageDeliveredIcon, href: '/dashboard/inventory', color: 'bg-cyan-500', img: '/vendedorainventario.png' },
+    { title: 'Inventario', desc: 'Control de stock', icon: ContractsIcon, href: '/dashboard/inventory', color: 'bg-cyan-500', img: '/vendedorainventario.png' },
   ];
 
   const getColorClasses = (color: string) => {

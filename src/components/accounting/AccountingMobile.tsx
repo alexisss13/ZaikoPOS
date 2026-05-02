@@ -62,38 +62,39 @@ export default function AccountingMobile() {
   if (currentView === 'home') {
     return (
       <div 
-        className="flex flex-col h-full w-full gap-3"
+        className="flex flex-col h-full w-full"
         style={{
           WebkitTapHighlightColor: 'transparent',
           transform: 'translateZ(0)',
           contain: 'layout style paint',
         }}
       >
-        {/* Header compacto */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-black text-slate-900 leading-tight">Contabilidad</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[11px] font-bold text-emerald-600">
-                S/ {stats.totalIncome.toFixed(2)} ingresos
-              </span>
-              <span className="text-[11px] text-slate-300">•</span>
-              <span className="text-[11px] font-bold text-red-600">
-                S/ {stats.totalExpenses.toFixed(2)} gastos
-              </span>
+        {/* Header con formato consistente */}
+        <div className="bg-white border-b border-slate-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="p-2 bg-slate-100 rounded-xl">
+                <CalculatorIcon className="w-5 h-5 text-slate-600" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-black text-slate-900 leading-tight">Contabilidad</h1>
+                <p className="text-xs text-slate-500 font-semibold">
+                  S/ {stats.totalIncome.toFixed(2)} ingresos · S/ {stats.totalExpenses.toFixed(2)} gastos
+                </p>
+              </div>
             </div>
+            
+            <button
+              onClick={() => { haptic(8); }}
+              className="h-10 w-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
+            >
+              <FilterIcon className="w-4 h-4" strokeWidth={2} />
+            </button>
           </div>
-          
-          <button
-            onClick={() => { haptic(8); }}
-            className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-          >
-            <FilterIcon className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto pb-24 space-y-6">
+        <div className="flex-1 overflow-y-auto pb-24 bg-slate-50/30 px-4 pt-4 space-y-6">
           {/* Utilidad Neta Card */}
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-3">

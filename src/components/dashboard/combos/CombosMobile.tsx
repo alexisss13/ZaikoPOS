@@ -283,49 +283,49 @@ export function CombosMobile({ onClose }: CombosMobileProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
-        <button
-          onClick={onClose}
-          className="p-2 -ml-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all"
-        >
-          <ArrowLeft01Icon className="w-5 h-5 text-slate-700" />
-        </button>
-        <div className="flex items-center gap-2 flex-1">
-          <div className="p-1.5 bg-slate-100 rounded-lg">
-            <PackageIcon className="w-4 h-4 text-slate-600" />
+    <div className="flex flex-col h-full w-full bg-slate-50/30">
+      {/* Header móvil estilo HR - separado del contenido */}
+      <div className="bg-white border-b border-slate-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1">
+            <button
+              onClick={onClose}
+              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all"
+            >
+              <ArrowLeft01Icon className="w-5 h-5 text-slate-700" />
+            </button>
+            <div className="p-2 bg-slate-100 rounded-xl">
+              <PackageIcon className="w-5 h-5 text-slate-600" strokeWidth={2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-black text-slate-900 leading-tight">Combos</h2>
+              <p className="text-xs text-slate-500 font-semibold">{combos.length} combos encontrados</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-black text-slate-900">Combos</h2>
-            <p className="text-xs text-slate-500">{combos.length} combos encontrados</p>
-          </div>
+          <Button
+            onClick={() => setShowNewForm(true)}
+            className="h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm px-4"
+          >
+            <PlusSignIcon className="w-4 h-4 mr-1.5" strokeWidth={2} />
+            Nuevo
+          </Button>
         </div>
-        <Button
-          onClick={() => setShowNewForm(true)}
-          className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs px-3"
-        >
-          <PlusSignIcon className="w-3 h-3 mr-1" />
-          Nuevo
-        </Button>
-      </div>
 
-      {/* Search */}
-      <div className="p-4 border-b border-slate-200 bg-white">
-        <div className="relative">
-          <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        {/* Search */}
+        <div className="relative mt-4">
+          <Search01Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" strokeWidth={2.5} />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar combos..."
-            className="h-10 pl-10 rounded-xl"
+            className="w-full bg-slate-50 border-slate-200 pl-10 h-11 rounded-xl font-semibold"
           />
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {loading && combos.length === 0 ? (
+      {/* Content con fondo gris */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {isLoading && combos.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-slate-500">Cargando combos...</div>
           </div>
@@ -343,7 +343,7 @@ export function CombosMobile({ onClose }: CombosMobileProps) {
             </Button>
           </div>
         ) : (
-          <div className="p-4 space-y-3">
+          <div className="space-y-3">
             {combos.map((combo) => (
               <div
                 key={combo.id}

@@ -190,101 +190,103 @@ export const InventoryMobile = React.memo(function InventoryMobile({
   const pendingTransfers = transfers.filter(t => t.status === 'PENDING').length;
 
   return (
-    <div className="flex flex-col h-full w-full gap-3">
-      {/* Header compacto */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-slate-900 leading-tight">Inventario</h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[11px] font-bold text-blue-600">
-              {filteredMovements.length} movimientos
-            </span>
-            <span className="text-[11px] text-slate-300">•</span>
-            <span className="text-[11px] font-bold text-amber-600">
-              {pendingTransfers} pendientes
-            </span>
+    <div className="flex flex-col h-full w-full bg-slate-50/30">
+      {/* Header móvil estilo HR - separado del contenido */}
+      <div className="bg-white border-b border-slate-200 p-4 space-y-4">
+        {/* Título y botones */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-2 bg-slate-100 rounded-xl">
+              <PackageIcon className="w-5 h-5 text-slate-600" strokeWidth={2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-slate-900 leading-tight">Inventario</h1>
+              <p className="text-xs text-slate-500 font-semibold">
+                {filteredMovements.length} movimientos · {pendingTransfers} pendientes
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-1.5">
+            {canManage && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="h-10 w-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
+                >
+                  <MoreHorizontalIcon className="w-4 h-4" strokeWidth={2} />
+                </button>
+                
+                {showMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+                    <div className="absolute right-0 top-12 w-44 bg-white border border-slate-200 shadow-xl rounded-2xl p-1.5 z-50">
+                      <button
+                        onClick={() => { setShowNewMovement(true); setShowMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <CircleArrowUp02Icon className="w-4 h-4 text-slate-400" />
+                        Movimiento
+                      </button>
+                      <button
+                        onClick={() => { setShowNewTransfer(true); setShowMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <ArrowDataTransferHorizontalIcon className="w-4 h-4 text-slate-400" />
+                        Traslado
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        
-        <div className="flex items-center gap-1.5">
-          {canManage && (
-            <div className="relative">
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="h-10 w-10 p-0 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-              >
-                <MoreHorizontalIcon className="w-4 h-4" />
-              </button>
-              
-              {showMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 top-12 w-44 bg-white border border-slate-200 shadow-xl rounded-2xl p-1.5 z-50">
-                    <button
-                      onClick={() => { setShowNewMovement(true); setShowMenu(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      <CircleArrowUp02Icon className="w-4 h-4 text-slate-400" />
-                      Movimiento
-                    </button>
-                    <button
-                      onClick={() => { setShowNewTransfer(true); setShowMenu(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      <ArrowDataTransferHorizontalIcon className="w-4 h-4 text-slate-400" />
-                      Traslado
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+
+        {/* Barra de búsqueda */}
+        <div className="relative">
+          <Search01Icon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" strokeWidth={2.5} />
+          <Input
+            placeholder="Buscar producto, motivo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 h-11 bg-slate-50 border-slate-200 rounded-xl font-semibold"
+          />
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('movements')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'movements'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >
+            <PackageIcon className="w-4 h-4" />
+            Movimientos
+          </button>
+          <button
+            onClick={() => setActiveTab('transfers')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'transfers'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >
+            <ArrowDataTransferHorizontalIcon className="w-4 h-4" />
+            Traslados
+            {pendingTransfers > 0 && (
+              <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {pendingTransfers}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Barra de búsqueda */}
-      <div className="relative">
-        <Search01Icon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-        <Input
-          placeholder="Buscar producto, motivo..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 pr-4 h-9 bg-white border-slate-200 rounded-xl text-sm shadow-sm"
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab('movements')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'movements'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-600 border border-slate-200'
-          }`}
-        >
-          <PackageIcon className="w-4 h-4" />
-          Movimientos
-        </button>
-        <button
-          onClick={() => setActiveTab('transfers')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'transfers'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-600 border border-slate-200'
-          }`}
-        >
-          <ArrowDataTransferHorizontalIcon className="w-4 h-4" />
-          Traslados
-          {pendingTransfers > 0 && (
-            <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {pendingTransfers}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Content */}
+      {/* Content con fondo gris */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto pb-20"
@@ -306,13 +308,13 @@ export const InventoryMobile = React.memo(function InventoryMobile({
         </div>
 
         {isLoading ? (
-          <div className="space-y-2.5 px-4">
+          <div className="space-y-2.5 p-4">
             {Array(5).fill(0).map((_, i) => (
               <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 h-24 animate-pulse" />
             ))}
           </div>
         ) : activeTab === 'movements' ? (
-          <div className="space-y-2.5 px-4">
+          <div className="space-y-2.5 p-4">
             {filteredMovements.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
                 <PackageIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -378,7 +380,7 @@ export const InventoryMobile = React.memo(function InventoryMobile({
             )}
           </div>
         ) : (
-          <div className="space-y-2.5 px-4">
+          <div className="space-y-2.5 p-4">
             {filteredTransfers.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
                 <ArrowDataTransferHorizontalIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />

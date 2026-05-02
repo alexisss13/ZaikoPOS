@@ -119,8 +119,8 @@ export default function ProductsPage() {
         {/* Título y botones */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
-            <div className="p-2 bg-blue-100 rounded-xl">
-              <PackageIcon className="w-5 h-5 text-blue-600" strokeWidth={2} />
+            <div className="p-2 bg-slate-100 rounded-xl">
+              <PackageIcon className="w-5 h-5 text-slate-600" strokeWidth={2} />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-black text-slate-900 leading-tight">Productos</h1>
@@ -221,11 +221,37 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Contenido con fondo gris claro */}
-      <div className="flex-1 overflow-y-auto bg-slate-50/30 p-4 space-y-4">
+      {/* Contenido con fondo gris claro - SCROLL AQUÍ */}
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto bg-slate-50/30 p-4 scrollbar-hide"
+        onTouchStart={handleTouchStart} 
+        onTouchMove={handleTouchMove} 
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          overscrollBehavior: 'contain', 
+          WebkitOverflowScrolling: 'touch', 
+          willChange: 'scroll-position',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          perspective: 1000,
+        }}
+      >
+        {/* Pull to refresh indicator */}
+        <div id="pull-indicator" className="flex items-center justify-center overflow-hidden transition-all duration-200 -mt-4 mb-2" style={{ height: 0, opacity: 0, willChange: 'height, opacity' }}>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-lg border border-slate-200">
+            <div className={`refresh-icon w-4 h-4 ${isRefreshing ? 'animate-spin text-slate-600' : 'text-slate-400'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            </div>
+            <span className={`text-xs font-bold ${isRefreshing ? 'text-slate-600' : 'text-slate-500'}`}>
+              {isRefreshing ? 'Actualizando...' : isPulling ? 'Suelta para actualizar' : 'Desliza para actualizar'}
+            </span>
+          </div>
+        </div>
+
         {/* Chips de filtros activos */}
         {(codeFilter !== 'ALL' || categoryFilter !== 'ALL' || stockFilter !== 'ALL') && (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap mb-4">
             {codeFilter !== 'ALL' && (
               <button 
                 onClick={() => { setCodeFilter('ALL'); setCategoryFilter('ALL'); logic.setCurrentPage(1); }}
@@ -282,34 +308,8 @@ export default function ProductsPage() {
         />
       )}
 
-      {/* Product list */}
-      <div 
-        ref={scrollRef} 
-        className="flex flex-col flex-1 gap-3 overflow-y-auto pb-24" 
-        onTouchStart={handleTouchStart} 
-        onTouchMove={handleTouchMove} 
-        onTouchEnd={handleTouchEnd} 
-        style={{ 
-          overscrollBehavior: 'contain', 
-          WebkitOverflowScrolling: 'touch', 
-          willChange: 'scroll-position',
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-          perspective: 1000,
-        }}
-      >
-        {/* Pull to refresh indicator */}
-        <div id="pull-indicator" className="flex items-center justify-center overflow-hidden transition-all duration-200" style={{ height: 0, opacity: 0, willChange: 'height, opacity' }}>
-          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-lg border border-slate-200">
-            <div className={`refresh-icon w-4 h-4 ${isRefreshing ? 'animate-spin text-slate-600' : 'text-slate-400'}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-            </div>
-            <span className={`text-xs font-bold ${isRefreshing ? 'text-slate-600' : 'text-slate-500'}`}>
-              {isRefreshing ? 'Actualizando...' : isPulling ? 'Suelta para actualizar' : 'Desliza para actualizar'}
-            </span>
-          </div>
-        </div>
-
+      {/* Product list - SIN overflow-y-auto aquí */}
+      <div className="flex flex-col gap-3">
         {isLoading || isPending ? (
           <div className="space-y-3">
             {Array(5).fill(0).map((_, i) => (

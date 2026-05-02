@@ -1,7 +1,7 @@
 'use client';
 
 import { 
-  WarehouseIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, Download01Icon, 
+  ContractsIcon, Search01Icon, ArrowLeft01Icon, ArrowRight01Icon, Download01Icon, 
   CircleArrowUp02Icon, ArrowDataTransferHorizontalIcon, PackageIcon
 } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
@@ -84,7 +84,7 @@ export function InventoryDesktop({ logic }: { logic: any }) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         <div className="flex items-center gap-2.5 shrink-0">
           <h1 className="text-[26px] font-black text-slate-900 tracking-tight">Inventario</h1>
-          <WarehouseIcon className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
+          <ContractsIcon className="w-6 h-6 text-slate-500" strokeWidth={2.5} />
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
           <div className="relative flex items-center justify-end group transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-8 hover:w-[260px] focus-within:w-[260px] h-10 overflow-hidden">

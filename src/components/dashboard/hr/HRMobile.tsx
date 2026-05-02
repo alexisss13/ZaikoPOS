@@ -86,72 +86,77 @@ export function HRMobile() {
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white">
-        <div className="flex items-center gap-2 flex-1">
-          <div className="p-1.5 bg-slate-100 rounded-lg">
-            <UserGroupIcon className="w-4 h-4 text-slate-600" />
+    <div className="flex flex-col h-full w-full">
+      {/* Header con formato consistente */}
+      <div className="bg-white border-b border-slate-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-2 bg-slate-100 rounded-xl">
+              <UserGroupIcon className="w-5 h-5 text-slate-600" strokeWidth={2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-slate-900 leading-tight">Recursos Humanos</h1>
+              <p className="text-xs text-slate-500 font-semibold">Gestión de personal</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-black text-slate-900">Recursos Humanos</h2>
-            <p className="text-xs text-slate-500">Gestión de personal</p>
-          </div>
-        </div>
-        <Button
-          onClick={() => setActiveSection('scanner')}
-          className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs px-3"
-        >
-          <QrCode01Icon className="w-3 h-3 mr-1" />
-          Marcar
-        </Button>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="p-4 bg-slate-50 border-b border-slate-200">
-        <div className="grid grid-cols-2 gap-3">
           <Button
             onClick={() => setActiveSection('scanner')}
-            className="h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+            className="h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs px-3"
           >
-            <QrCode01Icon className="w-4 h-4" />
-            Marcar Asistencia
-          </Button>
-          <Button
-            onClick={() => setActiveSection('attendance')}
-            variant="outline"
-            className="h-12 rounded-xl flex items-center justify-center gap-2"
-          >
-            <Clock01Icon className="w-4 h-4" />
-            Ver Asistencias
+            <QrCode01Icon className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+            Marcar
           </Button>
         </div>
       </div>
 
-      {/* Sections Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-1 gap-4">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            return (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-200 active:scale-95 transition-all"
-              >
-                <div className={`p-3 rounded-xl ${section.color}`}>
-                  <Icon className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="font-bold text-slate-900">{section.title}</h3>
-                  <p className="text-sm text-slate-600">{section.description}</p>
-                </div>
-                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
-                  <ArrowLeft01Icon className="w-3 h-3 text-slate-400 rotate-180" />
-                </div>
-              </button>
-            );
-          })}
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto bg-slate-50/30 pb-24">
+        {/* Quick Actions */}
+        <div className="p-4 border-b border-slate-200">
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => setActiveSection('scanner')}
+              className="h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+            >
+              <QrCode01Icon className="w-4 h-4" strokeWidth={2} />
+              Marcar Asistencia
+            </Button>
+            <Button
+              onClick={() => setActiveSection('attendance')}
+              variant="outline"
+              className="h-12 rounded-xl flex items-center justify-center gap-2"
+            >
+              <Clock01Icon className="w-4 h-4" strokeWidth={2} />
+              Ver Asistencias
+            </Button>
+          </div>
+        </div>
+
+        {/* Sections Grid */}
+        <div className="p-4">
+          <div className="grid grid-cols-1 gap-4">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-200 active:scale-95 transition-all"
+                >
+                  <div className={`p-3 rounded-xl ${section.color}`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-slate-900">{section.title}</h3>
+                    <p className="text-sm text-slate-600">{section.description}</p>
+                  </div>
+                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
+                    <ArrowLeft01Icon className="w-3 h-3 text-slate-400 rotate-180" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
