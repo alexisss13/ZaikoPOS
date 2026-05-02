@@ -479,9 +479,16 @@ model Product {
   isAvailable Boolean     @default(true)
   type        ProductType @default(STANDARD)
 
+  // Pricing - Compartido por todas las variantes
+  cost               Decimal  @default(0) @db.Decimal(12, 2)
   wholesalePrice     Decimal? @db.Decimal(10, 2)
   wholesaleMinCount  Int?
   discountPercentage Int      @default(0)
+
+  // Inventory - Compartido por todas las variantes
+  minStock Int     @default(5)
+  sku      String?
+  barcode  String? // Código de barras principal del producto
 
   tags     String[]
   groupTag String?
@@ -521,25 +528,19 @@ model Product {
   @@index([active])
   @@index([supplierId])
   @@index([businessId, active, categoryId])
+  @@index([barcode])
+  @@index([sku])
 }
 
 model ProductVariant {
   id         String  @id @default(uuid())
   productId  String
   name       String
-  attributes Json?
+  attributes Json?   // Solo atributos distintivos (talla, color, etc.)
   sku        String?
   barcode    String? @unique
-
-  price    Decimal? @db.Decimal(10, 2)
-  cost     Decimal  @default(0) @db.Decimal(12, 2)
-  minStock Int      @default(5)
-  active   Boolean  @default(true)
-  images   String[]
-
-  // Wholesale pricing fields
-  wholesalePrice    Decimal? @db.Decimal(10, 2)
-  wholesaleMinCount Int?
+  active     Boolean @default(true)
+  images     String[] // Imágenes específicas de esta variante
 
   uomId String?
   uom   UnitOfMeasure? @relation(fields: [uomId], references: [id])
@@ -558,6 +559,8 @@ model ProductVariant {
   updatedAt DateTime @updatedAt
 
   @@unique([productId, name])
+  @@index([productId])
+  @@index([barcode])
 }
 
 model StockMovement {

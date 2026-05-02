@@ -309,7 +309,7 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
                             type="button"
                             onClick={() => {
                               setSelectedVariantId(variant.id);
-                              setCost(variant.cost?.toString() || '0');
+                              setCost(product.cost?.toString() || '0');
                               setSelectedUomId(variant.uomId || '');
                               setSearchTerm('');
                             }}
@@ -317,9 +317,9 @@ export function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps
                           >
                             <span className="text-slate-600">{variant.name}</span>
                             <div className="flex items-center gap-2">
-                              {variant.cost > 0 && (
+                              {product.cost > 0 && (
                                 <span className="text-emerald-600 font-bold text-[10px]">
-                                  S/ {variant.cost}
+                                  S/ {product.cost}
                                 </span>
                               )}
                               <span className="text-slate-400 font-mono text-[10px]">

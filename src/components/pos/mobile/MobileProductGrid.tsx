@@ -60,7 +60,7 @@ const ProductCard = memo(function ProductCard({
   const isOutOfStock = localStock <= 0;
   const hasDiscount = product.discountPercentage > 0;
   const hasWholesale = product.wholesalePrice && product.wholesaleMinCount;
-  const displayPrice = variant.price || product.basePrice;
+  const displayPrice = product.basePrice;
   const displayImages = (variant.images && variant.images.length > 0) ? variant.images : product.images;
 
   return (

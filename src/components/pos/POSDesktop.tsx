@@ -168,7 +168,7 @@ export function POSDesktop({ logic }: POSDesktopProps) {
                 const isOutOfStock = localStock <= 0;
                 const hasDiscount = product.discountPercentage > 0;
                 const hasWholesale = product.wholesalePrice && product.wholesaleMinCount;
-                const displayPrice = variant.price || product.basePrice;
+                const displayPrice = product.basePrice;
                 const displayImages = (variant.images?.length ? variant.images : product.images);
                 return (
                   <div key={`${product.id}-${variant.id}`} onClick={() => addToCart(product, variant)} className={`group relative flex flex-col gap-2 p-2 rounded-2xl transition-all select-none bg-white border ${isOutOfStock ? 'opacity-80 border-slate-200 border-dashed cursor-pointer hover:bg-slate-50' : 'cursor-pointer border-slate-100 hover:border-slate-200 hover:shadow-sm'}`}>

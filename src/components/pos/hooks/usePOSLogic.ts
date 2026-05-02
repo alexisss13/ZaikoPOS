@@ -248,7 +248,7 @@ export function usePOSLogic() {
       return [...prev, {
         variantId: variant.id, productId: product.id,
         productName: product.title, variantName: variant.name,
-        price: variant.price || product.basePrice,
+        price: product.basePrice,
         wholesalePrice: product.wholesalePrice, wholesaleMinCount: product.wholesaleMinCount,
         discountPercentage: product.discountPercentage,
         images: (variant.images?.length ? variant.images : product.images),

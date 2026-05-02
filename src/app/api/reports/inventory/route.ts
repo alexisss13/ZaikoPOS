@@ -81,8 +81,12 @@ async function getInventorySummary(where: any, lowStockOnly: boolean) {
       include: {
         variant: {
           select: {
-            cost: true,
-            price: true
+            product: {
+              select: {
+                cost: true,
+                basePrice: true
+              }
+            }
           }
         }
       }
@@ -90,11 +94,11 @@ async function getInventorySummary(where: any, lowStockOnly: boolean) {
   ]);
 
   const totalCostValue = stockValue.reduce((sum, item) => 
-    sum + (Number(item.variant.cost) * item.quantity), 0
+    sum + (Number(item.variant.product.cost) * item.quantity), 0
   );
 
   const totalSaleValue = stockValue.reduce((sum, item) => 
-    sum + (Number(item.variant.price) * item.quantity), 0
+    sum + (Number(item.variant.product.basePrice) * item.quantity), 0
   );
 
   return NextResponse.json({
@@ -161,12 +165,12 @@ async function getDetailedInventory(where: any, searchParams: URLSearchParams) {
       category: item.variant.product.category.name,
       branch: item.branch.name,
       quantity: item.quantity,
-      minStock: item.variant.minStock,
-      cost: Number(item.variant.cost),
-      price: Number(item.variant.price),
-      totalCostValue: Number(item.variant.cost) * item.quantity,
-      totalSaleValue: Number(item.variant.price) * item.quantity,
-      isLowStock: item.quantity <= item.variant.minStock,
+      minStock: item.variant.product.minStock,
+      cost: Number(item.variant.product.cost),
+      price: Number(item.variant.product.basePrice),
+      totalCostValue: Number(item.variant.product.cost) * item.quantity,
+      totalSaleValue: Number(item.variant.product.basePrice) * item.quantity,
+      isLowStock: item.quantity <= item.variant.product.minStock,
       updatedAt: item.updatedAt
     })),
     pagination: {
@@ -285,10 +289,10 @@ async function getLowStockItems(where: any) {
       category: item.variant.product.category.name,
       branch: item.branch.name,
       currentStock: item.quantity,
-      minStock: item.variant.minStock,
-      deficit: Math.max(0, item.variant.minStock - item.quantity),
-      cost: Number(item.variant.cost),
-      price: Number(item.variant.price)
+      minStock: item.variant.product.minStock,
+      deficit: Math.max(0, item.variant.product.minStock - item.quantity),
+      cost: Number(item.variant.product.cost),
+      price: Number(item.variant.product.basePrice)
     }))
   });
 }
@@ -328,10 +332,10 @@ async function getInventoryByCategory(where: any) {
 
     categoryStats[categoryName].totalProducts += 1;
     categoryStats[categoryName].totalStock += item.quantity;
-    categoryStats[categoryName].totalCostValue += Number(item.variant.cost) * item.quantity;
-    categoryStats[categoryName].totalSaleValue += Number(item.variant.price) * item.quantity;
+    categoryStats[categoryName].totalCostValue += Number(item.variant.product.cost) * item.quantity;
+    categoryStats[categoryName].totalSaleValue += Number(item.variant.product.basePrice) * item.quantity;
     
-    if (item.quantity <= item.variant.minStock) {
+    if (item.quantity <= item.variant.product.minStock) {
       categoryStats[categoryName].lowStockItems += 1;
     }
   });
@@ -347,11 +351,11 @@ async function getInventoryValuation(where: any) {
     include: {
       variant: {
         select: {
-          cost: true,
-          price: true,
           product: {
             select: {
               title: true,
+              cost: true,
+              basePrice: true,
               category: {
                 select: { name: true }
               }
@@ -363,11 +367,11 @@ async function getInventoryValuation(where: any) {
   });
 
   const totalCostValue = inventory.reduce((sum, item) => 
-    sum + (Number(item.variant.cost) * item.quantity), 0
+    sum + (Number(item.variant.product.cost) * item.quantity), 0
   );
 
   const totalSaleValue = inventory.reduce((sum, item) => 
-    sum + (Number(item.variant.price) * item.quantity), 0
+    sum + (Number(item.variant.product.basePrice) * item.quantity), 0
   );
 
   const totalItems = inventory.reduce((sum, item) => sum + item.quantity, 0);

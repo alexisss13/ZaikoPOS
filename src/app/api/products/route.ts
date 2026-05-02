@@ -36,9 +36,6 @@ export async function GET(req: Request) {
               name: true,
               sku: true,
               barcode: true,
-              price: true,
-              cost: true,
-              minStock: true,
               active: true,
               attributes: true,
               images: true,
@@ -75,6 +72,10 @@ export async function GET(req: Request) {
         slug: true,
         images: true,
         basePrice: true,
+        cost: true,
+        minStock: true,
+        sku: true,
+        barcode: true,
         wholesalePrice: true,
         wholesaleMinCount: true,
         active: true,
@@ -114,8 +115,7 @@ export async function GET(req: Request) {
         name: true,
         sku: true,
         barcode: true,
-        cost: true,
-        minStock: true,
+        images: true,
       },
       take: productIds.length, // Solo 1 por producto
     });
@@ -166,6 +166,10 @@ export async function GET(req: Request) {
         slug: product.slug,
         images: product.images.slice(0, 1),
         basePrice: product.basePrice,
+        cost: product.cost,
+        minStock: product.minStock,
+        sku: variant?.sku || product.sku,
+        barcode: variant?.barcode || product.barcode,
         wholesalePrice: product.wholesalePrice,
         wholesaleMinCount: product.wholesaleMinCount,
         active: product.active,
@@ -175,11 +179,7 @@ export async function GET(req: Request) {
         category: product.category,
         supplier: product.supplier,
         branchStocks,
-        minStock: variant?.minStock || 5,
-        cost: variant?.cost || 0,
-        barcode: variant?.barcode || null,
-        sku: variant?.sku || null,
-        code: variant?.barcode || variant?.sku || product.id.slice(0, 8),
+        code: variant?.barcode || variant?.sku || product.barcode || product.sku || product.id.slice(0, 8),
         variants: variant ? [variant] : [], // Incluir la variante para el kardex
       };
     });
@@ -254,16 +254,17 @@ export async function POST(req: Request) {
     // Asegurar que las imágenes se guarden correctamente
     const images = Array.isArray(body.images) ? body.images : [];
 
+    // Para productos simples, consolidar datos de wholesale
+    const wholesalePrice = body.wholesalePrice ? parseFloat(body.wholesalePrice) : null;
+    const wholesaleMinCount = body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null;
+
     // Crear producto con variantes
     const variantsData = body.variants || [{
       name: 'Estándar',
       attributes: {},
       sku: body.sku || null,
       barcode: body.barcode || null,
-      price: body.basePrice ? parseFloat(body.basePrice) : 0,
-      cost: body.cost ? parseFloat(body.cost) : 0,
-      minStock: body.minStock ? parseInt(body.minStock) : 5,
-      images: images
+      images: images, // Guardar imágenes en la variante también
     }];
 
     // Generar códigos de barras únicos para variantes sin barcode
@@ -280,13 +281,8 @@ export async function POST(req: Request) {
         attributes: variant.attributes || {},
         sku: variant.sku || null,
         barcode: barcode,
-        price: variant.price ? parseFloat(variant.price) : 0,
-        cost: variant.cost ? parseFloat(variant.cost) : 0,
-        minStock: variant.minStock ? parseInt(variant.minStock) : 5,
         active: true,
-        images: variant.images || images,
-        wholesalePrice: variant.wholesalePrice ? parseFloat(variant.wholesalePrice) : null,
-        wholesaleMinCount: variant.wholesaleMinCount ? parseInt(variant.wholesaleMinCount) : null,
+        images: variant.images || images, // Asegurar que la variante tenga imágenes
       };
     });
 
@@ -301,7 +297,11 @@ export async function POST(req: Request) {
         categoryId: body.categoryId,
         supplierId: body.supplierId || null,
         images,
-        basePrice: variantsData[0]?.price ? parseFloat(variantsData[0].price) : 0,
+        basePrice: body.basePrice ? parseFloat(body.basePrice) : 0,
+        cost: body.cost ? parseFloat(body.cost) : 0,
+        minStock: body.minStock ? parseInt(body.minStock) : 5,
+        sku: body.sku || null,
+        barcode: body.barcode || null,
         wholesalePrice: body.wholesalePrice ? parseFloat(body.wholesalePrice) : null,
         wholesaleMinCount: body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null,
         discountPercentage: body.discountPercentage ? parseInt(body.discountPercentage) : 0,

@@ -52,7 +52,7 @@ export function MobileInventoryHeader({ logic, canManage, onRefresh }: MobileInv
                   onClick={() => setShowMenu(!showMenu)}
                   className="h-10 px-3 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-700 text-white text-xs font-bold hover:bg-slate-800 active:scale-95 transition-all"
                 >
-                  <PlusSignIcon className="w-3.5 h-3.5" strokeWidth={2} />
+                  <PlusSignIcon className="w-5 h-5" strokeWidth={2} />
                 </button>
 
                 {showMenu && (

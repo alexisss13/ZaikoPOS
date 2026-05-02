@@ -15,12 +15,7 @@ interface Variant {
   attributes: Record<string, string>;
   sku: string;
   barcode: string;
-  price: string;
-  cost: string;
-  minStock: string;
   images: string[];
-  wholesalePrice: string;
-  wholesaleMinCount: string;
 }
 
 interface ProductMobileFormProps {
@@ -55,6 +50,17 @@ export function ProductMobileForm({
     description: '',
   });
   
+  // Precios y costos (a nivel de producto)
+  const [pricing, setPricing] = useState({
+    basePrice: '',
+    cost: '',
+    minStock: '5',
+    sku: '',
+    barcode: '',
+    wholesalePrice: '',
+    wholesaleMinCount: ''
+  });
+  
   // Variantes
   const [variants, setVariants] = useState<Variant[]>([]);
   const [variantTypes, setVariantTypes] = useState<string[]>([]);
@@ -66,7 +72,7 @@ export function ProductMobileForm({
   const [selectedBranchCode, setSelectedBranchCode] = useState<string>('');
   
   // Estados para funcionalidades adicionales
-  const [showWholesale, setShowWholesale] = useState<Record<string, boolean>>({});
+  const [showWholesale, setShowWholesale] = useState(false);
   const [isUploadingVariantImages, setIsUploadingVariantImages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -78,12 +84,7 @@ export function ProductMobileForm({
         attributes: {},
         sku: '',
         barcode: '',
-        price: '',
-        cost: '',
-        minStock: '5',
         images: [],
-        wholesalePrice: '',
-        wholesaleMinCount: ''
       }]);
     } else {
       setVariants([]);
@@ -119,7 +120,18 @@ export function ProductMobileForm({
       });
       setImageUrls(productToEdit.images || []);
       
-      // Cargar variantes existentes
+      // Cargar precios y costos a nivel de producto
+      setPricing({
+        basePrice: productToEdit.basePrice?.toString() || '',
+        cost: productToEdit.cost?.toString() || '',
+        minStock: productToEdit.minStock?.toString() || '5',
+        sku: productToEdit.sku || '',
+        barcode: productToEdit.barcode || '',
+        wholesalePrice: productToEdit.wholesalePrice?.toString() || '',
+        wholesaleMinCount: productToEdit.wholesaleMinCount?.toString() || ''
+      });
+      
+      // Cargar variantes existentes (solo atributos, SKU, barcode e imágenes)
       if (productToEdit.variants && productToEdit.variants.length > 0) {
         const loadedVariants = productToEdit.variants.map((v: any) => ({
           id: v.id,
@@ -127,12 +139,7 @@ export function ProductMobileForm({
           attributes: v.attributes || {},
           sku: v.sku || '',
           barcode: v.barcode || '',
-          price: v.price?.toString() || '',
-          cost: v.cost?.toString() || '',
-          minStock: v.minStock?.toString() || '5',
-          images: v.images || [],
-          wholesalePrice: v.wholesalePrice?.toString() || '',
-          wholesaleMinCount: v.wholesaleMinCount?.toString() || ''
+          images: v.images || []
         }));
         setVariants(loadedVariants);
         
@@ -149,19 +156,14 @@ export function ProductMobileForm({
           setVariantTypes(Array.from(types));
         }
       } else {
-        // Si no hay variantes, crear una estándar con los datos del producto
+        // Si no hay variantes, crear una estándar
         setVariants([{
           id: 'standard',
           name: 'Estándar',
           attributes: {},
           sku: productToEdit.sku || '',
           barcode: productToEdit.barcode || '',
-          price: productToEdit.basePrice?.toString() || '',
-          cost: productToEdit.cost?.toString() || '',
-          minStock: productToEdit.minStock?.toString() || '5',
-          images: productToEdit.images || [],
-          wholesalePrice: productToEdit.wholesalePrice?.toString() || '',
-          wholesaleMinCount: productToEdit.wholesaleMinCount?.toString() || ''
+          images: productToEdit.images || []
         }]);
         setProductType('simple');
       }
@@ -222,10 +224,10 @@ export function ProductMobileForm({
     }
   };
 
-  const validatePricing = (variant: Variant): string | null => {
-    const cost = parseFloat(variant.cost) || 0;
-    const price = parseFloat(variant.price) || 0;
-    const wholesalePrice = parseFloat(variant.wholesalePrice) || 0;
+  const validatePricing = (): string | null => {
+    const cost = parseFloat(pricing.cost) || 0;
+    const price = parseFloat(pricing.basePrice) || 0;
+    const wholesalePrice = parseFloat(pricing.wholesalePrice) || 0;
 
     if (cost > price && price > 0) {
       return `El costo (S/${cost}) no puede ser mayor al precio de venta (S/${price})`;
@@ -284,37 +286,46 @@ export function ProductMobileForm({
       return;
     }
 
-    if (variants.length === 0 || variants.some(v => !v.name || !v.price)) {
-      toast.error('Completa la información de las variantes');
+    if (!pricing.basePrice) {
+      toast.error('El precio de venta es requerido');
       return;
     }
 
     // Validar precios antes de enviar
-    const pricingErrors = variants.map(validatePricing).filter(Boolean);
-    if (pricingErrors.length > 0) {
-      toast.error(pricingErrors[0]);
+    const pricingError = validatePricing();
+    if (pricingError) {
+      toast.error(pricingError);
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Para productos simples, extraer datos de la variante estándar
+      const isSimpleProduct = productType === 'simple' || (variants.length === 1 && variants[0].name === 'Estándar');
+      const standardVariant = isSimpleProduct ? variants[0] : null;
+      const finalImages = imageUrls.length > 0 ? imageUrls : (standardVariant?.images || []);
+
       const payload = {
         ...formData,
         productType,
+        images: finalImages,
+        // Datos de precio/costo a nivel de producto
+        basePrice: parseFloat(pricing.basePrice) || 0,
+        cost: parseFloat(pricing.cost) || 0,
+        minStock: parseInt(pricing.minStock) || 5,
+        sku: pricing.sku || null,
+        barcode: pricing.barcode || null,
+        wholesalePrice: parseFloat(pricing.wholesalePrice) || null,
+        wholesaleMinCount: parseInt(pricing.wholesaleMinCount) || null,
+        // Variantes solo con atributos, SKU, barcode e imágenes
         variants: variants.map(v => ({
           name: v.name,
           attributes: v.attributes,
           sku: v.sku || null,
           barcode: v.barcode || null,
-          price: parseFloat(v.price) || 0,
-          cost: parseFloat(v.cost) || 0,
-          minStock: parseInt(v.minStock) || 5,
-          images: v.images.length > 0 ? v.images : imageUrls,
-          wholesalePrice: parseFloat(v.wholesalePrice) || null,
-          wholesaleMinCount: parseInt(v.wholesaleMinCount) || null
+          images: v.images.length > 0 ? v.images : finalImages
         })),
         branchStocks,
-        images: imageUrls,
         active: true,
       };
 
@@ -358,14 +369,14 @@ export function ProductMobileForm({
     if (step === 3) {
       if (variants.length === 0) return false;
       
-      // Validar que todas las variantes tengan nombre y precio
-      const hasValidVariants = variants.every(v => v.name && v.price);
+      // Validar que todas las variantes tengan nombre
+      const hasValidVariants = variants.every(v => v.name);
       if (!hasValidVariants) return false;
 
-      // Validar precios
-      const pricingErrors = variants.map(validatePricing).filter(Boolean);
-      if (pricingErrors.length > 0) {
-        toast.error(pricingErrors[0]);
+      // Validar precios a nivel de producto
+      const pricingError = validatePricing();
+      if (pricingError) {
+        toast.error(pricingError);
         return false;
       }
 
@@ -577,7 +588,7 @@ export function ProductMobileForm({
           <div className="space-y-4">
             {productType === 'simple' ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-slate-900">Variante Estándar</h3>
+                <h3 className="text-lg font-bold text-slate-900">Precios y Costos</h3>
                 {variants.map((variant) => (
                   <div key={variant.id} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
                     <div>
@@ -590,8 +601,8 @@ export function ProductMobileForm({
                           type="number"
                           step="0.01"
                           min="0"
-                          value={variant.price}
-                          onChange={(e) => updateVariant(variant.id, 'price', e.target.value)}
+                          value={pricing.basePrice}
+                          onChange={(e) => setPricing({ ...pricing, basePrice: e.target.value })}
                           placeholder="0.00"
                           className="h-12 pl-10 rounded-xl"
                         />
@@ -608,8 +619,8 @@ export function ProductMobileForm({
                           type="number"
                           step="0.01"
                           min="0"
-                          value={variant.cost}
-                          onChange={(e) => updateVariant(variant.id, 'cost', e.target.value)}
+                          value={pricing.cost}
+                          onChange={(e) => setPricing({ ...pricing, cost: e.target.value })}
                           placeholder="0.00"
                           className="h-12 pl-10 rounded-xl"
                         />
@@ -622,8 +633,8 @@ export function ProductMobileForm({
                           SKU (opcional)
                         </Label>
                         <Input
-                          value={variant.sku}
-                          onChange={(e) => updateVariant(variant.id, 'sku', e.target.value)}
+                          value={pricing.sku}
+                          onChange={(e) => setPricing({ ...pricing, sku: e.target.value })}
                           placeholder="LAP-HP-001"
                           className="h-12 rounded-xl"
                         />
@@ -636,8 +647,8 @@ export function ProductMobileForm({
                         <Input
                           type="number"
                           min="1"
-                          value={variant.minStock}
-                          onChange={(e) => updateVariant(variant.id, 'minStock', e.target.value)}
+                          value={pricing.minStock}
+                          onChange={(e) => setPricing({ ...pricing, minStock: e.target.value })}
                           placeholder="5"
                           className="h-12 rounded-xl"
                         />
@@ -648,18 +659,18 @@ export function ProductMobileForm({
                     <div>
                       <button
                         type="button"
-                        onClick={() => setShowWholesale(prev => ({ ...prev, [variant.id]: !prev[variant.id] }))}
+                        onClick={() => setShowWholesale(!showWholesale)}
                         className="flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors"
                       >
                         <div className={`w-4 h-4 border-2 border-slate-300 rounded flex items-center justify-center transition-colors ${
-                          showWholesale[variant.id] ? 'bg-slate-900 border-slate-900' : ''
+                          showWholesale ? 'bg-slate-900 border-slate-900' : ''
                         }`}>
-                          {showWholesale[variant.id] && <div className="w-2 h-2 bg-white rounded-sm" />}
+                          {showWholesale && <div className="w-2 h-2 bg-white rounded-sm" />}
                         </div>
                         ¿Es mayorista?
                       </button>
                       
-                      {showWholesale[variant.id] && (
+                      {showWholesale && (
                         <div className="mt-3 space-y-3 p-3 bg-slate-50 rounded-xl">
                           <div>
                             <Label className="text-sm font-bold text-slate-700 mb-2 block">
@@ -671,8 +682,8 @@ export function ProductMobileForm({
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                value={variant.wholesalePrice}
-                                onChange={(e) => updateVariant(variant.id, 'wholesalePrice', e.target.value)}
+                                value={pricing.wholesalePrice}
+                                onChange={(e) => setPricing({ ...pricing, wholesalePrice: e.target.value })}
                                 placeholder="0.00"
                                 className="h-12 pl-10 rounded-xl"
                               />
@@ -686,8 +697,8 @@ export function ProductMobileForm({
                             <Input
                               type="number"
                               min="1"
-                              value={variant.wholesaleMinCount}
-                              onChange={(e) => updateVariant(variant.id, 'wholesaleMinCount', e.target.value)}
+                              value={pricing.wholesaleMinCount}
+                              onChange={(e) => setPricing({ ...pricing, wholesaleMinCount: e.target.value })}
                               placeholder="10"
                               className="h-12 rounded-xl"
                             />

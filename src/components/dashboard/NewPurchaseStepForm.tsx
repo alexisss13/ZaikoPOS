@@ -389,7 +389,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                         </div>
                         {product.variants?.map((variant: any) => {
                           const totalStock = variant.stock?.reduce((sum: number, s: any) => sum + s.quantity, 0) || 0;
-                          const isLowStock = totalStock <= variant.minStock;
+                          const isLowStock = totalStock <= (product.minStock || 5);
                           
                           return (
                             <button
@@ -397,7 +397,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                               type="button"
                               onClick={() => {
                                 setSelectedVariantId(variant.id);
-                                setCost(variant.cost?.toString() || '0');
+                                setCost(product.cost?.toString() || '0');
                                 setSelectedUomId(variant.uomId || '');
                                 setSearchTerm('');
                               }}
@@ -406,9 +406,9 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                               <div className="flex-1">
                                 <span className="text-slate-600">{variant.name}</span>
                                 <div className="flex items-center gap-2 mt-1">
-                                  {variant.cost > 0 && (
+                                  {product.cost > 0 && (
                                     <span className="text-emerald-600 font-bold text-xs">
-                                      S/ {variant.cost}
+                                      S/ {product.cost}
                                     </span>
                                   )}
                                   <span className="text-slate-400 font-mono text-[10px]">
@@ -421,7 +421,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                                   Stock: {totalStock}
                                 </span>
                                 <p className="text-[9px] text-slate-400">
-                                  Mín: {variant.minStock}
+                                  Mín: {product.minStock || 5}
                                 </p>
                               </div>
                             </button>
@@ -450,7 +450,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                           </div>
                           {product.variants?.map((variant: any) => {
                             const totalStock = variant.stock?.reduce((sum: number, s: any) => sum + s.quantity, 0) || 0;
-                            const isLowStock = totalStock <= variant.minStock;
+                            const isLowStock = totalStock <= (product.minStock || 5);
                             
                             return (
                               <button
@@ -458,7 +458,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                                 type="button"
                                 onClick={() => {
                                   setSelectedVariantId(variant.id);
-                                  setCost(variant.cost?.toString() || '0');
+                                  setCost(product.cost?.toString() || '0');
                                   setSelectedUomId(variant.uomId || '');
                                 }}
                                 className="w-full px-6 py-2.5 text-left text-xs hover:bg-white transition-colors flex justify-between items-center"
@@ -466,9 +466,9 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                                 <div className="flex-1">
                                   <span className="text-slate-600">{variant.name}</span>
                                   <div className="flex items-center gap-2 mt-1">
-                                    {variant.cost > 0 && (
+                                    {product.cost > 0 && (
                                       <span className="text-emerald-600 font-bold text-xs">
-                                        S/ {variant.cost}
+                                        S/ {product.cost}
                                       </span>
                                     )}
                                     <span className="text-slate-400 font-mono text-[10px]">
@@ -481,7 +481,7 @@ export function NewPurchaseStepForm({ isOpen, onClose, onSuccess }: NewPurchaseS
                                     Stock: {totalStock}
                                   </span>
                                   <p className="text-[9px] text-slate-400">
-                                    Mín: {variant.minStock}
+                                    Mín: {product.minStock || 5}
                                   </p>
                                 </div>
                               </button>

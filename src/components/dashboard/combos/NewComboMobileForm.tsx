@@ -13,11 +13,11 @@ interface ComboItem {
   variant: {
     id: string;
     name: string;
-    price: number;
     product: {
       id: string;
       title: string;
       images: string[];
+      basePrice: number;
     };
   };
 }
@@ -116,7 +116,7 @@ export function NewComboMobileForm({ onClose, onSuccess, categories, branches }:
   };
 
   const calculateTotalCost = () => {
-    return comboItems.reduce((total, item) => total + (item.variant.price * item.quantity), 0);
+    return comboItems.reduce((total, item) => total + (item.variant.product.basePrice * item.quantity), 0);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -373,7 +373,7 @@ export function NewComboMobileForm({ onClose, onSuccess, categories, branches }:
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 text-sm truncate">{item.variant.product.title}</p>
                         <p className="text-xs text-slate-600">{item.variant.name}</p>
-                        <p className="text-xs font-bold text-slate-900">S/ {item.variant.price.toFixed(2)} c/u</p>
+                        <p className="text-xs font-bold text-slate-900">S/ {item.variant.product.basePrice.toFixed(2)} c/u</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Input
@@ -422,7 +422,7 @@ export function NewComboMobileForm({ onClose, onSuccess, categories, branches }:
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-slate-900 text-sm truncate">{product.title}</p>
                           <p className="text-xs text-slate-600">{variant.name}</p>
-                          <p className="text-xs font-bold text-slate-900">S/ {variant.price.toFixed(2)}</p>
+                          <p className="text-xs font-bold text-slate-900">S/ {product.basePrice.toFixed(2)}</p>
                         </div>
                         <Button
                           onClick={() => addComboItem(variant)}

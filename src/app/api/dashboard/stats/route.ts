@@ -108,7 +108,15 @@ export async function GET(req: NextRequest) {
       include: {
         items: {
           include: {
-            variant: true // Incluir variant para obtener el costo
+            variant: {
+              include: {
+                product: {
+                  select: {
+                    cost: true
+                  }
+                }
+              }
+            }
           }
         },
         payments: true,
@@ -136,7 +144,7 @@ export async function GET(req: NextRequest) {
     // Calcular costos totales
     const totalCost = sales.reduce((sum, sale) => 
       sum + sale.items.reduce((itemSum, item) => {
-        const cost = item.variant?.cost ? Number(item.variant.cost) : 0;
+        const cost = item.variant?.product?.cost ? Number(item.variant.product.cost) : 0;
         return itemSum + (cost * item.quantity);
       }, 0), 0
     );
@@ -161,7 +169,15 @@ export async function GET(req: NextRequest) {
       include: {
         items: {
           include: {
-            variant: true
+            variant: {
+              include: {
+                product: {
+                  select: {
+                    cost: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -169,7 +185,7 @@ export async function GET(req: NextRequest) {
     
     const previousCost = previousSalesWithItems.reduce((sum, sale) => 
       sum + sale.items.reduce((itemSum, item) => {
-        const cost = item.variant?.cost ? Number(item.variant.cost) : 0;
+        const cost = item.variant?.product?.cost ? Number(item.variant.product.cost) : 0;
         return itemSum + (cost * item.quantity);
       }, 0), 0
     );
@@ -193,7 +209,7 @@ export async function GET(req: NextRequest) {
           ? `${item.productName} - ${item.variantName}`
           : item.productName;
         
-        const itemCost = item.variant?.cost ? Number(item.variant.cost) * item.quantity : 0;
+        const itemCost = item.variant?.product?.cost ? Number(item.variant.product.cost) * item.quantity : 0;
         const itemRevenue = Number(item.subtotal);
         const itemProfit = itemRevenue - itemCost;
         
@@ -236,7 +252,7 @@ export async function GET(req: NextRequest) {
         };
         const saleItems = sale.items.reduce((sum, item) => sum + item.quantity, 0);
         const saleCost = sale.items.reduce((sum, item) => {
-          const cost = item.variant?.cost ? Number(item.variant.cost) : 0;
+          const cost = item.variant?.product?.cost ? Number(item.variant.product.cost) : 0;
           return sum + (cost * item.quantity);
         }, 0);
         const saleRevenue = Number(sale.total);
@@ -291,13 +307,13 @@ export async function GET(req: NextRequest) {
       });
 
       formattedLowStock = lowStockProducts
-        .filter(stock => stock.quantity <= stock.variant.minStock)
+        .filter(stock => stock.quantity <= stock.variant.product.minStock)
         .slice(0, 10)
         .map((stock, index) => ({
           id: `${stock.id}-${index}`,
           name: stock.variant.product.title + (stock.variant.name !== 'Estándar' ? ` - ${stock.variant.name}` : ''),
           stock: stock.quantity,
-          minStock: stock.variant.minStock,
+          minStock: stock.variant.product.minStock,
           branchName: stock.branch.name
         }));
     } catch (stockError) {

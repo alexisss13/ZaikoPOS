@@ -36,9 +36,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           select: {
             id: true,
             name: true,
-            price: true,
-            cost: true,
-            minStock: true,
             active: true,
             images: true,
             stock: {
@@ -171,7 +168,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       await prisma.productVariant.update({
         where: { id: comboVariant.id },
         data: {
-          price: parseFloat(basePrice),
           images: images !== undefined ? images : comboVariant.images
         }
       });

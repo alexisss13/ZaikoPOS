@@ -15,11 +15,11 @@ interface ComboItem {
   variant: {
     id: string;
     name: string;
-    price: number;
     product: {
       id: string;
       title: string;
       images: string[];
+      basePrice: number;
     };
   };
 }
@@ -262,7 +262,7 @@ export function CombosMobile({ onClose }: CombosMobileProps) {
                     <div className="flex-1">
                       <p className="font-medium text-slate-900">{item.variant.product.title}</p>
                       <p className="text-sm text-slate-600">{item.variant.name}</p>
-                      <p className="text-sm font-bold text-slate-900">S/ {item.variant.price.toFixed(2)} c/u</p>
+                      <p className="text-sm font-bold text-slate-900">S/ {item.variant.product.basePrice.toFixed(2)} c/u</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-slate-900">{item.quantity}x</p>

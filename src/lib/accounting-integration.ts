@@ -88,7 +88,11 @@ export async function createSaleJournalEntries(saleId: string) {
           include: {
             variant: {
               select: {
-                cost: true
+                product: {
+                  select: {
+                    cost: true
+                  }
+                }
               }
             }
           }
@@ -203,8 +207,8 @@ export async function createSaleJournalEntries(saleId: string) {
     // Crear asiento de costo si hay items con costo
     let totalCost = 0;
     for (const item of sale.items) {
-      if (item.variant?.cost) {
-        totalCost += Number(item.variant.cost) * item.quantity;
+      if (item.variant?.product?.cost) {
+        totalCost += Number(item.variant.product.cost) * item.quantity;
       }
     }
 
@@ -516,9 +520,9 @@ export async function createInventoryAdjustmentJournalEntry(movementId: string) 
       include: {
         variant: {
           select: {
-            cost: true,
             product: {
               select: {
+                cost: true,
                 businessId: true
               }
             }
@@ -544,7 +548,7 @@ export async function createInventoryAdjustmentJournalEntry(movementId: string) 
     }
 
     // Calcular valor del ajuste
-    const cost = Number(movement.variant?.cost || 0);
+    const cost = Number(movement.variant?.product?.cost || 0);
     const adjustmentValue = Math.abs(movement.quantity) * cost;
 
     if (adjustmentValue === 0) {

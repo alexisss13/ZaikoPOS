@@ -68,10 +68,16 @@ export class AutomatedEntriesService {
       for (const item of saleData.items) {
         const variant = await prisma.productVariant.findUnique({
           where: { id: item.variantId },
-          select: { cost: true }
+          select: { 
+            product: {
+              select: {
+                cost: true
+              }
+            }
+          }
         });
-        if (variant) {
-          totalCOGS += Number(variant.cost) * item.quantity;
+        if (variant?.product?.cost) {
+          totalCOGS += Number(variant.product.cost) * item.quantity;
         }
       }
 

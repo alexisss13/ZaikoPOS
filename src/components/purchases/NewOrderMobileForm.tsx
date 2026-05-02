@@ -126,7 +126,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
         productTitle: product.title,
         variantName: variant.name,
         quantity: 1,
-        cost: Number(variant.cost || product.cost || 0),
+        cost: Number(product.cost || 0),
       };
       console.log('New item created:', newItem);
       setOrderItems([...orderItems, newItem]);
@@ -513,7 +513,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                           
                           return variants.map((variant: any) => {
                             const totalStock = variant.stock?.reduce((sum: number, s: any) => sum + s.quantity, 0) || 0;
-                            const isLowStock = totalStock <= variant.minStock;
+                            const isLowStock = totalStock <= (product.minStock || 5);
                             
                             return (
                               <button
@@ -526,7 +526,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                                     <p className="text-xs font-bold text-slate-900">{product.title}</p>
                                     <p className="text-[10px] text-slate-500">{variant.name}</p>
                                     <p className="text-[10px] text-slate-400">
-                                      Costo: S/ {Number(variant.cost || product.cost || 0).toFixed(2)}
+                                      Costo: S/ {Number(product.cost || 0).toFixed(2)}
                                     </p>
                                   </div>
                                   <div className="text-right ml-2">
@@ -534,7 +534,7 @@ export function NewOrderMobileForm({ onClose, onSuccess }: NewOrderMobileFormPro
                                       Stock: {totalStock}
                                     </p>
                                     <p className="text-[9px] text-slate-400">
-                                      Mín: {variant.minStock}
+                                      Mín: {product.minStock || 5}
                                     </p>
                                   </div>
                                 </div>

@@ -79,8 +79,6 @@ export async function GET(req: Request) {
             select: {
               id: true,
               name: true,
-              price: true,
-              cost: true,
               images: true,
               stock: {
                 select: {
@@ -187,9 +185,6 @@ export async function POST(req: Request) {
         variants: {
           create: {
             name: 'Combo',
-            price: parseFloat(basePrice),
-            cost: 0,
-            minStock: 1,
             active: true,
             images: images || []
           }

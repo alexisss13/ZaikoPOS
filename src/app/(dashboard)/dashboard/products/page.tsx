@@ -148,7 +148,7 @@ export default function ProductsPage() {
             {canCreate && (
               <button 
                 onClick={() => { setSelectedProduct(null); setCanEditSelected(true); setIsModalOpen(true); }} 
-                className="h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 active:from-blue-600 active:to-blue-700 text-white shadow-md active:scale-95 transition-all"
+                className="h-10 px-3 flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 active:from-blue-600 active:to-blue-700 text-white shadow-md active:scale-95 transition-all"
               >
                 <PlusSignIcon className="w-5 h-5" strokeWidth={2} />
               </button>
@@ -353,7 +353,7 @@ export default function ProductsPage() {
             </p>
             <button 
               onClick={() => { setLocalSearchTerm(''); handleSearchChange(''); setCodeFilter('ALL'); setCategoryFilter('ALL'); setStockFilter('ALL'); haptic(); }} 
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold shadow-lg active:scale-95 transition-all"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 text-white text-sm font-bold shadow-lg active:scale-95 transition-all"
             >
               Limpiar filtros
             </button>

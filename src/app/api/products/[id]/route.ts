@@ -19,14 +19,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             name: true,
             sku: true,
             barcode: true,
-            price: true,
-            cost: true,
-            minStock: true,
             active: true,
             images: true,
             attributes: true,
-            wholesalePrice: true,
-            wholesaleMinCount: true,
             uomId: true,
             uom: {
               select: {
@@ -60,11 +55,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     
     const productWithVariantData = {
       ...product,
-      sku: standardVariant?.sku,
-      barcode: standardVariant?.barcode,
-      cost: standardVariant?.cost,
-      minStock: standardVariant?.minStock,
-      // Las imágenes del producto tienen prioridad, si no hay, usar las de la variante
+      sku: standardVariant?.sku || product.sku,
+      barcode: standardVariant?.barcode || product.barcode,
+      // Las imágenes: priorizar producto, luego variante
       images: product.images.length > 0 ? product.images : (standardVariant?.images || []),
     };
 
@@ -140,6 +133,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       ? (Array.isArray(body.images) ? body.images : []) 
       : product.images;
 
+    // Para productos simples, consolidar wholesale price
+    const wholesalePrice = body.wholesalePrice !== undefined 
+      ? (body.wholesalePrice ? parseFloat(body.wholesalePrice) : null) 
+      : product.wholesalePrice;
+    
+    const wholesaleMinCount = body.wholesaleMinCount !== undefined 
+      ? (body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null) 
+      : product.wholesaleMinCount;
+
     // Actualizar producto
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -150,9 +152,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         categoryId: body.categoryId || product.categoryId,
         branchOwnerId,
         images,
-        basePrice: body.variants && body.variants.length > 0 ? parseFloat(body.variants[0].price) : product.basePrice,
-        wholesalePrice: body.wholesalePrice !== undefined ? (body.wholesalePrice ? parseFloat(body.wholesalePrice) : null) : product.wholesalePrice,
-        wholesaleMinCount: body.wholesaleMinCount !== undefined ? (body.wholesaleMinCount ? parseInt(body.wholesaleMinCount) : null) : product.wholesaleMinCount,
+        basePrice: body.basePrice !== undefined ? parseFloat(body.basePrice) : product.basePrice,
+        cost: body.cost !== undefined ? parseFloat(body.cost) : product.cost,
+        minStock: body.minStock !== undefined ? parseInt(body.minStock) : product.minStock,
+        sku: body.sku !== undefined ? body.sku : product.sku,
+        barcode: body.barcode !== undefined ? body.barcode : product.barcode,
+        wholesalePrice,
+        wholesaleMinCount,
         isAvailable: body.active !== undefined ? body.active : product.isAvailable,
         active: body.active !== undefined ? body.active : product.active,
         supplierId: body.supplierId !== undefined ? (body.supplierId || null) : product.supplierId,
@@ -182,12 +188,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           attributes: variantData.attributes || {},
           sku: variantData.sku || null,
           barcode: variantData.barcode || null,
-          price: parseFloat(variantData.price) || 0,
-          cost: parseFloat(variantData.cost) || 0,
-          minStock: parseInt(variantData.minStock) || 5,
           images: variantData.images || images,
-          wholesalePrice: variantData.wholesalePrice ? parseFloat(variantData.wholesalePrice) : null,
-          wholesaleMinCount: variantData.wholesaleMinCount ? parseInt(variantData.wholesaleMinCount) : null,
           active: true
         };
 
@@ -206,6 +207,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             }
           });
         }
+      }
+    } else {
+      // Si no se enviaron variantes pero se actualizaron datos del producto simple,
+      // actualizar la variante estándar con los nuevos datos
+      const standardVariant = product.variants.find(v => v.name === 'Estándar') || product.variants[0];
+      
+      if (standardVariant) {
+        await prisma.productVariant.update({
+          where: { id: standardVariant.id },
+          data: {
+            images,
+            sku: body.sku !== undefined ? body.sku : standardVariant.sku,
+            barcode: body.barcode !== undefined ? body.barcode : standardVariant.barcode,
+          }
+        });
       }
     }
 
