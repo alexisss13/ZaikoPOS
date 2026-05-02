@@ -122,7 +122,7 @@ export function MobileHomeScreen() {
         {/* Botón de Acción Principal */}
         <button
           onClick={() => router.push('/dashboard/pos')}
-          className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 active:from-emerald-600 active:to-emerald-700 transition-all duration-200 shadow-lg active:scale-[0.97] w-full max-w-[220px]"
+          className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 active:from-emerald-600 active:to-emerald-700 transition-all duration-200 shadow-lg active:scale-[0.97] w-[full] max-w-[220px] mr-8"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-active:translate-x-[200%] transition-transform duration-700" />
           
